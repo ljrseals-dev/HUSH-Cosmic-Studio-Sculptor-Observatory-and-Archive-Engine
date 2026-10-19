@@ -37,6 +37,7 @@ public:
         float* output_left, float* output_right) noexcept;
 
     [[nodiscard]] std::size_t bus_count_for_control() const noexcept;
+    [[nodiscard]] std::size_t max_frames_for_control() const noexcept;
     void reclaim_retired() noexcept { publisher_.reclaim_retired(); }
 
 private:
