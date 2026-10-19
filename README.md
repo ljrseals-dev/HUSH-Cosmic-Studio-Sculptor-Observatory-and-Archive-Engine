@@ -29,3 +29,148 @@ Press any key while the UI window is focused to close it.
 This is a **source handoff/starter**, not a completed production DAW. The example module ABI is HUSH-native and is **not VST3 or LV2**. No real audio-device playback, recording, full arrangement/session editing, production plugin hosting, or live connection to the separate `hush-processor` repository is claimed here. Hardware testing and security audit have not been performed. See `docs/IMPLEMENTATION_STATUS.md`.
 
 No telemetry, analytics, crash upload, update checking, remote configuration, or network bootstrap is included.
+
+
+You're right. This architecture is a bare-bones skeleton. It shows four boxes and a few connections, but it doesn't yet represent a professional, integrated HUSH Cosmic Studio.
+
+The key issue is that the diagram describes components without showing the complete audio signal path, actual engine integration, session model, or the three-panel studio interface.
+
+## What HUSH Cosmic Studio 0.2.1 should show
+
+## HUSH COSMIC STUDIO
+
+Native C++20 · Local-first · Real-time audio architecture
+
+The Sculptor
+
+Timeline · Clips · Mixer · Automation
+
+Observatory
+
+Transport · Spatial view · Master metering
+
+Archive & Engine
+
+Media · Plugins · DSP · Device status
+
+Engine Bridge
+
+Bounded command queue · Parameter state · Telemetry snapshots
+
+### Audio Engine
+
+Audio I/O
+
+Device selection · Input/output buffers
+
+Session & Transport
+
+Tempo · Play/stop · Position
+
+DSP Graph
+
+Tracks · Gain · Pan · Processor chain
+
+Metering & Analysis
+
+Peak · RMS · Clipping · Latency
+
+Audio buffers flow through the active processing graph
+
+Processor chain
+
+Input
+
+Hush DSP
+
+Master Out
+
+The actual Hush Processor must be connected here; the diagram alone does not establish that integration.
+
+## The engineering work missing from the skeleton
+
+| Area           | Required implementation                                  |
+| -------------- | -------------------------------------------------------- |
+| Session model  | Tracks, clips, routing, tempo, save/load                 |
+| Audio I/O      | Device discovery, stream lifecycle, error handling       |
+| Engine bridge  | Real commands and telemetry connected to the live engine |
+| DSP graph      | Actual processor execution and safe graph updates        |
+| Observatory    | Live meters and analysis, not invented display values    |
+| UI interaction | Working transport, faders, clip editing, library actions |
+| Verification   | Compile, automated tests, GUI launch, audio-device test  |
+
+One important correction: an X11 event loop is a Linux-specific foundation, not a cross-platform GUI strategy. If HUSH is intended for Windows, Linux, and macOS, the windowing and audio-device layers need an explicit portability plan.
+
+I would make the next milestone HUSH Cosmic Studio 0.2.1 — Engine Integration, starting by examining the real `hush-daw` and `hush-processor` source trees, identifying the canonical engine interfaces, and wiring the bridge to those interfaces before claiming the Observatory is live. I haven't inspected the source behind this SVG, so I can't yet say which of these components already exist in code.
+You're right. This architecture is a bare-bones skeleton. It shows four boxes and a few connections, but it doesn't yet represent a professional, integrated HUSH Cosmic Studio.
+
+The key issue is that the diagram describes components without showing the complete audio signal path, actual engine integration, session model, or the three-panel studio interface.
+
+## What HUSH Cosmic Studio 0.2.1 should show
+
+## HUSH COSMIC STUDIO
+
+Native C++20 · Local-first · Real-time audio architecture
+
+The Sculptor
+
+Timeline · Clips · Mixer · Automation
+
+Observatory
+
+Transport · Spatial view · Master metering
+
+Archive & Engine
+
+Media · Plugins · DSP · Device status
+
+Engine Bridge
+
+Bounded command queue · Parameter state · Telemetry snapshots
+
+### Audio Engine
+
+Audio I/O
+
+Device selection · Input/output buffers
+
+Session & Transport
+
+Tempo · Play/stop · Position
+
+DSP Graph
+
+Tracks · Gain · Pan · Processor chain
+
+Metering & Analysis
+
+Peak · RMS · Clipping · Latency
+
+Audio buffers flow through the active processing graph
+
+Processor chain
+
+Input
+
+Hush DSP
+
+Master Out
+
+The actual Hush Processor must be connected here; the diagram alone does not establish that integration.
+
+## The engineering work missing from the skeleton
+
+| Area           | Required implementation                                  |
+| -------------- | -------------------------------------------------------- |
+| Session model  | Tracks, clips, routing, tempo, save/load                 |
+| Audio I/O      | Device discovery, stream lifecycle, error handling       |
+| Engine bridge  | Real commands and telemetry connected to the live engine |
+| DSP graph      | Actual processor execution and safe graph updates        |
+| Observatory    | Live meters and analysis, not invented display values    |
+| UI interaction | Working transport, faders, clip editing, library actions |
+| Verification   | Compile, automated tests, GUI launch, audio-device test  |
+
+One important correction: an X11 event loop is a Linux-specific foundation, not a cross-platform GUI strategy. If HUSH is intended for Windows, Linux, and macOS, the windowing and audio-device layers need an explicit portability plan.
+
+I would make the next milestone HUSH Cosmic Studio 0.2.1 — Engine Integration, starting by examining the real `hush-daw` and `hush-processor` source trees, identifying the canonical engine interfaces, and wiring the bridge to those interfaces before claiming the Observatory is live. I haven't inspected the source behind this SVG, so I can't yet say which of these components already exist in code.
+
