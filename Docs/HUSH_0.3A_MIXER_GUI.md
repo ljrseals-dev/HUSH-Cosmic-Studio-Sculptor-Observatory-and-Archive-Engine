@@ -35,7 +35,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 ## Realtime contract
 
 - `RealtimeTrackMixer` is configured and its track buffers are allocated before starting the backend.
-- GUI gain, pan, mute, and solo edits enqueue a complete control snapshot for the affected track; undo/redo locate the touched operation and enqueue only that track. Startup still seeds all tracks before audio begins. This avoids consuming queue capacity proportional to total track count on every edit.
+- While live audio is running, gain and pan enqueue preview snapshots as the sliders move, so changes are heard at a subsequent audio block boundary; releasing the slider commits the final project value as one undoable operation. Mute and solo commit immediately. Undo/redo locate the touched operation and enqueue only that track. Startup seeds all tracks before audio begins. This avoids consuming queue capacity proportional to total track count on every edit.
 - The bounded queue is single-producer (GUI thread) / single-consumer (audio callback). A rejected/full queue is reported; the GUI does not wait for the audio callback.
 - The callback uses preallocated buffers and performs no allocation, locking, logging, or file/network I/O.
 - The backend callback thread is stopped and joined before live mixer state is destroyed or replaced.
@@ -46,7 +46,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 The repository's CI should compile the combined Qt + ALSA target and run the registered core contract tests. That verifies build compatibility and existing mixer queue contracts, not a physical audio-device session.
 
 Still required before claiming a production live mixer:
-- automated Qt interaction test proving fader/pan/mute/solo and undo/redo are reflected in the next audio block;
+- automated Qt interaction test proving drag-preview, fader/pan/mute/solo and undo/redo are reflected in the next audio block;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
