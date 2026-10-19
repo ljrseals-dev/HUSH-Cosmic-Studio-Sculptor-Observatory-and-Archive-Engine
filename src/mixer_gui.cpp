@@ -366,7 +366,7 @@ private:
         // the bounded queue is full, neither the model nor undo history advances.
         if (!enqueue_live_control_values(id, values)) {
             status_->setText("Edit not applied: live command queue full; retry after audio drains");
-            refresh();
+            QTimer::singleShot(0, this, [this] { refresh(); });
             return;
         }
         if (log_.apply_and_append(project_, std::move(operation))) {
