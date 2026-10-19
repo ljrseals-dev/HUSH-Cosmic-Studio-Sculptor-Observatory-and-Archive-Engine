@@ -21,7 +21,9 @@
 ## Remaining release gates
 - [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
 - [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; the current subprocess test covers completed writes, not power loss or mid-write termination.
-- [x] Optional Linux ALSA capture/playback worker target and callback contract (device validation pending).\n- [ ] Wire the ALSA callback to RealtimeBusEngine with explicit graph input/output/master-bus semantics.\n- [ ] Optional JACK/PipeWire compile-time backends.
+- [x] Optional Linux ALSA capture/playback worker target and callback contract (device validation pending).
+- [ ] Wire the ALSA callback to RealtimeBusEngine with explicit graph input/output/master-bus semantics.
+- [ ] Optional JACK/PipeWire compile-time backends.
 - [ ] Integrate RealtimeBusEngine with an actual ALSA/device callback and verify atomics are lock-free on target hardware. Current integration is a callback-ready processing component, not a device backend.
 - [ ] Safe graph swap and deferred reclamation; current processor is configure-once and must not be destroyed while processing.
 - [ ] Integrate track-to-bus assignment, inserts, solo/mute semantics, meters, and xrun counters into the processing path.
