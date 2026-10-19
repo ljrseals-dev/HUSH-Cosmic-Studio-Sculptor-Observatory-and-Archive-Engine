@@ -12,6 +12,7 @@
 - [x] Contract tests for implemented primitives, routing persistence, cycle rejection, and torn-tail recovery.
 - [x] Child-process exit/restart test for recovering a completed journal snapshot.
 - [x] Bus graph validation, send tap metadata, and source-before-destination render order.
+- [x] Offline/reference bus-buffer renderer with pre/post-fader sends, deterministic topological processing, and input validation.
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
@@ -20,7 +21,8 @@
 - [ ] ALSA real-time backend and optional JACK/PipeWire compile-time backends.
 - [ ] Preallocated processing graph and bounded lock-free parameter queue.
 - [ ] Graph swap with documented and implemented safe reclamation.
-- [ ] Bus rendering, send tap application, inserts, and project-track-to-bus assignment.
+- [ ] Integrate the reference bus renderer into a preallocated real-time processing graph; the current renderer allocates buffers and is not audio-callback safe.
+- [ ] Inserts and project-track-to-bus assignment.
 - [ ] Meter/xrun readouts connected to a real device backend.
 - [ ] 60-minute 48 kHz/128-frame zero-xrun reference run.
 - [ ] Loopback latency measurement and underrun injection.
