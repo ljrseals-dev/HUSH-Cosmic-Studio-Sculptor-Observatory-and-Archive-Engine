@@ -96,6 +96,18 @@ public:
         return true;
     }
 
+    // After startup, enqueue only the track touched by the operation. Sending the
+    // whole project for every slider release needlessly consumes the bounded queue.
+    bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
+        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
+        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
+            const auto& track = project.tracks[i];
+            if (track.id == track_id)
+                return mixer_->enqueue_control(i, track.gain, track.pan, track.mute, track.solo);
+        }
+        return false;
+    }
+
 private:
     static void callback(const float* input, float* output, std::size_t frames,
                          void* user_data) noexcept {
@@ -190,17 +202,27 @@ public:
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
         connect(undo, &QPushButton::clicked, this, [this] {
+            const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
+            const std::string track_id = operation ? operation->entity_id : std::string{};
             if (log_.undo(project_)) {
-                sync_live_controls();
+                if (!sync_live_controls(track_id)) {
+                    status_->setText("Undo applied; live command queue full — retry or stop audio");
+                } else {
+                    status_->setText("Undo applied");
+                }
                 refresh();
-                status_->setText("Undo applied");
             }
         });
         connect(redo, &QPushButton::clicked, this, [this] {
+            const auto* operation = log_.operation_at(log_.cursor());
+            const std::string track_id = operation ? operation->entity_id : std::string{};
             if (log_.redo(project_)) {
-                sync_live_controls();
+                if (!sync_live_controls(track_id)) {
+                    status_->setText("Redo applied; live command queue full — retry or stop audio");
+                } else {
+                    status_->setText("Redo applied");
+                }
                 refresh();
-                status_->setText("Redo applied");
             }
         });
 #ifdef HUSH_GUI_HAS_ALSA
@@ -285,7 +307,7 @@ private:
         case hush::OperationKind::SetSolo: before = it->solo ? 1.0F : 0.0F; break;
         }
         if (before != after && log_.apply_and_append(project_, {id, kind, before, after})) {
-            if (!sync_live_controls()) {
+            if (!sync_live_controls(id)) {
                 status_->setText("Project edited; live command queue full — retry or stop audio");
             } else {
                 status_->setText("Edited · undo history " + QString::number(log_.cursor()));
@@ -293,9 +315,11 @@ private:
         }
     }
 
-    bool sync_live_controls() {
+    bool sync_live_controls(const std::string& track_id) {
 #ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() && !live_.enqueue_project_controls(project_)) return false;
+        if (live_.running() && !live_.enqueue_track_control(project_, track_id)) return false;
+#else
+        (void)track_id;
 #endif
         return true;
     }
