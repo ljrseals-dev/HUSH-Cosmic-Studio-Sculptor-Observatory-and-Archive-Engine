@@ -11,9 +11,9 @@ int main() {
                             {"sum","master",SendTap::PostFader,1.0F}}, graph_error));
 
     const std::vector<BusAudioInput> inputs{
-        {"master", {{{0.0F, 0.0F}}, {{0.0F, 0.0F}}}, 1.0F},
-        {"source", {{{1.0F, -1.0F}}, {{0.5F, -0.5F}}}, 0.25F},
-        {"sum", {{{0.1F, 0.2F}}, {{0.2F, 0.4F}}}, 2.0F}
+        {"master", {{0.0F, 0.0F}, {0.0F, 0.0F}}, 1.0F},
+        {"source", {{1.0F, -1.0F}, {0.5F, -0.5F}}, 0.25F},
+        {"sum", {{0.1F, 0.2F}, {0.2F, 0.4F}}, 2.0F}
     };
     std::vector<RenderedBus> rendered;
     BusRenderError error;
