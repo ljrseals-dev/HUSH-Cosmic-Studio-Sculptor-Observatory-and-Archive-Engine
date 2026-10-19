@@ -203,8 +203,8 @@ public:
 #endif
 
         project_.id = "hush-demo";
-        project_.tracks = {{"track-1", "Input L", 1.0F, 0.0F, false, false},
-                           {"track-2", "Input R", 0.8F, 0.0F, false, false}};
+        project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
+                           {"track-2", "Input R", 0.8F, 1.0F, false, false}};
         refresh();
         status_->setText("Demo session · unsaved · offline");
     }
