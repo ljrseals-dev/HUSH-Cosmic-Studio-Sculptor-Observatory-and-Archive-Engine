@@ -69,6 +69,19 @@ if(HUSH_ENABLE_ALSA)
   endif()
 endif()
 
+if(HUSH_BUILD_STRESS_TOOLS)
+  add_executable(hush_routing_benchmark tools/hush_routing_benchmark.cpp)
+  target_link_libraries(hush_routing_benchmark PRIVATE hush_core)
+  target_compile_features(hush_routing_benchmark PRIVATE cxx_std_20)
+
+  add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
+  target_link_libraries(hush_headless_soak PRIVATE hush_core)
+  target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
+endif()
+
+if(HUSH_BUILD_TESTS)
+  enable_testing()
+
 if(HUSH_BUILD_GUI AND HUSH_BUILD_TESTS)
   find_package(Qt6 REQUIRED COMPONENTS Test)
   add_executable(hush_gui_interaction_tests tests/gui_interaction_tests.cpp)
@@ -84,18 +97,6 @@ if(HUSH_BUILD_GUI AND HUSH_BUILD_TESTS)
   set_tests_properties(hush_gui_interaction_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
-if(HUSH_BUILD_STRESS_TOOLS)
-  add_executable(hush_routing_benchmark tools/hush_routing_benchmark.cpp)
-  target_link_libraries(hush_routing_benchmark PRIVATE hush_core)
-  target_compile_features(hush_routing_benchmark PRIVATE cxx_std_20)
-
-  add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
-  target_link_libraries(hush_headless_soak PRIVATE hush_core)
-  target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
-endif()
-
-if(HUSH_BUILD_TESTS)
-  enable_testing()
 
   add_test(
     NAME hush_privacy_source_audit
