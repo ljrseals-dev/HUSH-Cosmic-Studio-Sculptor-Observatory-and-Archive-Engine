@@ -23,3 +23,8 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Preserved two non-empty archives whose full contents could not be verified; they remain explicit audit debt and must not be treated as source dependencies.
 - Added artifact ignore rules, contribution guidance, and security reporting policy.
 - Published history remains intact; no filter-repo, force-push, or history rewrite was performed.
+
+
+## Unreleased — proposed transport/MIDI/automation design
+
+- Added `Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md` covering transport/tempo, MIDI input and learn, automation lanes, schema-v2 migration, realtime constraints, staged evidence gates, and owner decisions. Proposal only; no subsystem implementation is authorized by this document.
