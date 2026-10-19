@@ -44,9 +44,7 @@ bool RealtimeBusAudioAdapter::process(const float* interleaved_input,
     if (interleaved_output == nullptr) return false;
     if (frames > max_frames_ || engine_ == nullptr ||
         (frames != 0 && interleaved_input == nullptr)) {
-        if (frames <= max_frames_) {
-            std::fill_n(interleaved_output, frames * 2, 0.0F);
-        }
+        std::fill_n(interleaved_output, frames * 2, 0.0F);
         return false;
     }
     if (frames == 0) return true;
