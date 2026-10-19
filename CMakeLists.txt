@@ -15,6 +15,7 @@ add_library(hush_core
     src/bus_graph.cpp
     src/bus_renderer.cpp
     src/preallocated_bus_processor.cpp
+    src/realtime_bus_engine.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
