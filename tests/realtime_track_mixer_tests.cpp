@@ -36,5 +36,17 @@ int main() {
     assert(!mixer.enqueue_control(0, 1.0F, 2.0F, false, false));
     assert(!mixer.process(inputs, 1, left, right, 2));
     assert(!mixer.process(inputs, 2, left, right, 9));
+
+    // The SPSC command queue is bounded: fill it without a consumer, then
+    // verify the next command is rejected rather than blocking or overwriting.
+    RealtimeTrackMixer saturated;
+    assert(saturated.configure(1, 2));
+    for (std::size_t i = 0; i < RealtimeTrackMixer::kQueueCapacity; ++i) {
+        assert(saturated.enqueue_control(0, 1.0F, 0.0F, false, false));
+    }
+    assert(!saturated.enqueue_control(0, 0.5F, 0.0F, false, false));
+    const float* one_input[] = {a};
+    assert(saturated.process(one_input, 1, left, right, 2));
+    assert(saturated.enqueue_control(0, 0.5F, 0.0F, false, false));
     return 0;
 }
