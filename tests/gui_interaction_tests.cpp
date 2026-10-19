@@ -63,7 +63,7 @@ private slots:
         MixerWindow window;
         auto* live = window.findChild<QPushButton*>(QStringLiteral("liveAlsaButton"));
         QVERIFY(live);
-#ifdef HUSH_ENABLE_ALSA
+#ifdef HUSH_GUI_HAS_ALSA
         QVERIFY(live->isEnabled());
 #else
         QVERIFY(!live->isEnabled());
