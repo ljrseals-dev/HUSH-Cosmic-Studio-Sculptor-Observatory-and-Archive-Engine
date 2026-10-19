@@ -25,6 +25,7 @@ add_library(hush_core
     src/recovery_journal.cpp
     src/autosave_controller.cpp
     src/wav_writer.cpp
+    src/project_wav_export.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
@@ -151,6 +152,10 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_wav_writer_tests tests/wav_writer_tests.cpp)
   target_link_libraries(hush_wav_writer_tests PRIVATE hush_core)
   add_test(NAME hush_wav_writer_tests COMMAND hush_wav_writer_tests)
+
+  add_executable(hush_project_wav_export_tests tests/project_wav_export_tests.cpp)
+  target_link_libraries(hush_project_wav_export_tests PRIVATE hush_core)
+  add_test(NAME hush_project_wav_export_tests COMMAND hush_project_wav_export_tests)
   # Keep assert-based contract checks active even when users build Release.
   if(MSVC)
     target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
@@ -158,6 +163,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_partial_write_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_wav_writer_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_project_wav_export_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE /UNDEBUG)
@@ -173,6 +179,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_partial_write_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_wav_writer_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_project_wav_export_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE -UNDEBUG)
