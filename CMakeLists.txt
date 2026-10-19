@@ -76,6 +76,13 @@ endif()
 
 if(HUSH_BUILD_TESTS)
   enable_testing()
+
+  add_test(
+    NAME hush_privacy_source_audit
+    COMMAND ${CMAKE_COMMAND}
+      -DHUSH_SOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/privacy_source_audit.cmake
+  )
   add_executable(hush_contract_tests tests/contract_tests.cpp)
   target_link_libraries(hush_contract_tests PRIVATE hush_core)
   add_test(NAME hush_contract_tests COMMAND hush_contract_tests)
