@@ -1,130 +1,86 @@
-# Repository hygiene audit
+# Repository audit — HUSH Cosmic Studio
 
-**Audited ref:** `main` at `0c49e20b42617e905495b202b88948201fed2a8d`  
-**Scope:** tracked-tree inventory and source/documentation/build-reference review. No history rewrite was performed.  
-**Important limitation:** the GitHub file API returned no content for the 2.8 MB integration-starter archive. The small source ZIP can be identified as a ZIP container, but its contents have not been fully extracted and compared against the source tree. Those two archives are therefore preserved as **unknown** pending a byte-level review. The four 2-byte “ZIPs” contain only a line ending, not a ZIP local-file header, and are malformed placeholders.
+**Audited ref:** `main`, tree `31578b352a5b62f4a62af87745b3615be55ca10b`  
+**Method:** GitHub tracked-tree and source-file inspection. This is not a local checkout build. No files were deleted by this audit.
 
-## Tracked-file inventory
+## CMake inventory
 
-All tracked files at the audited ref are listed below. Build/test relevance is summarized by location: CMake sources are listed in `CMakeLists.txt`; contract tests are registered there when `HUSH_BUILD_TESTS=ON`; docs are linked from the README or are supporting design/validation records. ZIPs and the image are separately audited below.
+CMake minimum: 3.20. Project: `HushUnifiedDAW` 0.2.0. Language: C++20, extensions disabled.
 
-| Tracked path | Classification / reference audit |
-|---|---|
-| `.github/workflows/hush-0.2.yml` | CI configuration. |
-| `.gitignore` | Repository metadata/documentation. |
-| `Adapter/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1 (1).zip` | Archive; see archive table below. |
-| `CHANGELOG.md` | Repository metadata/documentation. |
-| `CMakeLists.txt` | Build and test target registry. |
-| `Docs/ALSA_AUDIO_BACKEND.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/AUTOSAVE_CONTROLLER.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/BUS_RENDERER.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/BUS_ROUTING_FOUNDATION.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/DECISION_LOG.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/HUSH_0.3A_MIXER_GUI.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/IMPLEMENTATION_STATUS.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/PARAMETER_QUEUE.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/PREALLOCATED_BUS_PROCESSOR.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/Prompt` | Documentation/design/test evidence; not compiled. |
-| `Docs/REALTIME_BUS_ENGINE.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/RECOVERY_JOURNAL.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/RECOVERY_RESTART_TEST.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/RELEASE_GATES.md` | Documentation/design/test evidence; not compiled. |
-| `Docs/VALIDATION_REPORT.md` | Documentation/design/test evidence; not compiled. |
-| `Hush.txt` | Repository metadata/documentation. |
-| `LICENSE` | Repository metadata/documentation. |
-| `Processor/HUSH-2.2.0-reconciled (1).zip` | Archive; see archive table below. |
-| `README.md` | Project entry point and documented build commands. |
-| `ROADMAP.md` | Repository metadata/documentation. |
-| `Source/Adapter/A/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1.zip` | Archive; see archive table below. |
-| `Source/HUSH-Cosmic-Studio-0.2.1-GitHub-Source.zip` | Archive; see archive table below. |
-| `Source/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine-codex-hush-0.2-headless-foundation.zip` | Archive; see archive table below. |
-| `hush-daw-codex-hush-processor-integration-starter (1).zip` | Archive; see archive table below. |
-| `images/1792375771560.jpg` | Image asset; no README/docs reference found. |
-| `include/hush/alsa_audio_backend.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/autosave_controller.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/bus_graph.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/bus_renderer.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/mixer.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/operation_log.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/preallocated_bus_processor.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/project.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/realtime_bus_audio_adapter.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/realtime_bus_engine.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/recovery_journal.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `include/hush/spsc_parameter_queue.hpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/alsa_audio_backend.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/alsa_realtime_host.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/autosave_controller.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/bus_graph.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/bus_renderer.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/mixer.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/mixer_gui.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/operation_log.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/preallocated_bus_processor.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/project.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/realtime_bus_audio_adapter.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/realtime_bus_engine.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `src/recovery_journal.cpp` | C++ implementation/header; source integration is in CMakeLists.txt. |
-| `tests/bus_graph_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/bus_renderer_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/contract_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/parameter_queue_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/preallocated_bus_processor_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/realtime_bus_audio_adapter_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/realtime_bus_engine_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
-| `tests/recovery_restart_tests.cpp` | Test source; test target registration is in CMakeLists.txt. |
+### Options
 
-## Archive inventory
+| Option | Default | Effect / dependency |
+|---|---:|---|
+| `HUSH_BUILD_TESTS` | ON | Registers CTest executables listed below. `Threads` is required for graph publisher tests. |
+| `HUSH_ENABLE_ALSA` | OFF | Linux-only; requires preinstalled ALSA development headers/libraries via `find_package(ALSA REQUIRED)`. Builds `hush_alsa_backend` and `hush_alsa_realtime_host`. |
+| `HUSH_BUILD_GUI` | OFF | Requires preinstalled Qt 6 Widgets; builds `hush_mixer_gui`. |
+| `HUSH_BUILD_STRESS_TOOLS` | ON | Builds offline `hush_routing_benchmark` and `hush_headless_soak`. |
 
-| File | Status | Action |
+### Targets
+
+| Target | Backing source(s) | Condition |
 |---|---|---|
-| `Adapter/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1 (1).zip` | **Malformed** — 2 bytes; content is a line ending, not a ZIP archive | Remove in this cleanup. |
-| `Processor/HUSH-2.2.0-reconciled (1).zip` | **Malformed** — 2 bytes; content is a line ending, not a ZIP archive | Remove in this cleanup. |
-| `Source/Adapter/A/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1.zip` | **Malformed** — 2 bytes; content is a line ending, not a ZIP archive | Remove in this cleanup. |
-| `Source/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine-codex-hush-0.2-headless-foundation.zip` | **Malformed** — 2 bytes; content is a line ending, not a ZIP archive | Remove in this cleanup. |
-| `Source/HUSH-Cosmic-Studio-0.2.1-GitHub-Source.zip` | **Unknown** — valid ZIP container; full contents not extracted and compared | Preserve; review contents before deciding whether to extract/delete. |
-| `hush-daw-codex-hush-processor-integration-starter (1).zip` | **Unknown** — 2.8 MB; file API did not return bytes for inspection | Preserve; review contents before deciding whether to extract/delete. |
+| `hush_core` | `src/project.cpp`, `operation_log.cpp`, `mixer.cpp`, `bus_graph.cpp`, `bus_renderer.cpp`, `preallocated_bus_processor.cpp`, `realtime_bus_engine.cpp`, `realtime_track_mixer.cpp`, `realtime_bus_audio_adapter.cpp`, `recovery_journal.cpp`, `autosave_controller.cpp` | Always |
+| `hush_mixer_gui` | `src/mixer_gui.cpp`, links `hush_core` and `Qt6::Widgets` | `HUSH_BUILD_GUI` |
+| `hush_alsa_backend` | `src/alsa_audio_backend.cpp` | `HUSH_ENABLE_ALSA` |
+| `hush_alsa_realtime_host` | `src/alsa_realtime_host.cpp`, links core and ALSA backend | `HUSH_ENABLE_ALSA` |
+| `hush_routing_benchmark` | `tools/hush_routing_benchmark.cpp` | `HUSH_BUILD_STRESS_TOOLS` |
+| `hush_headless_soak` | `tools/hush_headless_soak.cpp` | `HUSH_BUILD_STRESS_TOOLS` |
 
-No archive is referenced by CMake or a registered test. The four malformed placeholders have no usable contents. The two unknown archives are not deleted because redundancy/uniqueness could not be established from the available byte-level evidence.
+Registered CTest executables: `hush_contract_tests`, `hush_bus_graph_tests`, `hush_bus_renderer_tests`, `hush_preallocated_bus_processor_tests`, `hush_realtime_bus_engine_tests`, `hush_realtime_bus_audio_adapter_tests`, `hush_realtime_track_mixer_tests`, `hush_realtime_graph_publisher_tests`, `hush_parameter_queue_tests`, `hush_recovery_restart_tests`, `hush_recovery_partial_write_tests`.
 
-## Image inventory
+No source globbing, `FetchContent`, download command, package bootstrap, or configure-time source fetch was found in `CMakeLists.txt`. Optional dependencies must be installed before configuring. GitHub Actions installs system packages on its runner; that is CI provisioning, not a CMake build-time download.
 
-| File | Status | Action |
+## Tracked-tree inventory
+
+At the audited tree there are 71 tracked blobs, no tracked build directories/CMake caches, and no tracked image files. See the [main tree](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/tree/main).
+
+The tracked C++ sources under `src/`, public headers under `include/hush/`, tests under `tests/`, and stress tools under `tools/` are represented in CMake or test registration. Documentation files are supporting design, usage, audit, and release-gate material; not every design note needs a CMake target.
+
+## Archive inventory — preserve pending byte-level review
+
+| File | Size | Classification | Action |
+|---|---:|---|---|
+| `Source/HUSH-Cosmic-Studio-0.2.1-GitHub-Source.zip` | 9,508 bytes | **Unknown** — contents not extracted and compared in this audit | Preserve; download/extract and compare before deciding if redundant. |
+| `hush-daw-codex-hush-processor-integration-starter (1).zip` | 2,795,731 bytes | **Unknown** — binary contents unavailable through repository text inspection | Preserve; inspect locally, document provenance/unique files, then decide whether to extract or move to Releases. |
+
+Neither archive is referenced by CMake, tests, or README build commands. That alone does not prove its contents are redundant. No deletion is justified by current evidence. The workflow temporarily tolerates these two legacy tracked archives but rejects newly added/modified ZIPs. After the archives are dispositioned, remove the allowlist so CI rejects all tracked ZIPs.
+
+## README claim-to-evidence audit
+
+| Claim | Backing files/tests | Boundary |
 |---|---|---|
-| `images/1792375771560.jpg` | No reference found in README or tracked documentation; not used by CMake/tests | Remove from the source tree. |
+| Schema-v1 project persistence | `include/hush/project.hpp`, `src/project.cpp`, `tests/contract_tests.cpp` | Does not prove compatibility with every historical external project. |
+| Bus graph validation/cycle detection | `include/hush/bus_graph.hpp`, `src/bus_graph.cpp`, `tests/bus_graph_tests.cpp` | Not a live graph swap. |
+| Offline/reference renderer | `include/hush/bus_renderer.hpp`, `src/bus_renderer.cpp`, `tests/bus_renderer_tests.cpp` | Not a complete media-playback DAW. |
+| Preallocated processing and parameter queue | `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `include/hush/spsc_parameter_queue.hpp`, related CTest targets | Not a formal hard-real-time proof. |
+| Block-boundary fader updates/stereo adapter | `src/realtime_bus_engine.cpp`, `src/realtime_bus_audio_adapter.cpp`, respective tests | Not full GUI binding or complete track-to-master routing. |
+| Realtime track-mixer primitive | `include/hush/realtime_track_mixer.hpp`, `src/realtime_track_mixer.cpp`, `tests/realtime_track_mixer_tests.cpp` | GUI is not connected to this primitive. |
+| Graph-publication primitive | `include/hush/realtime_graph_publisher.hpp`, `tests/realtime_graph_publisher_tests.cpp` | Not integrated into production engine lifecycle. |
+| Recovery journal and partial-write cases | `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`, `tests/recovery_partial_write_tests.cpp` | Does not establish power-loss durability. |
+| Optional ALSA host | `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, `Docs/ALSA_AUDIO_BACKEND.md` | CI compile/tests do not prove hardware reliability, latency, or zero xruns. |
+| Optional Qt GUI | `src/mixer_gui.cpp`, `Docs/HUSH_0.3A_MIXER_GUI.md` | Project-state editor only; not connected to live audio. |
+| Benchmark/soak harnesses | `tools/hush_routing_benchmark.cpp`, `tools/hush_headless_soak.cpp` | CI smoke tests do not count as a qualifying 500-track run or eight-hour soak report. |
 
-## Rename-commit audit
+## Build commands and evidence
 
-The following historical commits are named `Rename …`. They move archive/image assets, not compiled source files. The current paths below are present in the tracked tree; none is referenced by `CMakeLists.txt`, tests, or README build commands. No historical path was rewritten.
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
 
-| Commit | Current path / finding |
-|---|---|
-| `19f1b93b9e` | `Source/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine-codex-hush-0.2-headless-foundation.zip` — malformed placeholder; removed. |
-| `a6a066e9ed` | `Source/Adapter/A/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1.zip` — malformed placeholder; removed. |
-| `ff90328131` | `Source/HUSH-Cosmic-Studio-0.2.1-GitHub-Source.zip` — preserved pending content comparison. |
-| `43182b8d67` | Earlier archive location; current tree contains the later `Source/Adapter/A/…zip` path above, which is malformed and removed. |
-| `6cddeb29f3` | `images/1792375771560.jpg` — unreferenced image; removed. |
-| `799a9243f9` | `Processor/HUSH-2.2.0-reconciled (1).zip` — malformed placeholder; removed. |
-| `913eba70b8` | `Adapter/hush-daw-codex-cosmic-studio-engine-bridge-0.2.1 (1).zip` — malformed placeholder; removed. |
-| `598b070cb9` | Historical misspelled `Proccessor/…` location; not present in current tree. Current `Processor/…` placeholder is malformed and removed. |
-| `84d649774d` | Historical root `HUSH-2.2.0-reconciled.zip` location; not present in current tree. |
+cmake -S . -B build-gui -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
+cmake --build build-gui --parallel 2
 
-## README claim audit
+cmake -S . -B build-alsa -DHUSH_ENABLE_ALSA=ON -DHUSH_BUILD_TESTS=ON
+cmake --build build-alsa
+```
 
-| Claim area | Evidence | Honest boundary |
-|---|---|---|
-| Schema-v1 project persistence and compatibility | `include/hush/project.hpp`, `src/project.cpp`, `tests/contract_tests.cpp` | Contract tests cover the project API; no claim of all historical project compatibility. |
-| Bus graph validation | `include/hush/bus_graph.hpp`, `src/bus_graph.cpp`, `tests/bus_graph_tests.cpp` | Validation and cycle rejection only; not a live, safely swappable graph. |
-| Offline renderer | `include/hush/bus_renderer.hpp`, `src/bus_renderer.cpp`, `tests/bus_renderer_tests.cpp` | Reference/offline renderer, not a complete track mixer. |
-| Preallocated processing and SPSC commands | `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `include/hush/spsc_parameter_queue.hpp`, `tests/preallocated_bus_processor_tests.cpp`, `tests/parameter_queue_tests.cpp` | Code avoids explicit allocation/locking/logging/I/O in the processing function; this is not a formal hard-real-time proof. |
-| Queued fader changes and stereo adapter | `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp` | Fader command and adapter contracts only; not full GUI binding or track-to-master routing. |
-| ALSA backend/host | `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, `Docs/ALSA_AUDIO_BACKEND.md` | CI compile/contracts do not establish real-device reliability or zero xruns. |
-| Recovery journal/autosave | `src/recovery_journal.cpp`, `src/autosave_controller.cpp`, `tests/recovery_restart_tests.cpp` | Process-restart recovery and truncated-tail handling; power-loss durability and lifecycle integration remain unverified. |
-| Undo/redo operation log | `src/operation_log.cpp`, `tests/contract_tests.cpp` | Primitive operation-log tests; not a full DAW edit history UI. |
-| Qt mixer shell | `src/mixer_gui.cpp`, `Docs/HUSH_0.3A_MIXER_GUI.md` | Edits project state; it is not connected to live audio. |
-| Performance, soak, hardware latency/xruns | No completed target-machine report/harness in the tracked tree at audit time | Explicitly unverified; owner: project maintainer; requires named Linux/ALSA target machine and attached reports. |
-| Sanitizers | `.github/workflows/hush-0.2.yml` | CI jobs exist; each run’s result is evidence only for the tested configuration, not hardware/soak behavior. |
+**Local build status for this audit: not run.** Repository file inspection cannot honestly provide verbatim compiler output from a local checkout. The GitHub Actions workflow defines default, Qt, ALSA, ASan, TSan, and artifact-hygiene jobs; use the PR's actual workflow run for pass/fail evidence. Hardware tests, 60-minute stability, latency, 500-track performance, eight-hour soak, and archive-content verification remain open gates.
 
-## Verification status
+## Cleanup decision
 
-This audit is a repository/API inspection. A fresh local clone/build could not be run in the current execution environment because outbound DNS/network access to GitHub is unavailable. The pull-request CI run must provide the build and CTest evidence; hardware, long-soak, and archive-content verification remain separate gates.
+- Keep the existing `.gitignore`; it already covers build trees, CMake artifacts, binaries, IDE folders, OS cruft, local audio artifacts, and ZIPs.
+- Do not delete either remaining archive until its contents are reviewed.
+- No build outputs or images are present in the tracked tree.
+- Do not rewrite published history.

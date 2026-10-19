@@ -11,7 +11,12 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added CI for default C++20, ALSA-enabled, Qt 6 GUI, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
-## Unreleased — Phase 1–7 execution tooling\n\n- Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.\n- Added recovery journal tests for interrupted record headers and truncated payloads. These additions have not yet been run in this session; performance and soak reports remain outstanding.\n\n## Unreleased — repository hygiene
+## Unreleased — Phase 1–7 execution tooling
+
+- Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.
+- Added recovery journal tests for interrupted record headers and truncated payloads. These additions have not yet been run in this session; performance and soak reports remain outstanding.
+
+## Unreleased — repository hygiene
 
 - Added tracked-file, historical rename, and archive audit in `Docs/REPO_AUDIT.md`.
 - Removed four malformed 2-byte ZIP placeholders and the unreferenced `images/1792375771560.jpg`.
