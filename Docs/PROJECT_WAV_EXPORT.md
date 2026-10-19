@@ -14,4 +14,4 @@ This function allocates buffers and writes files. Call it only on an offline/con
 
 ## Scope boundary
 
-The schema-v1 `Project` currently contains track control metadata, buses, and routes, but no clip timeline or media-source references. This API therefore exports supplied bus audio through the project routing graph; it does **not** load audio files, position clips on a timeline, or render a complete arrangement. Those are separate milestones.
+The schema-v1 `Project` currently contains track control metadata, buses, and routes, but no clip timeline or media-source references. The adjacent `read_wav` API now imports RIFF/WAVE PCM16 and IEEE float32 into an interleaved float buffer on a non-realtime thread. It preserves the file's sample rate and channel count; resampling, channel mapping, media-source persistence, clip placement, and complete arrangement rendering are not included yet.
