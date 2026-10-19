@@ -1,14 +1,18 @@
-# HUSH 0.3a — Mixer GUI
+# HUSH 0.3a — Mixer GUI and optional live input monitor
 
-## Scope and critical limitation
+## Scope and limits
 
-**This GUI still edits project state only. It is NOT wired to live audio processing and does not control the running audio engine.** A separate `RealtimeTrackMixer` core primitive has now been added with a bounded SPSC command queue and block-boundary gain/pan/mute/solo updates, but the Qt widgets do not yet enqueue those commands or attach to a running device callback. Do not describe the GUI as a live mixer yet.
+The Qt mixer edits the canonical project model and records undoable changes through `OperationLog`. When built with both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON`, an explicitly user-started **Live ALSA** monitor also connects the GUI controls to `RealtimeTrackMixer` through its bounded SPSC command queue.
 
-Optional Qt 6 Widgets shell over the canonical `hush::Project` model. Mixer-only: no arrangement, recording, MIDI, plugin editors, voice control, or live graph reconfiguration.
+This is a first live-control integration, not a complete multitrack DAW mixer. The current ALSA backend provides one stereo capture stream: its left channel feeds track index 0 and its right channel feeds track index 1. Additional project tracks have no live source and are disabled while the monitor runs. Track-to-bus routing, independent playback sources, inserts/sends, recording, MIDI, plugin hosting, and external sync are not implemented by this change.
+
+No audio capture begins automatically. The user must press **Start Live ALSA**; stopping the monitor joins the backend thread before its mixer state is released. There are no telemetry, network requests, update checks, or background uploads.
 
 ## Build
 
-Qt 6 Widgets must already be installed; CMake never downloads dependencies.
+Dependencies must already be installed; CMake does not download them.
+
+GUI without live ALSA:
 
 ```sh
 cmake -S . -B build-gui -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
@@ -17,27 +21,34 @@ ctest --test-dir build-gui --output-on-failure
 ./build-gui/hush_mixer_gui
 ```
 
-On Debian/Ubuntu, install `qt6-base-dev` before configuring.
+GUI with optional Linux ALSA live monitor (Qt 6 Widgets and ALSA development headers required):
 
-## Implemented
+```sh
+cmake -S . -B build-gui-alsa -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON -DHUSH_ENABLE_ALSA=ON
+cmake --build build-gui-alsa --parallel 2
+ctest --test-dir build-gui-alsa --output-on-failure
+./build-gui-alsa/hush_mixer_gui
+```
 
-- Open/save schema-v1 JSON projects through the existing reader/writer.
-- Track name and stable ID, gain (0.00–2.00), pan (−1.00 to +1.00), mute and solo.
-- Mutations use `OperationLog::apply_and_append`; Undo and Redo use the same operation log.
-- In-memory demo session on first launch; never automatically saved.
-- No telemetry, runtime network requests, update checks, or background audio capture.
+The default capture and playback devices are ALSA `default`, at a requested 48 kHz and 128 frames per period. Actual values depend on the target device. If the device cannot open/configure both capture and playback, the GUI reports a startup error. Device compatibility, loopback, latency, xrun rate, and long-duration stability require target-machine tests.
 
-## Realtime engine primitive (added; not yet GUI-integrated)
+## Realtime contract
 
-- `hush::RealtimeTrackMixer` is configured once on the control thread with a fixed track count and maximum block size.
-- The control thread enqueues complete gain/pan/mute/solo snapshots through a bounded SPSC queue; the audio callback applies queued snapshots at the next block boundary.
-- The processing method uses preallocated state and performs no allocation, lock, logging, or I/O. One producer and one audio consumer are required.
-- A core contract test is registered as `hush_realtime_track_mixer_tests`; it has not been executed in this session.
+- `RealtimeTrackMixer` is configured and its track buffers are allocated before starting the backend.
+- GUI gain, pan, mute, and solo edits enqueue complete track-control snapshots; undo/redo also synchronize the model's controls to the engine.
+- The bounded queue is single-producer (GUI thread) / single-consumer (audio callback). A rejected/full queue is reported; the GUI does not wait for the audio callback.
+- The callback uses preallocated buffers and performs no allocation, locking, logging, or file/network I/O.
+- The backend callback thread is stopped and joined before live mixer state is destroyed or replaced.
+- The queue's atomic lock-free properties and actual callback timing must still be checked on target hardware.
 
-## Remaining
+## Evidence and remaining gates
 
-- Bind Qt control changes (including Undo/Redo) to a configured `RealtimeTrackMixer` and a running audio callback; add a Qt interaction/integration test.
-- Meter polling, sends/insert UI, track creation/deletion, CLI/GUI parity automation.
-- GUI leak/xrun soak tests and hardware validation.
+The repository's CI should compile the combined Qt + ALSA target and run the registered core contract tests. That verifies build compatibility and existing mixer queue contracts, not a physical audio-device session.
 
-A passing GUI build proves only that this optional target compiles and its registered tests pass. It does not establish live-audio control, hardware latency, zero-xrun behavior, or long-soak stability.
+Still required before claiming a production live mixer:
+- automated Qt interaction test proving fader/pan/mute/solo and undo/redo are reflected in the next audio block;
+- a dedicated two-channel loopback integration test;
+- full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
+- target-device startup/shutdown, callback timing, lock-free atomic checks, xrun reporting, and a documented soak/latency report.
+
+Do not claim recording, MIDI, automation, plugin hosting, multitrack live source routing, or zero-xrun hardware behavior as delivered by this change.
