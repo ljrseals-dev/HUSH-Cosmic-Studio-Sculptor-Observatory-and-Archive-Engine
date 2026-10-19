@@ -1,8 +1,6 @@
-Here’s a ready-to-post tweet:
-
 ───
 
-HUSH 2.1.0-nightly is live
+HUSH DAW 
 
 Mix Alpha + multi-bus summing + SSE2 SIMD landed.
  Offline-first. No network. Built for real work.
@@ -17,4 +15,3 @@ Nightly drops. Feedback welcome.
 
 ───
 
-Want a shorter version or one that tags specific people/handles?
