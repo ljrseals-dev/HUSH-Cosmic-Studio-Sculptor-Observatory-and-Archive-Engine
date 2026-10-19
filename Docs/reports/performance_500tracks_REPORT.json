@@ -1,0 +1,14 @@
+{
+  "harness": "performance_500tracks",
+  "result": "NOT_RUN",
+  "machine": {
+    "uname": "NOT_RUN — requires named Linux kernel/OS",
+    "cpu": "NOT RUN — requires named CPU",
+    "alsa_version": "NOT_RUN — not applicable unless ALSA build is measured",
+    "device": "NOT_RUN — offline synthetic benchmark; identify host audio device only if used"
+  },
+  "started_at": "NOT_RUN — human target-machine run required",
+  "duration_s": null,
+  "metrics": {},
+  "notes": "NOT RUN — requires a named machine, exact build commit, declared processing budget, and a completed 500-track measurement."
+}

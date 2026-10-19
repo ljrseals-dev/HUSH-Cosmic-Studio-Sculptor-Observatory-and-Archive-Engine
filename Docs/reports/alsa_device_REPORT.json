@@ -1,0 +1,14 @@
+{
+  "harness": "alsa_device_report",
+  "result": "NOT_RUN",
+  "machine": {
+    "uname": "NOT_RUN — requires named Linux kernel/OS",
+    "cpu": "NOT_RUN — requires named CPU",
+    "alsa_version": "NOT_RUN — requires installed ALSA version",
+    "device": "NOT_RUN — requires explicit ALSA capture/playback device"
+  },
+  "started_at": "NOT_RUN — human target-machine run required",
+  "duration_s": null,
+  "metrics": {},
+  "notes": "NOT RUN — requires a real Linux ALSA capture/playback device selected explicitly with --device; no hardware measurement is claimed."
+}

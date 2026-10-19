@@ -1,0 +1,14 @@
+{
+  "harness": "zero_xrun_60m",
+  "result": "NOT_RUN",
+  "machine": {
+    "uname": "NOT_RUN — requires named Linux kernel/OS",
+    "cpu": "NOT_RUN — requires named CPU",
+    "alsa_version": "NOT_RUN — requires installed ALSA version",
+    "device": "NOT_RUN — requires explicit ALSA device"
+  },
+  "started_at": "NOT_RUN — human target-machine run required",
+  "duration_s": null,
+  "metrics": {},
+  "notes": "NOT RUN — requires a physical/reference ALSA device and a full uninterrupted 60-minute run; simulated CI does not qualify."
+}
