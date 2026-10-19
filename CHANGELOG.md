@@ -11,6 +11,11 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added CI for default C++20, ALSA-enabled, Qt 6 GUI, combined Qt + ALSA live-mixer build, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
+## Unreleased — offline project bus-to-WAV export
+
+- Connected schema-v1 project bus/route validation and the offline bus renderer to PCM16/float32 WAV output through an explicit selected output bus.
+- Added contract coverage for routing-to-WAV samples and invalid output-bus/project cases. CI validation is pending; this does not yet load media files or render an arrangement timeline.
+
 ## Unreleased — Phase 1–7 execution tooling
 
 - Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.
