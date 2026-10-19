@@ -95,7 +95,7 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 
 - [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
 - [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
-- Gate 7 autosave lifecycle changes are being reviewed in [PR #38](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/38); they are not merged or validated until fresh CI passes.
+- Gate 7 autosave lifecycle changes are being reviewed in [PR #39](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/39); they are not merged or validated until fresh CI passes.
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
 - The Qt mixer has an optional, explicitly started ALSA live-input monitor when both GUI and ALSA build options are enabled. It currently routes the capture device's two channels to the first two tracks only; full track-source/bus routing, GUI interaction tests, and hardware validation remain outstanding. Do not describe this repository as a finished DAW or claim long-duration stability or a verified release build without committed evidence.
 
