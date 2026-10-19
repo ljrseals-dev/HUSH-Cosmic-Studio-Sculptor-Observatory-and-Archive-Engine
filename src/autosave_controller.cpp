@@ -38,6 +38,7 @@ AutosaveController::Outcome AutosaveController::save_now(const Project& snapshot
         return Outcome::Failed;
     }
     clear_error();
+    last_save_ = Clock::now();
     return Outcome::Saved;
 }
 

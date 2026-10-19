@@ -253,7 +253,6 @@ public:
 #endif
 
         connect(&autosave_timer_, &QTimer::timeout, this, [this] { autosaveTick(); });
-        autosave_timer_.start(1000);
 
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
@@ -352,6 +351,7 @@ private:
         project_path_ = path;
         autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
         autosave_journal_path_ = journal_path;
+        if (!autosave_timer_.isActive()) autosave_timer_.start(1000);
         refresh();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
         refresh_save_status();
@@ -384,6 +384,7 @@ private:
             autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
             autosave_journal_path_ = journal_path;
         }
+        if (!autosave_timer_.isActive()) autosave_timer_.start(1000);
         hush::Error error;
         if (autosave_->save_now(project_, error) != hush::AutosaveController::Outcome::Saved) {
             QMessageBox::warning(this, "Recovery save failed",
