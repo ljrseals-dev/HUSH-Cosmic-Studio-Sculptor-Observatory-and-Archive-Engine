@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
 option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend and host" OFF)
+option(HUSH_BUILD_GUI "Build the optional Qt 6 mixer GUI" OFF)
 
 add_library(hush_core
     src/project.cpp
@@ -26,6 +27,13 @@ if(MSVC)
   target_compile_options(hush_core PRIVATE /W4 /permissive-)
 else()
   target_compile_options(hush_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+endif()
+
+if(HUSH_BUILD_GUI)
+  find_package(Qt6 REQUIRED COMPONENTS Widgets)
+  add_executable(hush_mixer_gui src/mixer_gui.cpp)
+  target_link_libraries(hush_mixer_gui PRIVATE hush_core Qt6::Widgets)
+  target_compile_features(hush_mixer_gui PRIVATE cxx_std_20)
 endif()
 
 if(HUSH_ENABLE_ALSA)

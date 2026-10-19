@@ -19,10 +19,12 @@
 - [x] Interleaved-stereo adapter injects device input into a selected graph input bus, runs RealtimeBusEngine, and emits the selected master's post-fader output; scratch is preallocated and offline contract tests pass in CI.
 - [x] Optional Linux ALSA capture/playback worker target and callback contract.
 - [x] Optional Linux host executable constructs a capture-to-master graph, configures engine and adapter, starts ALSA, and stops cleanly on SIGINT/SIGTERM.
-- [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
+- [x] Optional Qt 6 Widgets mixer GUI shell with schema-v1 open/save, gain/pan/mute/solo controls, and undo/redo through the operation log.
+- [ ] GUI meter polling, send/insert controls, CLI parity test, live-engine binding, and GUI session soak remain incomplete.
+- [x] Recording, MIDI, plugins, and voice remain out of scope for this milestone.
 
 ## Remaining release gates
-- [ ] Build the ALSA-enabled configuration on a Linux host with ALSA development headers/libraries; the default CI job builds/tests with ALSA disabled.
+- [ ] CI builds and tests both the ALSA-disabled and ALSA-enabled configurations; real-device startup, callback timing, and xrun validation remain open.
 - [ ] Test device startup/shutdown on named ALSA hardware, verify parameter atomics are lock-free on target hardware, and measure callback timing/xruns.
 - [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in a host UI/log.
 - [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; current subprocess test covers completed writes, not power loss or mid-write termination.

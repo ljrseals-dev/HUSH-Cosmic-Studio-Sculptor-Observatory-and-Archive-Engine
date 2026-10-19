@@ -31,3 +31,18 @@ jobs:
         run: cmake --build build-alsa --parallel 2
       - name: Contract tests
         run: ctest --test-dir build-alsa --output-on-failure
+
+  linux-qt6-mixer-gui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 6 Widgets
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y qt6-base-dev
+      - name: Configure GUI build
+        run: cmake -S . -B build-gui -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
+      - name: Build GUI and contracts
+        run: cmake --build build-gui --parallel 2
+      - name: Contract tests
+        run: ctest --test-dir build-gui --output-on-failure

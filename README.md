@@ -1,6 +1,6 @@
 # HUSH Unified DAW — 0.2 headless foundation
 
-This project follows the ordered headless-first milestone sequence in `Docs/Prompt`. It includes persisted bus routing, a local recovery-journal API, an offline reference renderer, a bounded SPSC parameter queue, a preallocated bus processor, and a realtime interleaved-stereo adapter. GUI, recording, MIDI, plugins, and voice control remain out of scope.
+This project follows the ordered milestone sequence in `Docs/Prompt`. It includes persisted bus routing, a local recovery-journal API, an offline reference renderer, a bounded SPSC parameter queue, a preallocated bus processor, a realtime interleaved-stereo adapter, and an optional first-pass 0.3a mixer GUI. Recording, MIDI, plugin hosting, and voice control remain out of scope.
 
 ## Build offline
 
@@ -43,4 +43,17 @@ cmake --build build-alsa
 The host uses the ALSA `default` capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. It is a minimal integration host, not the finished DAW GUI or full track mixer.
 
 ## Not yet complete / do not claim
-This is not a finished DAW release. The standard CI job tests the ALSA-disabled build; the optional ALSA-enabled host still needs compilation and testing on Linux with ALSA development files and real devices. Safe graph swapping/reclamation, full track-to-bus/insert/solo/mute integration, meters/xrun reporting in the graph, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate require further work and target-machine evidence. No GUI is included.
+This is not a finished DAW release. The standard CI job tests the ALSA-disabled build; the optional ALSA-enabled host still needs compilation and testing on Linux with ALSA development files and real devices. Safe graph swapping/reclamation, full track-to-bus/insert/solo/mute integration, meters/xrun reporting in the graph, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate require further work and target-machine evidence. The optional 0.3a mixer GUI is included; it is not yet wired to live audio processing.
+
+
+## Optional mixer GUI (0.3a)
+
+Install Qt 6 Widgets from your system package manager, then build the optional desktop mixer:
+
+```sh
+cmake -S . -B build-gui -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
+cmake --build build-gui --parallel 2
+./build-gui/hush_mixer_gui
+```
+
+See [Docs/HUSH_0.3A_MIXER_GUI.md](Docs/HUSH_0.3A_MIXER_GUI.md) for scope and limitations. The GUI edits and saves project state but is not yet wired to live audio processing.

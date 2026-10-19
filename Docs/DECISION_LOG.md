@@ -23,3 +23,8 @@
 ## 0.2 parameter-to-processor integration
 16. `RealtimeBusEngine` drains a bounded SPSC queue at block boundaries and applies the final queued fader value per bus before calling the preallocated processor. Queue overflow is explicit (`enqueue_fader_change` returns false); callers must handle rejected changes.
 17. The integrated engine is configure-once. Live topology replacement remains blocked until safe graph reclamation is implemented; this component is not a device backend and does not claim target-hardware real-time readiness.
+
+
+## 0.3a mixer GUI foundation
+18. The first desktop UI is an optional Qt 6 Widgets target; Qt is supplied by the operating system and is never downloaded by CMake. This keeps the headless C++20 build unchanged for users who do not request the GUI.
+19. The GUI uses the canonical schema-v1 project reader/writer and records track control edits through OperationLog::apply_and_append. GUI edits currently change saved project state only; live audio graph binding is explicitly not claimed.
