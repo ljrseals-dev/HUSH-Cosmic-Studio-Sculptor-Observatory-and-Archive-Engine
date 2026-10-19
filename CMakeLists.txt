@@ -147,6 +147,7 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_recovery_partial_write_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_partial_write_tests COMMAND hush_recovery_partial_write_tests)
 
+  # Lifecycle contracts use injected journal writers and value snapshots; no live audio device is required.
   add_executable(hush_autosave_lifecycle_tests tests/autosave_lifecycle_tests.cpp)
   target_link_libraries(hush_autosave_lifecycle_tests PRIVATE hush_core Threads::Threads)
   target_compile_features(hush_autosave_lifecycle_tests PRIVATE cxx_std_20)
