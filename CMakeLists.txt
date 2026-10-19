@@ -104,9 +104,11 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
 
+  find_package(Threads REQUIRED)
   add_executable(hush_realtime_graph_publisher_tests tests/realtime_graph_publisher_tests.cpp)
   target_include_directories(hush_realtime_graph_publisher_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_realtime_graph_publisher_tests PRIVATE cxx_std_20)
+  target_link_libraries(hush_realtime_graph_publisher_tests PRIVATE Threads::Threads)
   add_test(NAME hush_realtime_graph_publisher_tests COMMAND hush_realtime_graph_publisher_tests)
 
   add_executable(hush_parameter_queue_tests tests/parameter_queue_tests.cpp)
