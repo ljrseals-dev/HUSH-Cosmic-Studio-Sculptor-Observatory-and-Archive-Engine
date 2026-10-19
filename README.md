@@ -18,6 +18,7 @@ No FetchContent, package bootstrap, network access, telemetry, or update checks 
 - Bus-route validation at project load, including cycle detection.
 - Append-only full-snapshot recovery journal with length framing, sync request, and truncated-tail recovery.
 - Non-audio-thread autosave controller policy: first-poll snapshot, periodic snapshots, and save on observed transport stop; host lifecycle integration remains required.
+- Process-restart integration test for a completed durable journal append; this is not a power-loss durability guarantee.
 - Invertible append-only operation-log primitives with undo/redo tests.
 - Explicit equal-power pan law (−3 dB center) and selectable −4.5 dB legacy law.
 - Float32 mixer primitives, solo-in-place/mute semantics, and deterministic offline render helper.
