@@ -35,7 +35,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 ## Realtime contract
 
 - `RealtimeTrackMixer` is configured and its track buffers are allocated before starting the backend.
-- GUI gain, pan, mute, and solo edits enqueue a complete control snapshot for the affected track; undo/redo locate the touched operation and enqueue only that track. Startup still seeds all tracks before audio begins. This avoids consuming queue capacity proportional to total track count on every edit.
+- While live audio is running, gain and pan enqueue preview snapshots as the sliders move, so the next audio block uses the changing values. Releasing the slider commits the final value as one undoable project operation; preview movement itself does not mutate the project or create undo entries. Mute and solo commit immediately. Undo/redo locate the touched operation and enqueue only that track. Startup seeds all tracks before audio begins.
 - The bounded queue is single-producer (GUI thread) / single-consumer (audio callback). Edits, undo, and redo reserve their live command before committing project state/history; if the queue is full, the operation is rejected, the model/history do not advance, the UI is restored from canonical state, and a retry message is shown. The GUI never waits for the audio callback.
 - `RealtimeTrackMixer` rejects unknown track indices, unconfigured use, non-finite gain/pan, gain outside 0–2, and pan outside −1–1. Queue saturation returns `false`; it does not overwrite pending commands.
 - The callback uses preallocated buffers and performs no allocation, locking, logging, or file/network I/O.
@@ -47,7 +47,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 The repository's CI should compile the combined Qt + ALSA target and run the registered core contract tests. That verifies build compatibility and existing mixer queue contracts, not a physical audio-device session.
 
 Still required before claiming a production live mixer:
-- automated Qt interaction test proving fader/pan/mute/solo and undo/redo are reflected in the next audio block; current core regression tests prove command application and deterministic queue-full/invalid-value rejection, but do not synthesize Qt clicks;
+- automated Qt interaction test proving drag-preview, fader/pan/mute/solo and undo/redo are reflected in the next audio block; current core regression tests prove command application and deterministic queue-full/invalid-value rejection, but do not synthesize Qt clicks;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.

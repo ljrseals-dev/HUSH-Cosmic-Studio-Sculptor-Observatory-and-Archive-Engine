@@ -347,6 +347,18 @@ private:
         return true;
     }
 
+    // During a fader/pan drag, preview the candidate values in the live engine
+    // without mutating project state or adding undo entries. sliderReleased commits
+    // the final value through change(), creating one undoable operation.
+    void preview_live_sliders(const std::string& id, float gain, float pan) {
+        auto values = live_control_values(id);
+        if (!values) return;
+        values->gain = gain;
+        values->pan = pan;
+        if (!enqueue_live_control_values(id, *values))
+            status_->setText("Live preview queue full — release slider or stop audio");
+    }
+
     void change(const std::string& id, hush::OperationKind kind, float after) {
         const auto it = std::find_if(project_.tracks.begin(), project_.tracks.end(),
                                      [&](const hush::Track& t) { return t.id == id; });
@@ -443,6 +455,18 @@ private:
             id->setFlags(id->flags() & ~Qt::ItemIsEditable);
             table_->setItem(row, 5, id);
             const auto track_id = t.id;
+            // Live audio follows the slider during a drag. The release handlers below
+            // commit only the final value to the project and undo history.
+            connect(gain, &QSlider::valueChanged, this,
+                    [this, gain, pan, track_id](int) {
+                        preview_live_sliders(track_id, gain->value() / 100.0F,
+                                             pan->value() / 100.0F);
+                    });
+            connect(pan, &QSlider::valueChanged, this,
+                    [this, gain, pan, track_id](int) {
+                        preview_live_sliders(track_id, gain->value() / 100.0F,
+                                             pan->value() / 100.0F);
+                    });
             connect(gain, &QSlider::sliderReleased, this,
                     [this, gain, track_id] { change(track_id, hush::OperationKind::SetGain, gain->value() / 100.0F); });
             connect(pan, &QSlider::sliderReleased, this,
