@@ -80,6 +80,10 @@ if(HUSH_BUILD_STRESS_TOOLS)
   target_link_libraries(hush_routing_benchmark PRIVATE hush_core)
   target_compile_features(hush_routing_benchmark PRIVATE cxx_std_20)
 
+  add_executable(hush_voice_path_benchmark tools/hush_voice_path_benchmark.cpp)
+  target_link_libraries(hush_voice_path_benchmark PRIVATE hush_core)
+  target_compile_features(hush_voice_path_benchmark PRIVATE cxx_std_20)
+
   add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
   target_link_libraries(hush_headless_soak PRIVATE hush_core)
   target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
