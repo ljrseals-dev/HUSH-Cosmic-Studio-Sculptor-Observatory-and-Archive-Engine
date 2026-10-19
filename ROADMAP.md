@@ -10,6 +10,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [x] Recovery journal process-restart test and truncated-tail handling.
 - [ ] Verify remaining committed archive contents and remove redundant binary archives.
 - [ ] Wire GUI controls to live audio; add queued-command interaction tests and GUI/CLI parity.
+- [x] Add in-memory sample-positioned automation lane interpolation and contract tests (`hush_automation_tests`).
+- [ ] Add transport clock/tempo-map state, schema-v2 persistence with v1 compatibility, and safe automation snapshot publication before enabling live playback/recording.
 - [ ] Implement safe graph replacement and deferred reclamation.
 - [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
 - [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
