@@ -135,7 +135,7 @@ public:
         connect(redo, &QPushButton::clicked, this, [this] {
             if (log_.redo(project_)) { refresh(); status_->setText("Redo applied"); }
         });
-        connect(themePicker_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        connect(themePicker_, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
             const auto theme = index == 1 ? StudioTheme::Inkho : StudioTheme::PlainVanilla;
             applyTheme(app_, theme);
             QSettings settings;
