@@ -1,0 +1,20 @@
+Here’s a ready-to-post tweet:
+
+───
+
+HUSH 2.1.0-nightly is live
+
+Mix Alpha + multi-bus summing + SSE2 SIMD landed.
+ Offline-first. No network. Built for real work.
+
+Bull Gates opened the git for HUSH development — repo is public and moving.
+
+https://github.com/ljrseals-dev/hush-daw
+
+Nightly drops. Feedback welcome.
+
+#HUSH #DAW #OpenSource #AudioDev
+
+───
+
+Want a shorter version or one that tags specific people/handles?
