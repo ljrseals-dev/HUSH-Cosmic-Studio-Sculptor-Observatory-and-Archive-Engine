@@ -5,6 +5,7 @@
 - [x] Backward-compatible reading of older schema-v1 files without bus/route arrays.
 - [x] Persisted bus-routing validation at the project-load boundary (unknown endpoints, duplicate/empty bus IDs, self-routes, invalid gain, and cycles).
 - [x] Append-only recovery journal with length-framed full-project snapshots, stable-storage sync, and recovery that ignores an incomplete trailing record.
+- [x] Autosave scheduling policy for first poll, periodic snapshots, and transport-stop snapshots; caller must poll from a non-audio thread.
 - [x] Invertible operation-log primitives.
 - [x] Explicit pan law options.
 - [x] Float32 mixing primitives and solo/mute semantics.
@@ -13,7 +14,7 @@
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
-- [ ] Wire a periodic autosave scheduler and transport-stop save into a running application lifecycle. The journal API is currently explicit-call only.
+- [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
 - [ ] Add a kill/restart integration test on supported target filesystems and verify directory-entry durability where required.
 - [ ] ALSA real-time backend and optional JACK/PipeWire compile-time backends.
 - [ ] Preallocated processing graph and bounded lock-free parameter queue.

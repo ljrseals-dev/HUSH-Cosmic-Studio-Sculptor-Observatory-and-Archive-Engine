@@ -1,3 +1,4 @@
+#include "hush/autosave_controller.hpp"
 #include "hush/mixer.hpp"
 #include "hush/operation_log.hpp"
 #include "hush/recovery_journal.hpp"
@@ -15,11 +16,9 @@ int main() {
     assert(from_json(json,loaded,err)); assert(loaded==p);
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
-    // Older schema-v1 project files without bus/route arrays remain readable.
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";
     assert(from_json(legacy,loaded,err)); assert(loaded.buses.empty() && loaded.routes.empty());
 
-    // A cycle in persisted routing is rejected at the project boundary.
     const std::string cyclic=R"({"schema_version":1,"id":"cycle","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"a","name":"A"},{"id":"b","name":"B"}],"routes":[{"source_bus_id":"a","destination_bus_id":"b","tap":"post_fader","gain":1},{"source_bus_id":"b","destination_bus_id":"a","tap":"pre_fader","gain":1}]})";
     assert(!from_json(cyclic,loaded,err)); assert(err.code=="bus_route_cycle");
 
@@ -44,12 +43,27 @@ int main() {
     Project second=p; second.id="recover-2"; second.buses.push_back({"bus-vox","Vocals"});
     assert(journal.append_snapshot(first,err));
     assert(journal.append_snapshot(second,err));
-    // Simulate a process dying during the next record. Recovery must retain the last
-    // complete record instead of accepting a partial JSON payload.
     { std::ofstream tail(journal_path,std::ios::binary|std::ios::app); tail << "HUSHJ1 200\npartial"; }
     Project recovered;
     assert(journal.recover_latest(recovered,err));
     assert(recovered==second);
     std::filesystem::remove(journal_path,cleanup_error);
+
+    // Autosave schedule: first poll saves, early poll does not, interval and stop do.
+    const auto autosave_path=std::filesystem::temp_directory_path()/"hush-autosave-contract.journal";
+    std::filesystem::remove(autosave_path,cleanup_error);
+    AutosaveController autosave(RecoveryJournal(autosave_path),std::chrono::milliseconds(100));
+    const auto t0=AutosaveController::Clock::time_point{};
+    Project autosave_project; autosave_project.id="autosave-first";
+    assert(autosave.poll(autosave_project,t0,false,err)==AutosaveController::Outcome::Saved);
+    autosave_project.id="autosave-too-soon";
+    assert(autosave.poll(autosave_project,t0+std::chrono::milliseconds(50),false,err)==AutosaveController::Outcome::NotDue);
+    autosave_project.id="autosave-periodic";
+    assert(autosave.poll(autosave_project,t0+std::chrono::milliseconds(100),true,err)==AutosaveController::Outcome::Saved);
+    autosave_project.id="autosave-stop";
+    assert(autosave.poll(autosave_project,t0+std::chrono::milliseconds(110),false,err)==AutosaveController::Outcome::Saved);
+    assert(RecoveryJournal(autosave_path).recover_latest(recovered,err));
+    assert(recovered.id=="autosave-stop");
+    std::filesystem::remove(autosave_path,cleanup_error);
     return 0;
 }
