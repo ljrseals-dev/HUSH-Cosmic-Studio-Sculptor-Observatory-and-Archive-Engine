@@ -4,8 +4,8 @@
 #include <vector>
 namespace hush {
 enum class SendTap { PreFader, PostFader };
-struct Bus { std::string id; std::string name; };
-struct BusRoute { std::string source_bus_id; std::string destination_bus_id; SendTap tap{SendTap::PostFader}; float gain{1.0F}; };
+struct Bus { std::string id; std::string name; bool operator==(const Bus&) const = default; };
+struct BusRoute { std::string source_bus_id; std::string destination_bus_id; SendTap tap{SendTap::PostFader}; float gain{1.0F}; bool operator==(const BusRoute&) const = default; };
 struct RoutingError { std::string code; std::string entity_id; std::string message; };
 // Setup/control-side validator. Never call configure() from an audio callback.
 class BusGraph {

@@ -13,6 +13,7 @@ add_library(hush_core
     src/operation_log.cpp
     src/mixer.cpp
     src/bus_graph.cpp
+    src/recovery_journal.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
@@ -31,4 +32,12 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_bus_graph_tests tests/bus_graph_tests.cpp)
   target_link_libraries(hush_bus_graph_tests PRIVATE hush_core)
   add_test(NAME hush_bus_graph_tests COMMAND hush_bus_graph_tests)
+  # Keep assert-based contract checks active even when users build Release.
+  if(MSVC)
+    target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_bus_graph_tests PRIVATE /UNDEBUG)
+  else()
+    target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
+  endif()
 endif()

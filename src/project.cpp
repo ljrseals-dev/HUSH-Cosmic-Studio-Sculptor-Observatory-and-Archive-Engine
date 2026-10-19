@@ -23,6 +23,35 @@ std::string escape_json(const std::string& s) {
 std::string law_name(PanLaw law) {
     return law == PanLaw::LegacyMinus4_5dB ? "legacy_minus_4_5_db" : "equal_power_minus_3_db";
 }
+std::string tap_name(SendTap tap) {
+    return tap == SendTap::PreFader ? "pre_fader" : "post_fader";
+}
+bool extract_array(const std::string& s, const std::string& key, std::string& body, bool required, Error& e) {
+    const auto key_pos=s.find("\"" + key + "\"");
+    if (key_pos==std::string::npos) {
+        if (required) e={"array_missing","",key + " array is missing","error"};
+        body.clear();
+        return !required;
+    }
+    const auto left=s.find('[',key_pos);
+    if (left==std::string::npos) { e={"array_invalid","",key + " array malformed","error"}; return false; }
+    bool quoted=false, escaped=false;
+    int depth=0;
+    for (std::size_t i=left;i<s.size();++i) {
+        const char c=s[i];
+        if (quoted) {
+            if (escaped) escaped=false;
+            else if (c=='\\') escaped=true;
+            else if (c=='"') quoted=false;
+            continue;
+        }
+        if (c=='"') { quoted=true; continue; }
+        if (c=='[') ++depth;
+        else if (c==']' && --depth==0) { body=s.substr(left+1,i-left-1); return true; }
+    }
+    e={"array_invalid","",key + " array is unterminated","error"};
+    return false;
+}
 }
 std::string to_json(const Project& p) {
     std::ostringstream o;
@@ -38,12 +67,27 @@ std::string to_json(const Project& p) {
           << ", \"solo\": " << (t.solo?"true":"false") << "}";
     }
     if (!p.tracks.empty()) o << "\n  ";
+    o << "],\n  \"buses\": [";
+    for (std::size_t i=0;i<p.buses.size();++i) {
+        const auto& b=p.buses[i];
+        o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(b.id)
+          << "\", \"name\": \"" << escape_json(b.name) << "\"}";
+    }
+    if (!p.buses.empty()) o << "\n  ";
+    o << "],\n  \"routes\": [";
+    for (std::size_t i=0;i<p.routes.size();++i) {
+        const auto& r=p.routes[i];
+        o << (i ? ",\n" : "\n") << "    {\"source_bus_id\": \"" << escape_json(r.source_bus_id)
+          << "\", \"destination_bus_id\": \"" << escape_json(r.destination_bus_id)
+          << "\", \"tap\": \"" << tap_name(r.tap) << "\", \"gain\": " << r.gain << "}";
+    }
+    if (!p.routes.empty()) o << "\n  ";
     o << "]\n}\n";
     return o.str();
 }
 
-// Strict reader for the canonical schema-v1 subset emitted by to_json.
-// Rejects unknown schema versions and malformed/missing track fields.
+// Strict reader for the schema-v1 model subset emitted by to_json. Bus and route arrays
+// are optional for compatibility with earlier schema-v1 project files.
 bool from_json(const std::string& s, Project& out, Error& e) {
     std::smatch m;
     const std::regex version_re(R"("schema_version"\s*:\s*(\d+))");
@@ -61,11 +105,8 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     else if (m[1].str()=="equal_power_minus_3_db") p.pan_law=PanLaw::EqualPowerMinus3dB;
     else { e={"pan_law_invalid","","Unknown pan law","error"}; return false; }
 
-    const auto open=s.find("\"tracks\"");
-    if (open==std::string::npos) { e={"tracks_missing","","Tracks array is missing","error"}; return false; }
-    const auto left=s.find('[',open), right=s.find(']',left);
-    if (left==std::string::npos || right==std::string::npos) { e={"tracks_invalid","","Tracks array malformed","error"}; return false; }
-    const std::string body=s.substr(left+1,right-left-1);
+    std::string body;
+    if (!extract_array(s,"tracks",body,true,e)) return false;
     const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
@@ -81,6 +122,38 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
     if (body.find('{')!=std::string::npos && p.tracks.empty()) {
         e={"track_parse_failed","","Track object did not match schema-v1 fields","error"}; return false;
+    }
+
+    if (!extract_array(s,"buses",body,false,e)) return false;
+    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),bus_re);
+    for (auto it=begin;it!=end;++it) {
+        Bus b{(*it)[1].str(),(*it)[2].str()};
+        if (b.id.empty()) { e={"bus_id_empty","","Bus ID must not be empty","error"}; return false; }
+        p.buses.push_back(std::move(b));
+    }
+    if (body.find('{')!=std::string::npos && p.buses.empty()) {
+        e={"bus_parse_failed","","Bus object did not match schema-v1 fields","error"}; return false;
+    }
+
+    if (!extract_array(s,"routes",body,false,e)) return false;
+    const std::regex route_re(R"json(\{\s*"source_bus_id"\s*:\s*"([^"]*)"\s*,\s*"destination_bus_id"\s*:\s*"([^"]*)"\s*,\s*"tap"\s*:\s*"(pre_fader|post_fader)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),route_re);
+    for (auto it=begin;it!=end;++it) {
+        try {
+            const auto& x=*it;
+            const float gain=std::stof(x[4].str());
+            p.routes.push_back({x[1].str(),x[2].str(),x[3].str()=="pre_fader"?SendTap::PreFader:SendTap::PostFader,gain});
+        } catch (...) { e={"route_gain_invalid","","Route gain is invalid","error"}; return false; }
+    }
+    if (body.find('{')!=std::string::npos && p.routes.empty()) {
+        e={"route_parse_failed","","Route object did not match schema-v1 fields","error"}; return false;
+    }
+    if (!p.buses.empty() || !p.routes.empty()) {
+        BusGraph graph; RoutingError routing_error;
+        if (!graph.configure(p.buses,p.routes,routing_error)) {
+            e={routing_error.code,routing_error.entity_id,routing_error.message,"error"}; return false;
+        }
     }
     out=std::move(p); e={}; return true;
 }
