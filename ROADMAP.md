@@ -8,7 +8,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [x] Optional ALSA backend/host and CI configuration.
 - [x] Optional Qt 6 mixer shell and CI configuration; combined Qt + ALSA live-monitor build added to CI.
 - [x] Recovery journal process-restart test and truncated-tail handling.
-- [ ] Validate the new project bus-to-WAV export path in CI; clip/media timeline rendering remains a separate milestone.
+- [ ] Validate the project bus-to-WAV export and WAV-import paths in CI; clip/media timeline rendering remains a separate milestone.
+- [x] Add offline WAV import for PCM16 and IEEE float32 with a bounded data-size limit and malformed-file checks; this does not yet add media references to project schema-v1.
 - [ ] Verify remaining committed archive contents and remove redundant binary archives.
 - [x] Wire GUI fader/pan/mute/solo and undo/redo to bounded realtime commands through an explicitly started ALSA live monitor (source mapping limited to capture L/R → tracks 1–2).
 - [ ] Add Qt interaction/loopback tests and GUI/CLI parity; run combined Qt + ALSA CI and target-device checks.
