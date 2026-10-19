@@ -18,10 +18,10 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
 | 60-minute zero-xrun run | No target-device artifact attached | Open |
 | Loopback latency and underrun injection | No measurement report | Open |
-| 500-track performance budget | No benchmark report | Open |
-| 8-hour soak and memory-drift bound | No soak report | Open |
+| 500-track performance budget | `tools/hush_routing_benchmark.cpp` and CMake target added; no run report attached | Partial; run required |
+| 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` added; emits JSON counters/RSS where available; no 8-hour report or pass threshold attached | Partial; run required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
-| Partial-write fault injection | No explicit fault-injection artifact identified | Open |
+| Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` adds interrupted-header and truncated-payload cases; execution/CI evidence still pending | Implemented in source; test run pending |
 
 ## Report requirements
 
