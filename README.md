@@ -73,6 +73,17 @@ ctest --test-dir build-gui --output-on-failure
 
 For the optional live ALSA GUI path, enable both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON` in the same build directory. The live action is explicit; it is not a background capture feature.
 
+### Optional offline benchmark and soak harnesses
+
+`HUSH_BUILD_STRESS_TOOLS` defaults to `ON`. The standard build therefore also creates `hush_routing_benchmark` and `hush_headless_soak`; set `-DHUSH_BUILD_STRESS_TOOLS=OFF` to omit them. Example short smoke runs:
+
+```sh
+./build/hush_routing_benchmark 500 10
+./build/hush_headless_soak 60 ./hush-soak.journal
+```
+
+The benchmark emits JSON with synthetic track-mixer throughput and rejected parameter-update counts. The headless soak runs a synthetic 500-track mixer and periodically writes recovery snapshots. These are offline software harnesses, not audio-device tests; the program output explicitly reports `"hardware_audio_test": false` and does not apply a pass threshold. CI smoke-runs each harness briefly, which is not equivalent to a 500-track performance qualification, an eight-hour soak, or a hardware zero-xrun test. Use a disposable journal path and remove it after the run if it is no longer needed.
+
 ## Included source and test references
 
 - **Schema-v1 project model and JSON reader/writer:** `include/hush/project.hpp`, `src/project.cpp`; contract coverage in `tests/contract_tests.cpp`.
