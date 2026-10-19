@@ -53,6 +53,11 @@ public:
         reclaim_retired();
     }
 
+    // Control thread only. The publisher's control operations must be serialized on one
+    // thread, so this pointer remains valid until that same thread publishes a replacement.
+    // Never retain it across publish() and never call this from the audio thread.
+    [[nodiscard]] Graph* active_for_control() noexcept { return active_owner_.get(); }
+
     // Audio thread only. A single callback reader is supported; nested/concurrent guards
     // are invalid. Guard lifetime must not extend beyond the callback.
     [[nodiscard]] AudioReadGuard acquire_for_audio() noexcept {
