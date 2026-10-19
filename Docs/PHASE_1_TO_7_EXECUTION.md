@@ -15,7 +15,7 @@ This file is an evidence ledger, not a claim that unfinished work is complete. A
 
 | Phase | Required implementation and evidence | Status at this revision |
 |---|---|---|
-| 1. Live mixer control | Connect the Qt mixer to the live engine; queue fader, pan, mute and solo changes; apply at block boundaries; Qt test proves enqueue and application; document thread ownership in `Docs/HUSH_0.3A_MIXER_GUI.md`. | **OPEN** — the current GUI edits the project model; the live engine currently exposes bus-fader queueing only. |
+| 1. Live mixer control | Connect the Qt mixer to the live engine; queue fader, pan, mute and solo changes; apply at block boundaries; Qt test proves enqueue and application; document thread ownership in `Docs/HUSH_0.3A_MIXER_GUI.md`. | **PARTIAL** — added `RealtimeTrackMixer` with bounded SPSC command queue, block-boundary application, gain/pan/mute/solo semantics and a contract test. The Qt GUI is still not connected to this mixer, and the new test has not been run in this session. |
 | 2. Safe graph swap | Construct replacement graph off the audio thread; publish safely; defer destruction until no callback can reference the old graph; stress-test under audio load with ASan and TSan. | **OPEN** — current engine is configure-once; no swap/reclamation protocol is implemented. |
 | 3. Track → bus → master | Implement end-to-end routing, inserts, correct solo/mute behavior, peak/RMS meters and GUI-visible xrun counters; add routing/semantics tests. | **OPEN** — bus primitives exist, but complete track graph and GUI meter semantics are not present. |
 | 4. ALSA hardening | Handle/report `-EPIPE` xruns outside the callback; run hardware startup/shutdown, loopback latency and 60-minute stability tests; attach target-machine JSON; retain ALSA-enabled CI. | **PARTIAL** — ALSA-enabled CI compiles/tests the backend; no target-hardware report is attached. |
@@ -29,6 +29,6 @@ Store each report as JSON and include: tested commit SHA, timestamp, OS/kernel, 
 
 ## Completion conclusion
 
-**HUSH Cosmic Studio 0.2 → 1.0 is not yet release-complete.** Phases 1–3 and 5 have implementation gaps; Phase 4 requires target hardware evidence; Phase 6 needs explicit partial-write fault-injection evidence or a clearly documented narrower guarantee; Phase 7 requires final artifact and CI reconciliation. This record intentionally does not turn a successful compile into a claim of realtime stability, low latency, zero xruns, or long-duration reliability.
+**HUSH Cosmic Studio 0.2 → 1.0 is not yet release-complete.** Phase 1 now has a track-mixer engine primitive but still lacks Qt-to-engine binding; Phases 2–3 and 5 have implementation gaps; Phase 4 requires target hardware evidence; Phase 6 needs explicit partial-write fault-injection evidence or a clearly documented narrower guarantee; Phase 7 requires final artifact and CI reconciliation. This record intentionally does not turn a successful compile into a claim of realtime stability, low latency, zero xruns, or long-duration reliability.
 
 Recording, MIDI, plugin hosting, and voice control remain out of scope unless separately specified.
