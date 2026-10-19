@@ -45,7 +45,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
 - **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.
-- **Optional Qt 6 project mixer shell:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. It edits project state only; it is not connected to live audio.
+- **Optional Qt 6 mixer GUI:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. With both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON`, its explicit Start Live ALSA action connects gain/pan/mute/solo and undo/redo to the bounded realtime track-mixer queue. The current capture mapping is limited to stereo input channels → tracks 1–2; this is not complete multitrack routing.
 - **Privacy contract and source audit:** `Docs/PRIVACY_CONTRACT.md`, `tools/privacy_source_audit.cmake`, registered by `CMakeLists.txt`.
 - **Build/test registration:** `CMakeLists.txt`; CI configurations and sanitizer jobs: `.github/workflows/hush-0.2.yml`.
 
@@ -77,7 +77,7 @@ ctest --test-dir build-gui --output-on-failure
 
 Every item below is **unverified/incomplete** until its evidence is committed. **Owner:** project maintainer. **Target-machine requirements** apply where specified.
 
-- **GUI-to-live-engine commands and GUI interaction/CLI parity:** no complete GUI binding test; requires the Qt GUI and engine running together.
+- **GUI-to-live-engine automated interaction test and GUI/CLI parity:** the optional Qt + ALSA path now queues GUI edits and undo/redo to the live callback; automated Qt interaction/loopback coverage and target-device validation remain outstanding.
 - **Safe graph replacement/deferred reclamation:** no graph swap implementation or reclamation stress test; requires ASan/TSan and a target Linux build.
 - **Full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters:** not implemented as a complete live mixer; requires unit/integration tests and target audio-device tests.
 - **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
@@ -96,5 +96,5 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 - [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
 - [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
-- The Qt mixer shell is **not yet connected to live audio**. Do not describe this repository as a finished DAW or claim hardware validation, long-duration stability, or a verified release build without committed evidence.
+- The Qt mixer has an optional, explicitly started ALSA live-input monitor when both GUI and ALSA build options are enabled. It currently routes the capture device's two channels to the first two tracks only; full track-source/bus routing, GUI interaction tests, and hardware validation remain outstanding. Do not describe this repository as a finished DAW or claim long-duration stability or a verified release build without committed evidence.
 
