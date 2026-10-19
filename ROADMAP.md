@@ -33,3 +33,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 ## Out of scope for the 0.2 foundation
 
 Recording, MIDI, plugin hosting, Windows/macOS parity, arrangement view, interchange, and HUSH voice/AOC Magic remain later milestones. See [Docs/Prompt](Docs/Prompt) for the full prompt sequence.
+
+
+## Proposed — awaiting owner decision
+
+Transport, MIDI input/learn, and automation are proposed but not complete. See [Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md](Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md) for the realtime/privacy contract, schema-v2 plan, milestones, risks, and owner decisions. The initial automation-lane model and interpolation tests are a foundation only; persistence, transport scheduling, GUI integration, and automation recording remain open.
