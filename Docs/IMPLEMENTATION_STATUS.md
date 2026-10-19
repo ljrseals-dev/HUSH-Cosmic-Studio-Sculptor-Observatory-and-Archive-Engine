@@ -14,17 +14,16 @@
 - [x] Bus graph validation, send tap metadata, and source-before-destination render order.
 - [x] Offline/reference bus-buffer renderer with pre/post-fader sends, deterministic topological processing, and input validation.
 - [x] Fixed-capacity single-producer/single-consumer parameter queue primitive and deterministic contract tests.
+- [x] Preallocated bus processor with control-thread setup, fixed-capacity buffers, indexed routes, and an allocation-free process path.
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
 - [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
 - [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; the current subprocess test covers completed writes, not power loss or mid-write termination.
 - [ ] ALSA real-time backend and optional JACK/PipeWire compile-time backends.
-- [ ] Preallocated processing graph and bounded lock-free parameter queue integration into the engine. The queue primitive is implemented, but callback integration and target lock-free verification are not.
-- [ ] Graph swap with documented and implemented safe reclamation.
-- [ ] Integrate the reference bus renderer into a preallocated real-time processing graph; the current renderer allocates buffers and is not audio-callback safe.
-- [ ] Inserts and project-track-to-bus assignment.
-- [ ] Meter/xrun readouts connected to a real device backend.
+- [ ] Integrate the parameter queue into the device callback and verify atomics are lock-free on target hardware.
+- [ ] Safe graph swap and deferred reclamation; current processor must not be reconfigured or destroyed while processing.
+- [ ] Integrate track-to-bus assignment, inserts, solo/mute semantics, meters, and xrun counters into the processing path.
 - [ ] 60-minute 48 kHz/128-frame zero-xrun reference run.
 - [ ] Loopback latency measurement and underrun injection.
 - [ ] Nested-bus render byte-identical to flat-bus render test.
