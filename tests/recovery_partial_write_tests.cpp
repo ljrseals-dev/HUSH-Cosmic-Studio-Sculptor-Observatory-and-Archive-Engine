@@ -2,42 +2,52 @@
 
 #include <filesystem>
 #include <fstream>
-#include <string>
+
+namespace {
+bool seed(const std::filesystem::path& path) {
+    hush::RecoveryJournal journal(path);
+    hush::Project project;
+    project.id = "last-complete-record";
+    project.tracks.push_back({"t1", "safe", 0.8F, 0.1F, false, false});
+    hush::Error error;
+    return journal.append_snapshot(project, error);
+}
+bool restores_previous(const std::filesystem::path& path) {
+    hush::RecoveryJournal journal(path);
+    hush::Project recovered;
+    hush::Error error;
+    return journal.recover_latest(recovered, error) && recovered.id == "last-complete-record";
+}
+}
 
 int main() {
-    using namespace hush;
-    const auto path = std::filesystem::temp_directory_path() / "hush-partial-write-fault-test.journal";
+    const auto base = std::filesystem::temp_directory_path();
+    const auto header_path = base / "hush-partial-header-test.journal";
+    const auto payload_path = base / "hush-partial-payload-test.journal";
     std::error_code ec;
-    std::filesystem::remove(path, ec);
-    RecoveryJournal journal(path);
-    Project original;
-    original.id = "last-complete-record";
-    original.tracks.push_back({"t1", "safe", 0.8F, 0.1F, false, false});
-    Error error;
-    if (!journal.append_snapshot(original, error)) return 1;
+    std::filesystem::remove(header_path, ec);
+    std::filesystem::remove(payload_path, ec);
 
-    // Fault injection: append an incomplete header as if the process stopped mid-write.
+    if (!seed(header_path)) return 1;
     {
-        std::ofstream file(path, std::ios::binary | std::ios::app);
-        file.write("HUSHJ1 123", 10);
+        std::ofstream file(header_path, std::ios::binary | std::ios::app);
+        file.write("HUSHJ1 123", 10); // no newline: interrupted header
         file.flush();
         if (!file) return 2;
     }
-    Project recovered;
-    if (!journal.recover_latest(recovered, error)) return 3;
-    if (recovered.id != original.id) return 4;
+    if (!restores_previous(header_path)) return 3;
 
-    // Fault injection: a syntactically complete length header with a truncated payload.
+    if (!seed(payload_path)) return 4;
     {
-        std::ofstream file(path, std::ios::binary | std::ios::app);
-        file << "HUSHJ1 50\n";
-        file.write("{\"schema_version\":", 18);
+        std::ofstream file(payload_path, std::ios::binary | std::ios::app);
+        file << "HUSHJ1 50\\n";
+        file.write("{\\\"schema_version\\\":", 18); // shorter than declared payload
         file.flush();
         if (!file) return 5;
     }
-    Project recovered_again;
-    if (!journal.recover_latest(recovered_again, error)) return 6;
-    if (recovered_again.id != original.id) return 7;
-    std::filesystem::remove(path, ec);
+    if (!restores_previous(payload_path)) return 6;
+
+    std::filesystem::remove(header_path, ec);
+    std::filesystem::remove(payload_path, ec);
     return 0;
 }
