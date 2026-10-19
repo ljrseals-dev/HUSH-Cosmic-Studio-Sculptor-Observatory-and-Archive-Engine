@@ -19,3 +19,7 @@
 13. Bus topology and route IDs are resolved to numeric indices on the control thread; the processing path uses preallocated buffers and does not perform graph lookups.
 14. The first processor API returns enum errors on the process path to avoid diagnostic-string allocation. Configuration and object lifetime remain host responsibilities.
 15. Live graph replacement is still blocked on safe reclamation; do not atomically swap owning pointers and destroy the old graph on the audio thread.
+
+## 0.2 parameter-to-processor integration
+16. `RealtimeBusEngine` drains a bounded SPSC queue at block boundaries and applies the final queued fader value per bus before calling the preallocated processor. Queue overflow is explicit (`enqueue_fader_change` returns false); callers must handle rejected changes.
+17. The integrated engine is configure-once. Live topology replacement remains blocked until safe graph reclamation is implemented; this component is not a device backend and does not claim target-hardware real-time readiness.
