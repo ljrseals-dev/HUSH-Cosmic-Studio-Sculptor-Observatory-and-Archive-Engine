@@ -1,0 +1,41 @@
+HUSH Unified DAW — Full Prompt Sequence to Completion
+
+
+
+This is the complete, ordered prompt set from 0.2 through a finished product. Hand them to a coding agent or team one at a time, in order. Each prompt is self-contained and ends with a gate that must pass before the next begins. Do not merge prompts. Do not skip gates.
+
+
+
+The overall arc:
+
+
+
+· 0.2 — Persistence + real-time Linux engine + bus routing (headless)
+
+· 0.3 — Mixer GUI, then arrangement view
+
+· 0.4 — Recording, takes, comping, punch
+
+· 0.5 — MIDI, pattern sequencing, clip launcher, scenes
+
+· 0.6 — VST3 plugin hosting
+
+· 0.7 — Windows platform parity
+
+· 0.8 — Automation, undo hardening, project interchange (AAF/OMF/RPP converters)
+
+· 0.9 — HUSH voice / AOC Magic integration
+
+· 1.0 — Release hardening, macOS, docs, installer
+
+
+
+Each prompt follows the same shape: Goal → Contracts to lock → Implementation → Gates → Deliverables → Do-not-ship list. This mirrors the discipline that made 0.1.0 and 0.2 trustworthy.
+
+
+
+---
+
+
+
+PROMPT 1 — HUSH 0.2 (consolidated)
