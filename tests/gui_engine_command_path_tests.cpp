@@ -95,6 +95,27 @@ int main() {
     assert(engine.process(inputs, 2, out_l, out_r, 2));
     expect_near(out_l[0], 0.25F);
 
+    // Pan edits also reach the processing block. Centering the left track
+    // contributes equal-power signal to both output channels.
+    assert(history.apply_and_append(project,
+        {"track-left", OperationKind::SetPan, -1.0F, 0.0F}));
+    assert(enqueue_track(project, engine, "track-left"));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F * 0.70710678F);
+    expect_near(out_r[0], 1.0F + 0.25F * 0.70710678F);
+
+    assert(history.undo(project));
+    assert(enqueue_track(project, engine, "track-left"));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F);
+    expect_near(out_r[0], 1.0F);
+
+    assert(history.redo(project));
+    assert(enqueue_track(project, engine, "track-left"));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F * 0.70710678F);
+    expect_near(out_r[0], 1.0F + 0.25F * 0.70710678F);
+
     assert(history.apply_and_append(project,
         {"track-left", OperationKind::SetMute, 0.0F, 1.0F}));
     assert(enqueue_track(project, engine, "track-left"));
