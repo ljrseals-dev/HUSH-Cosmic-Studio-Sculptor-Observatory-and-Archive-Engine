@@ -336,15 +336,33 @@ private:
         }
         const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
         bool recovered_snapshot = false;
+        bool recovered_project_persisted = false;
         std::error_code filesystem_error;
         if (std::filesystem::exists(journal_path, filesystem_error) && !filesystem_error) {
             hush::Error recovery_error;
             (void)hush::RecoveryJournal(journal_path).recover_if_different(
                 candidate, recovered_snapshot, recovery_error);
         }
+        if (recovered_snapshot) {
+            // Persist the applied snapshot to the canonical project so a successful
+            // recovery is announced once, not on every subsequent launch.
+            QFile recovered_file(path);
+            const auto recovered_json = hush::to_json(candidate);
+            if (recovered_file.open(QIODevice::WriteOnly | QIODevice::Truncate) &&
+                recovered_file.write(recovered_json.data(), static_cast<qint64>(recovered_json.size())) ==
+                    static_cast<qint64>(recovered_json.size()) &&
+                recovered_file.flush() && recovered_file.error() == QFileDevice::NoError) {
+                recovered_file.close();
+                recovered_project_persisted = !recovered_file.error();
+            } else {
+                project_save_error_ = recovered_file.errorString().isEmpty()
+                    ? QStringLiteral("Recovered project could not be persisted to the project file.")
+                    : recovered_file.errorString();
+            }
+        }
         project_ = std::move(candidate);
         log_ = hush::OperationLog{};
-        if (recovered_snapshot) log_.mark_dirty();
+        if (recovered_snapshot && !recovered_project_persisted) log_.mark_dirty();
         project_path_ = path;
         autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
         autosave_journal_path_ = journal_path;
@@ -353,7 +371,10 @@ private:
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
         refresh_save_status();
         if (recovered_snapshot && !recovery_notice_shown_) {
-            save_status_->setText("Recovered snapshot · " + QString::fromStdString(journal_path.string()));
+            if (project_save_error_.isEmpty())
+                save_status_->setText("Recovered snapshot · " + QString::fromStdString(journal_path.string()));
+            else
+                status_->setText("Recovery applied; project write failed · " + QString::fromStdString(journal_path.string()));
             recovery_notice_shown_ = true;
         }
     }
@@ -365,6 +386,7 @@ private:
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             project_save_error_ = file.errorString();
+            if (autosave_) autosave_->report_project_write_failure(project_save_error_.toStdString());
             refresh_save_status();
             QMessageBox::warning(this, "Save failed", file.errorString());
             return false;
@@ -374,6 +396,7 @@ private:
             !file.flush() || file.error() != QFileDevice::NoError) {
             project_save_error_ = file.errorString().isEmpty()
                 ? QStringLiteral("The project file could not be fully written.") : file.errorString();
+            if (autosave_) autosave_->report_project_write_failure(project_save_error_.toStdString());
             refresh_save_status();
             QMessageBox::warning(this, "Save failed", project_save_error_);
             return false;
