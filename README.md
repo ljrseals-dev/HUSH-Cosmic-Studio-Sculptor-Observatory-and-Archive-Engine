@@ -1,6 +1,6 @@
 # HUSH Unified DAW — 0.2 headless foundation
 
-This project follows the ordered headless-first milestone sequence in `Docs/Prompt`. This milestone extends the 0.2 foundation with persisted bus routing and a local recovery-journal API. GUI, recording, MIDI, plugins, and voice control remain out of scope.
+This project follows the ordered headless-first milestone sequence in `Docs/Prompt`. This milestone extends the 0.2 foundation with persisted bus routing, a local recovery-journal API, an offline bus renderer, and a bounded SPSC parameter-command queue. GUI, recording, MIDI, plugins, and voice control remain out of scope.
 
 ## Build offline
 
@@ -17,6 +17,7 @@ No FetchContent, package bootstrap, network access, telemetry, or update checks 
 - JSON serialization/deserialization for tracks, buses, and routes; older schema-v1 projects without bus/route arrays remain readable.
 - Bus-route validation at project load, including cycle detection.
 - Offline/reference bus-buffer rendering with pre-fader and post-fader sends; not yet real-time safe because it allocates processing buffers.
+- Fixed-capacity, allocation-free SPSC parameter-command queue primitive with full/empty handling and explicit lock-free atomic diagnostic; it is not yet connected to the audio callback.
 - Append-only full-snapshot recovery journal with length framing, sync request, and truncated-tail recovery.
 - Non-audio-thread autosave controller policy: first-poll snapshot, periodic snapshots, and save on observed transport stop; host lifecycle integration remains required.
 - Process-restart integration test for a completed durable journal append; this is not a power-loss durability guarantee.
@@ -26,6 +27,6 @@ No FetchContent, package bootstrap, network access, telemetry, or update checks 
 - Structured error type and offline CMake contract tests.
 
 ## Not yet complete / do not claim
-This is a milestone foundation, not a finished DAW release. Autosave scheduling is not yet connected to an application lifecycle. ALSA device streaming, lock-free real-time graph swapping with safe reclamation, real-time-safe preallocated bus-buffer rendering, inserts and track-to-bus assignment, real meters/xrun reporting, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate still require implementation and target-machine validation. No GUI is included.
+This is a milestone foundation, not a finished DAW release. Autosave scheduling is not yet connected to an application lifecycle. ALSA device streaming, integration of the parameter queue into a preallocated real-time graph, safe graph swapping/reclamation, real-time-safe bus rendering, inserts and track-to-bus assignment, real meters/xrun reporting, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate still require implementation and target-machine validation. No GUI is included.
 
 See `Docs/IMPLEMENTATION_STATUS.md`, `Docs/DECISION_LOG.md`, `Docs/VALIDATION_REPORT.md`, and `Docs/RECOVERY_JOURNAL.md`.
