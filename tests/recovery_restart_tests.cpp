@@ -6,7 +6,7 @@
 int main(int argc, char** argv) {
     using namespace hush;
     if (argc == 3 && std::string(argv[1]) == "--crash-child") {
-        RecoveryJournal journal(std::filesystem::path(argv[2]));
+        RecoveryJournal journal{std::filesystem::path(argv[2])};
         Project snapshot;
         snapshot.id = "durable-child-snapshot";
         snapshot.tracks.push_back({"track-child", "Child", 0.75F, -0.25F, false, false});
