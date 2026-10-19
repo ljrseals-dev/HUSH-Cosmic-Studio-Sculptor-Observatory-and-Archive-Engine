@@ -10,6 +10,11 @@
 namespace hush {
 
 // Control-to-audio-thread fader update. bus_index follows BusGraph::buses() order.
+struct BusAudioInputView {
+    const float* left{};
+    const float* right{};
+};
+
 struct BusFaderChange {
     std::uint32_t bus_index{};
     float gain{1.0F};
@@ -31,7 +36,7 @@ public:
     [[nodiscard]] bool enqueue_fader_change(std::size_t bus_index, float gain) noexcept;
 
     // Single audio-thread consumer. Inputs must be ordered like graph.buses().
-    [[nodiscard]] RealtimeProcessStatus process(const BusInputView* inputs,
+    [[nodiscard]] RealtimeProcessStatus process(const BusAudioInputView* inputs,
                                                 std::size_t input_count,
                                                 std::size_t frame_count) noexcept;
 
