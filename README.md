@@ -43,3 +43,42 @@ HUSH-Cosmic-Studio/
     ├── DEPENDENCIES.md         # Required external libraries & tools
     ├── SECURITY_AND_PRIVACY.md # Privacy guarantees and security policies
     └── RELEASE_CHECKLIST.md    # Release verification steps
+
+Getting Started
+
+Prerequisites
+
+To build and run HUSH Cosmic Studio from source, ensure your development environment meets the following requirements:
+
+· A modern C++20 compliant compiler (GCC 11+ or Clang 13+)
+· CMake (version 3.20 or higher)
+· PortAudio development libraries
+· X11 development headers (libx11-dev)
+
+Consult DEPENDENCIES.md for detailed package installation instructions across distributions.
+
+Building the Project
+
+Clone the repository and build using CMake:
+
+```bash
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j$(nproc)
+```
+
+Running Tests
+
+Execute the automated smoke tests to verify system stability:
+
+```bash
+ctest --output-on-failure
+```
+
+Documentation
+
+· Implementation Status: Track ongoing development milestones and planned features.
+· Security & Privacy Policy: Review our strict offline-first, zero-telemetry code commitments.
+· Release Checklist: Guidelines used by maintainers prior to tagging a new version.
+
+```
