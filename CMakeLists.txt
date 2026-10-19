@@ -14,6 +14,7 @@ add_library(hush_core
     src/mixer.cpp
     src/bus_graph.cpp
     src/bus_renderer.cpp
+    src/preallocated_bus_processor.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
@@ -39,6 +40,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_bus_renderer_tests PRIVATE hush_core)
   add_test(NAME hush_bus_renderer_tests COMMAND hush_bus_renderer_tests)
 
+  add_executable(hush_preallocated_bus_processor_tests tests/preallocated_bus_processor_tests.cpp)
+  target_link_libraries(hush_preallocated_bus_processor_tests PRIVATE hush_core)
+  add_test(NAME hush_preallocated_bus_processor_tests COMMAND hush_preallocated_bus_processor_tests)
+
   add_executable(hush_parameter_queue_tests tests/parameter_queue_tests.cpp)
   target_include_directories(hush_parameter_queue_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_parameter_queue_tests PRIVATE cxx_std_20)
@@ -53,12 +58,14 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_bus_graph_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_preallocated_bus_processor_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE /UNDEBUG)
   else()
     target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_preallocated_bus_processor_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE -UNDEBUG)
   endif()
 endif()
