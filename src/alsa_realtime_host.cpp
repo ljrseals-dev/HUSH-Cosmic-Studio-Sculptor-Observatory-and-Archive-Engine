@@ -1,7 +1,7 @@
 #include "hush/alsa_audio_backend.hpp"
 #include "hush/bus_graph.hpp"
-#include "hush/realtime_bus_audio_adapter.hpp"
-#include "hush/realtime_bus_engine.hpp"
+#include "hush/realtime_bus_engine_host.hpp"
+#include "hush/realtime_bus_engine_host_audio_adapter.hpp"
 
 #include <chrono>
 #include <csignal>
