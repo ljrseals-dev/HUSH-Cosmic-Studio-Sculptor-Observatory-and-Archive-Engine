@@ -41,7 +41,8 @@ public:
 
 private:
     struct Snapshot {
-        RealtimeBusEngine engine;
+        // Processing mutates preallocated DSP state, while topology/lifetime remain guarded.
+        mutable RealtimeBusEngine engine;
         std::size_t master_bus_index{0};
     };
     RealtimeGraphPublisher<Snapshot> publisher_;
