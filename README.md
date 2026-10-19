@@ -85,6 +85,7 @@ Every item below is **unverified/incomplete** until its evidence is committed. *
 - **500-track performance budget and 8-hour soak/memory-drift report:** no completed report; requires a named machine, reproducible harness, and committed results.
 - **Autosave lifecycle/failure surfacing:** policy code exists, but host-application lifecycle integration is incomplete.
 - **Power-loss durability:** explicitly not claimed. Current evidence covers completed journal records across process restart and truncated-tail handling only.
+- **Transport, MIDI, and automation:** proposed, not implemented; see [Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md](Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md).
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
 
 See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEASE_GATES.md](Docs/RELEASE_GATES.md), [Docs/REPO_AUDIT.md](Docs/REPO_AUDIT.md), and [ROADMAP.md](ROADMAP.md). Do not infer hardware readiness, performance, soak stability, release readiness, or a verified zero-network guarantee from green CI alone.
