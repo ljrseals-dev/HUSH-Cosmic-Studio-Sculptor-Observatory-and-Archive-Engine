@@ -5,6 +5,7 @@
 #include <fstream>
 #include <limits>
 #include <string>
+#include <utility>
 
 namespace hush {
 namespace {
@@ -68,7 +69,11 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
     std::uint32_t data_size = 0;
     std::streampos data_start{};
 
-    while (static_cast<std::uint64_t>(in.tellg() < 0 ? riff_end : in.tellg()) + 8ULL <= riff_end) {
+    while (true) {
+        const auto chunk_header_pos = in.tellg();
+        if (chunk_header_pos < 0) break;
+        const auto chunk_header_offset = static_cast<std::uint64_t>(chunk_header_pos);
+        if (chunk_header_offset > riff_end || riff_end - chunk_header_offset < 8ULL) break;
         unsigned char chunk[8]{};
         if (!read_exact(in, reinterpret_cast<char*>(chunk), 8))
             return fail(error, "WAV chunk header is truncated.");
