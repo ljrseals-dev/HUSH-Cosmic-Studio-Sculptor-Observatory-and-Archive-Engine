@@ -43,7 +43,7 @@ cmake --build build-alsa
 The host uses the ALSA `default` capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. It is a minimal integration host, not the finished DAW GUI or full track mixer.
 
 ## Not yet complete / do not claim
-This is not a finished DAW release. The standard CI job tests the ALSA-disabled build; the optional ALSA-enabled host still needs compilation and testing on Linux with ALSA development files and real devices. Safe graph swapping/reclamation, full track-to-bus/insert/solo/mute integration, meters/xrun reporting in the graph, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate require further work and target-machine evidence. No GUI is included.
+This is not a finished DAW release. The standard CI job tests the ALSA-disabled build; the optional ALSA-enabled host still needs compilation and testing on Linux with ALSA development files and real devices. Safe graph swapping/reclamation, full track-to-bus/insert/solo/mute integration, meters/xrun reporting in the graph, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate require further work and target-machine evidence. The optional 0.3a mixer GUI is included; it is not yet wired to live audio processing.
 
 
 ## Optional mixer GUI (0.3a)
