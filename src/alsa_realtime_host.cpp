@@ -1,13 +1,20 @@
 #include "hush/alsa_audio_backend.hpp"
+#include "hush/autosave_controller.hpp"
 #include "hush/bus_graph.hpp"
+#include "hush/project.hpp"
 #include "hush/realtime_bus_engine_host.hpp"
 #include "hush/realtime_bus_engine_host_audio_adapter.hpp"
 
 #include <chrono>
 #include <csignal>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace {
 volatile std::sig_atomic_t keep_running = 1;
@@ -15,10 +22,118 @@ volatile std::sig_atomic_t keep_running = 1;
 void handle_signal(int) {
     keep_running = 0;
 }
+
+bool write_project_file(const std::filesystem::path& path, const hush::Project& project,
+                        hush::Error& error) {
+    const std::string json = hush::to_json(project);
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file) {
+        error = {"project_write_failed", project.id, "Could not open project file for writing: " + path.string(), "error"};
+        return false;
+    }
+    file.write(json.data(), static_cast<std::streamsize>(json.size()));
+    file.flush();
+    if (!file) {
+        error = {"project_write_failed", project.id, "Could not write complete project file: " + path.string(), "error"};
+        return false;
+    }
+    file.close();
+    if (file.fail()) {
+        error = {"project_write_failed", project.id, "Could not close project file cleanly: " + path.string(), "error"};
+        return false;
+    }
+    error = {};
+    return true;
+}
+
+void print_help() {
+    std::cout
+        << "HUSH ALSA realtime host\n"
+        << "Usage: hush_alsa_realtime_host [--help] [--project FILE] [--journal FILE]\n"
+        << "  --project FILE  Open a local schema-v1 HUSH JSON project before audio starts.\n"
+        << "  --journal FILE  Recovery journal path (default: FILE.hush-recovery.journal).\n"
+        << "Exit codes: 0 normal shutdown; 1 argument, project-open, graph, or audio startup failure;\n"
+        << "            2 recovery/autosave/final-save failure (data may not be persisted).\n"
+        << "The host currently has no project-edit command surface; loaded project state is not live routing.\n";
+}
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     using namespace hush;
+
+    std::filesystem::path project_path;
+    std::filesystem::path journal_path;
+    bool has_project = false;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--help" || arg == "-h") {
+            print_help();
+            return 0;
+        }
+        if ((arg == "--project" || arg == "--journal") && i + 1 >= argc) {
+            std::cerr << "HUSH_ARGUMENT_ERROR missing value for " << arg << '\n';
+            return 1;
+        }
+        if (arg == "--project") {
+            project_path = argv[++i];
+            has_project = true;
+        } else if (arg == "--journal") {
+            journal_path = argv[++i];
+        } else {
+            std::cerr << "HUSH_ARGUMENT_ERROR unknown argument: " << arg << '\n';
+            return 1;
+        }
+    }
+    if (!has_project && !journal_path.empty()) {
+        std::cerr << "HUSH_ARGUMENT_ERROR --journal requires --project\n";
+        return 1;
+    }
+    if (has_project && journal_path.empty()) {
+        journal_path = std::filesystem::path(project_path.string() + ".hush-recovery.journal");
+    }
+
+    Project project;
+    std::unique_ptr<AutosaveController> autosave;
+    bool dirty = false;
+    if (has_project) {
+        std::ifstream input(project_path, std::ios::binary);
+        if (!input) {
+            std::cerr << "HUSH_PROJECT_OPEN_FAILED path=" << project_path.string() << '\n';
+            return 1;
+        }
+        const std::string json{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+        if (input.bad()) {
+            std::cerr << "HUSH_PROJECT_READ_FAILED path=" << project_path.string() << '\n';
+            return 1;
+        }
+        Error project_error;
+        if (!from_json(json, project, project_error)) {
+            std::cerr << "HUSH_PROJECT_INVALID path=" << project_path.string()
+                      << " code=" << project_error.code << " message=" << project_error.message << '\n';
+            return 1;
+        }
+
+        autosave = std::make_unique<AutosaveController>(RecoveryJournal(journal_path));
+        std::error_code filesystem_error;
+        if (std::filesystem::exists(journal_path, filesystem_error) && !filesystem_error) {
+            Error recovery_error;
+            bool recovery_applied = false;
+            if (RecoveryJournal(journal_path).recover_if_different(project, recovery_applied, recovery_error) &&
+                recovery_applied) {
+                if (!write_project_file(project_path, project, project_error)) {
+                    std::cerr << "HUSH_RECOVERY_SAVE_FAILED path=" << project_path.string()
+                              << " message=" << project_error.message << '\n';
+                    return 2;
+                }
+                if (autosave->save_now(project, recovery_error) != AutosaveController::Outcome::Saved) {
+                    std::cerr << "HUSH_RECOVERY_JOURNAL_FAILED path=" << journal_path.string()
+                              << " message=" << autosave->last_save_message() << '\n';
+                    return 2;
+                }
+                std::cerr << "HUSH_RECOVERY_APPLIED path=" << journal_path.string() << '\n';
+            }
+        }
+    }
 
     std::signal(SIGINT, handle_signal);
     std::signal(SIGTERM, handle_signal);
@@ -67,11 +182,34 @@ int main() {
               << "Capture is routed to the Master bus. Press Ctrl-C to stop.\n";
 
     while (keep_running != 0 && backend.running()) {
+        if (autosave && dirty) {
+            const Project snapshot = project;
+            Error save_error;
+            const auto outcome = autosave->poll_if_dirty(snapshot, AutosaveController::Clock::now(),
+                                                          true, false, save_error);
+            if (outcome == AutosaveController::Outcome::Saved) {
+                dirty = false;
+            } else if (outcome == AutosaveController::Outcome::Failed) {
+                std::cerr << "HUSH_AUTOSAVE_FAILED path=" << journal_path.string()
+                          << " message=" << autosave->last_save_message() << '\n';
+            }
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     backend.stop();
     engine_host.reclaim_retired();
+    if (autosave && dirty) {
+        Error save_error;
+        if (!write_project_file(project_path, project, save_error) ||
+            autosave->save_now(project, save_error) != AutosaveController::Outcome::Saved) {
+            std::cerr << "HUSH_FINAL_SAVE_FAILED path=" << project_path.string()
+                      << " message=" << (save_error.message.empty()
+                          ? autosave->last_save_message() : save_error.message) << '\n';
+            return 2;
+        }
+    }
+
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
               << backend.xrun_count() << '\n';
