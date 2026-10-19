@@ -1,9 +1,11 @@
+#include "hush/autosave_controller.hpp"
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
 #include "hush/realtime_track_mixer.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -19,6 +21,8 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -191,12 +195,14 @@ public:
         live_button_->setToolTip("Configure with -DHUSH_ENABLE_ALSA=ON to enable the optional live monitor.");
 #endif
         status_ = new QLabel("Offline mixer · live audio stopped");
+        save_status_ = new QLabel("Unsaved demo");
         bar->addWidget(open);
         bar->addWidget(save);
         bar->addWidget(undo);
         bar->addWidget(redo);
         bar->addWidget(live_button_);
         bar->addStretch();
+        bar->addWidget(save_status_);
         bar->addWidget(status_);
         layout->addLayout(bar);
 
@@ -210,7 +216,7 @@ public:
         setCentralWidget(root);
 
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
-        connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
+        connect(save, &QPushButton::clicked, this, [this] { (void)saveProject(); });
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
@@ -224,6 +230,7 @@ public:
             if (log_.undo(project_)) {
                 status_->setText("Undo applied");
                 refresh();
+                refresh_save_status();
             }
         });
         connect(redo, &QPushButton::clicked, this, [this] {
@@ -239,6 +246,7 @@ public:
             if (log_.redo(project_)) {
                 status_->setText("Redo applied");
                 refresh();
+                refresh_save_status();
             }
         });
 #ifdef HUSH_GUI_HAS_ALSA
@@ -247,11 +255,35 @@ public:
         status_timer_.start(250);
 #endif
 
+        connect(&autosave_timer_, &QTimer::timeout, this, [this] { autosaveTick(); });
+
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
                            {"track-2", "Input R", 0.8F, 1.0F, false, false}};
+        log_.mark_dirty();
         refresh();
-        status_->setText("Demo session · unsaved · offline");
+        status_->setText("Demo session · offline");
+        refresh_save_status();
+    }
+
+    void closeEvent(QCloseEvent* event) override {
+        if (!log_.dirty()) {
+            event->accept();
+            return;
+        }
+        const auto answer = QMessageBox::warning(
+            this, "Unsaved project",
+            "This project has unsaved changes. Save before quitting?",
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+            QMessageBox::Save);
+        if (answer == QMessageBox::Save) {
+            if (saveProject()) event->accept();
+            else event->ignore();
+        } else if (answer == QMessageBox::Discard) {
+            event->accept();
+        } else {
+            event->ignore();
+        }
     }
 
     ~MixerWindow() override {
@@ -263,15 +295,31 @@ public:
 private:
     hush::Project project_;
     hush::OperationLog log_;
+    std::unique_ptr<hush::AutosaveController> autosave_;
+    QString project_path_;
+    std::filesystem::path autosave_journal_path_;
+    bool recovery_notice_shown_{false};
+    QString project_save_error_;
     QTableWidget* table_{};
     QLabel* status_{};
+    QLabel* save_status_{};
     QPushButton* live_button_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
 #endif
+    QTimer autosave_timer_;
 
     void openProject() {
+        if (log_.dirty()) {
+            const auto answer = QMessageBox::warning(
+                this, "Unsaved project",
+                "Save changes before opening another project?",
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                QMessageBox::Save);
+            if (answer == QMessageBox::Save && !saveProject()) return;
+            if (answer == QMessageBox::Cancel) return;
+        }
         const auto path = QFileDialog::getOpenFileName(this, "Open HUSH Project", {}, "HUSH Project (*.json)");
         if (path.isEmpty()) return;
 #ifdef HUSH_GUI_HAS_ALSA
@@ -289,26 +337,124 @@ private:
             QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
             return;
         }
+        project_save_error_.clear();
+        const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
+        bool recovered_snapshot = false;
+        bool recovered_project_persisted = false;
+        std::error_code filesystem_error;
+        if (std::filesystem::exists(journal_path, filesystem_error) && !filesystem_error) {
+            hush::Error recovery_error;
+            (void)hush::RecoveryJournal(journal_path).recover_if_different(
+                candidate, recovered_snapshot, recovery_error);
+        }
+        if (recovered_snapshot) {
+            QFile recovered_file(path);
+            const auto recovered_json = hush::to_json(candidate);
+            if (recovered_file.open(QIODevice::WriteOnly | QIODevice::Truncate) &&
+                recovered_file.write(recovered_json.data(), static_cast<qint64>(recovered_json.size())) ==
+                    static_cast<qint64>(recovered_json.size()) &&
+                recovered_file.flush() && recovered_file.error() == QFileDevice::NoError) {
+                recovered_file.close();
+                recovered_project_persisted = !recovered_file.error();
+                if (!recovered_project_persisted) {
+                    project_save_error_ = recovered_file.errorString().isEmpty()
+                        ? QStringLiteral("Recovered project could not be closed cleanly.")
+                        : recovered_file.errorString();
+                }
+            } else {
+                project_save_error_ = recovered_file.errorString().isEmpty()
+                    ? QStringLiteral("Recovered project could not be persisted to the project file.")
+                    : recovered_file.errorString();
+            }
+        }
         project_ = std::move(candidate);
         log_ = hush::OperationLog{};
+        if (recovered_snapshot && !recovered_project_persisted) log_.mark_dirty();
+        project_path_ = path;
+        autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
+        autosave_journal_path_ = journal_path;
+        if (!autosave_timer_.isActive()) autosave_timer_.start(1000);
         refresh();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
+        refresh_save_status();
+        if (recovered_snapshot && !recovery_notice_shown_) {
+            if (project_save_error_.isEmpty())
+                save_status_->setText("Recovered snapshot · " + QString::fromStdString(journal_path.string()));
+            else
+                status_->setText("Recovery applied; project write failed · " + QString::fromStdString(journal_path.string()));
+            recovery_notice_shown_ = true;
+        }
     }
 
-    void saveProject() {
-        const auto path = QFileDialog::getSaveFileName(this, "Save HUSH Project", "session.json", "HUSH Project (*.json)");
-        if (path.isEmpty()) return;
+    bool saveProject() {
+        const QString initial = project_path_.isEmpty() ? QStringLiteral("session.json") : project_path_;
+        const auto path = QFileDialog::getSaveFileName(this, "Save HUSH Project", initial, "HUSH Project (*.json)");
+        if (path.isEmpty()) return false;
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            project_save_error_ = file.errorString();
+            if (autosave_) autosave_->report_project_write_failure(project_save_error_.toStdString());
+            refresh_save_status();
             QMessageBox::warning(this, "Save failed", file.errorString());
-            return;
+            return false;
         }
         const auto json = hush::to_json(project_);
-        if (file.write(json.data(), static_cast<qint64>(json.size())) != static_cast<qint64>(json.size())) {
-            QMessageBox::warning(this, "Save failed", file.errorString());
+        if (file.write(json.data(), static_cast<qint64>(json.size())) != static_cast<qint64>(json.size()) ||
+            !file.flush() || file.error() != QFileDevice::NoError) {
+            project_save_error_ = file.errorString().isEmpty()
+                ? QStringLiteral("The project file could not be fully written.") : file.errorString();
+            if (autosave_) autosave_->report_project_write_failure(project_save_error_.toStdString());
+            refresh_save_status();
+            QMessageBox::warning(this, "Save failed", project_save_error_);
+            return false;
+        }
+        file.close();
+        project_save_error_.clear();
+        project_path_ = path;
+        const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
+        if (!autosave_ || autosave_journal_path_ != journal_path) {
+            autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
+            autosave_journal_path_ = journal_path;
+        }
+        if (!autosave_timer_.isActive()) autosave_timer_.start(1000);
+        hush::Error error;
+        if (autosave_->save_now(project_, error) != hush::AutosaveController::Outcome::Saved) {
+            QMessageBox::warning(this, "Recovery save failed",
+                QString::fromStdString(autosave_->last_save_message()));
+            refresh_save_status();
+            return false;
+        }
+        log_.mark_saved();
+        status_->setText("Saved · " + QFileInfo(path).fileName());
+        refresh_save_status();
+        return true;
+    }
+
+    void autosaveTick() {
+        if (!autosave_ || !log_.dirty()) {
+            refresh_save_status();
             return;
         }
-        status_->setText("Saved · " + QFileInfo(path).fileName());
+        const hush::Project snapshot = project_;
+        hush::Error error;
+        const auto outcome = autosave_->poll_if_dirty(snapshot, hush::AutosaveController::Clock::now(),
+                                                       true, false, error);
+        if (outcome == hush::AutosaveController::Outcome::Saved) log_.mark_saved();
+        refresh_save_status();
+    }
+
+    void refresh_save_status() {
+        if (!project_save_error_.isEmpty()) {
+            save_status_->setText("⚠ Project save failed: " + project_save_error_);
+        } else if (autosave_ && autosave_->last_save_error() != hush::SaveError::None) {
+            save_status_->setText("⚠ Save error: " + QString::fromStdString(autosave_->last_save_message()));
+        } else if (log_.dirty()) {
+            save_status_->setText("● Unsaved changes");
+        } else if (!project_path_.isEmpty()) {
+            save_status_->setText("✓ Saved");
+        } else {
+            save_status_->setText("Unsaved demo");
+        }
     }
 
     struct LiveControlValues {
@@ -383,6 +529,7 @@ private:
         }
         if (log_.apply_and_append(project_, std::move(operation))) {
             status_->setText("Edited · undo history " + QString::number(log_.cursor()));
+            refresh_save_status();
         }
     }
 
