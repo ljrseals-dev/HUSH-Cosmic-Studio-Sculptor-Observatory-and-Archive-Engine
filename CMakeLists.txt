@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
-option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend" OFF)
+option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend and host" OFF)
 
 add_library(hush_core
     src/project.cpp
@@ -41,6 +41,15 @@ if(HUSH_ENABLE_ALSA)
     target_compile_options(hush_alsa_backend PRIVATE /W4 /permissive-)
   else()
     target_compile_options(hush_alsa_backend PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+  endif()
+
+  add_executable(hush_alsa_realtime_host src/alsa_realtime_host.cpp)
+  target_link_libraries(hush_alsa_realtime_host PRIVATE hush_core hush_alsa_backend)
+  target_compile_features(hush_alsa_realtime_host PRIVATE cxx_std_20)
+  if(MSVC)
+    target_compile_options(hush_alsa_realtime_host PRIVATE /W4 /permissive-)
+  else()
+    target_compile_options(hush_alsa_realtime_host PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
   endif()
 endif()
 
