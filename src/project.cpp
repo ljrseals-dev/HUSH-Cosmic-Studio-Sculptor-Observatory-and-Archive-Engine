@@ -47,8 +47,8 @@ std::string to_json(const Project& p) {
 bool from_json(const std::string& s, Project& out, Error& e) {
     std::smatch m;
     const std::regex version_re(R"("schema_version"\s*:\s*(\d+))");
-    const std::regex id_re(R"("id"\s*:\s*"([^"]*)")");
-    const std::regex law_re(R"("pan_law"\s*:\s*"([^"]+)")");
+    const std::regex id_re(R"REGEX("id"\s*:\s*"([^"]*)")REGEX");
+    const std::regex law_re(R"REGEX("pan_law"\s*:\s*"([^"]+)")REGEX");
     if (!std::regex_search(s,m,version_re) || m[1].str()!="1") {
         e={"schema_version_unsupported","","Expected schema_version 1","error"}; return false;
     }
