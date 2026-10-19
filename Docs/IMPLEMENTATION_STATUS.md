@@ -12,12 +12,12 @@
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
 - [x] Optional ALSA backend/host compiles and contract tests run in CI; this is not hardware validation.
-- [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. All seven jobs passed in [GitHub Actions run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377) on the tested revision; later commits require a fresh run. Hardware validation is not implied.
+- [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. Queue rejection now happens before project/history mutation, and the UI restores canonical values after rejection. Core tests cover block-boundary application, saturation, invalid indices, non-finite values, and range rejection. CI run [39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377) passed on its tested revision; this branch's changes need a fresh run. Hardware validation is not implied.
 - [x] Header-only RealtimeGraphPublisher primitive and a concurrent publication test exist. The test is being strengthened to assert that an old snapshot is not destroyed while a reader guard holds it; the primitive is not integrated into the production bus/audio engine.
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
 ## Open gates — do not claim complete
-- [ ] GUI interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; source queues controls for the explicitly started optional ALSA monitor, but automated UI/loopback evidence and GUI/CLI parity remain open.
+- [ ] Automated Qt interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; core mixer regression tests cover application, queue saturation, and invalid inputs, but actual Qt interaction/loopback evidence and GUI/CLI parity remain open.
 - [ ] Safe graph swap integrated into the actual engine and deferred reclamation verified under callback load; the standalone publication primitive is not production integration.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
 - [ ] Re-run ASan/TSan after the latest source changes and add race coverage for production graph-swap integration.
