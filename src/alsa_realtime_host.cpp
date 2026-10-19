@@ -35,17 +35,17 @@ int main() {
     }
 
     constexpr std::size_t max_frames = 4096;
-    RealtimeBusEngine engine;
+    RealtimeBusEngineHost engine_host;
     ProcessorSetupError setup_error;
-    if (!engine.configure(graph, max_frames, setup_error)) {
+    if (!engine_host.replace_graph(graph, max_frames, "master", setup_error)) {
         std::cerr << "Realtime engine setup failed: " << setup_error.code
                   << ": " << setup_error.message << '\n';
         return 1;
     }
 
-    RealtimeBusAudioAdapter adapter;
+    RealtimeBusEngineHostAudioAdapter adapter;
     std::string adapter_error;
-    if (!adapter.configure(engine, 0, 1, max_frames, adapter_error)) {
+    if (!adapter.configure(engine_host, 0, graph.buses().size(), max_frames, adapter_error)) {
         std::cerr << "Audio adapter setup failed: " << adapter_error << '\n';
         return 1;
     }
