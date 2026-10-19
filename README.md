@@ -43,7 +43,7 @@ HUSH-Cosmic-Studio/
     ├── DEPENDENCIES.md         # Required external libraries & tools
     ├── SECURITY_AND_PRIVACY.md # Privacy guarantees and security policies
     └── RELEASE_CHECKLIST.md    # Release verification steps
-
+```
 Getting Started
 
 Prerequisites
