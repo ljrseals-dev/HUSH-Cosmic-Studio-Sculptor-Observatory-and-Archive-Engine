@@ -7,6 +7,7 @@
 - [x] Append-only recovery journal with length-framed full-project snapshots and truncated-tail recovery.
 - [x] Autosave scheduling policy; caller must poll from a non-audio thread.
 - [x] Invertible operation-log primitives and undo/redo tests.
+- [x] In-memory automation lane interpolation (step/linear) and immutable-by-convention snapshot value; `tests/automation_tests.cpp` covers interpolation and input validation.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
@@ -17,6 +18,7 @@
 
 ## Open gates — do not claim complete
 - [ ] GUI fader/pan/mute/solo commands queued to the live engine at block boundaries, plus GUI interaction test and GUI/CLI parity.
+- [ ] Automation persistence and transport integration: current lane primitive is in-memory only; schema-v2 JSON fields, v1-compatible loading, safe snapshot publication/reclamation, and record/undo integration are not implemented.
 - [ ] Safe graph swap and deferred reclamation; graph remains configure-once.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, meters, and xrun counters.
 - [ ] ASan/TSan CI jobs pass and provide useful evidence for current code; no graph swap exists to stress yet.
