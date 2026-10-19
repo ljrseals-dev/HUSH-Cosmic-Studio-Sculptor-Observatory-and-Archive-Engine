@@ -15,11 +15,11 @@ ALSA is optional and disabled by default. CMake does not install packages or acc
 
 The host demonstrates the required control-thread setup sequence:
 1. Configure a valid `BusGraph` with a Capture bus routed to a Master bus.
-2. Configure `RealtimeBusEngine` with that graph and a maximum period size.
-3. Configure `RealtimeBusAudioAdapter` with the engine, input bus index, master bus index, and maximum period size.
-4. Start `AlsaAudioBackend` with `RealtimeBusAudioAdapter::alsa_callback` and a pointer to the adapter as user data.
+2. Configure `RealtimeBusEngineHost` with the validated graph, master bus ID, and maximum period size. The host builds the replacement snapshot off the callback and publishes it safely.
+3. Configure `RealtimeBusEngineHostAudioAdapter` with the host, input bus index, bus count, and maximum period size.
+4. Start `AlsaAudioBackend` with `RealtimeBusEngineHostAudioAdapter::alsa_callback` and a pointer to the adapter as user data.
 
-The adapter maps interleaved stereo float input to planar left/right data. It supplies silence to all other bus input slots, calls the engine once per block, then copies the selected master's post-fader output back to interleaved stereo. A bus index follows the graph's original `buses()` order. Do not reconfigure or destroy the graph/engine/adapter while the audio worker is running.
+The adapter maps interleaved stereo float input to planar left/right data. It supplies silence to all other bus input slots, calls the published host once per block, then copies the selected master's post-fader output back to interleaved stereo while the host's read guard is held. A bus index follows the graph's original `buses()` order. Same-topology graph replacements may be published while the worker runs. Stop/join the worker before changing bus count/order, reconfiguring the adapter, or destroying the host.
 
 ## Callback contract
 
@@ -31,6 +31,7 @@ Capture and playback must negotiate the same sample rate and period size; otherw
 
 - Uses blocking ALSA read/write on a dedicated worker, not ALSA's callback API; callback worst-case execution time still needs measurement.
 - Device setup and stop can block and must be called from a control thread.
-- The host is a minimal Capture -> Master integration harness, not a full track mixer or application GUI.
+- The host is a minimal Capture -> Master integration harness using guarded graph replacement, not a full track mixer or application GUI.
+- The adapter's bus count and input-bus index are fixed at configuration; changing topology requires stopping the backend and reconfiguring the adapter.
 - No latency, zero-xrun, hardware-compatibility, or release-readiness claim is made until tested on a named Linux machine.
 - On device failure the worker stops; the host prints final callback and recovery counters when control returns. Detailed worker failure reporting is not exposed yet.
