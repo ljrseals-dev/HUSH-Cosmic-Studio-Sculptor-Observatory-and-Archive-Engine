@@ -71,7 +71,7 @@ int main() {
     const auto recovery_path = std::filesystem::temp_directory_path() / "hush-autosave-recovery-notice.journal";
     std::filesystem::remove(recovery_path, cleanup);
     assert(RecoveryJournal(recovery_path).append_snapshot(recovered_state, error));
-    { std::ofstream tail(recovery_path, std::ios::binary | std::ios::app); tail << "HUSHJ1 99\\npartial"; }
+    { std::ofstream tail(recovery_path, std::ios::binary | std::ios::app); tail << "HUSHJ1 99\npartial"; }
     bool recovery_applied = false;
     assert(RecoveryJournal(recovery_path).recover_if_different(on_disk, recovery_applied, error));
     assert(recovery_applied && on_disk == recovered_state);

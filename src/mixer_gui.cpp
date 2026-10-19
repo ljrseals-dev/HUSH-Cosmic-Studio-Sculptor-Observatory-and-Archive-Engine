@@ -228,6 +228,7 @@ public:
                 return;
             }
             if (log_.undo(project_)) {
+                recovery_notice_message_.clear();
                 status_->setText("Undo applied");
                 refresh();
                 refresh_save_status();
@@ -244,6 +245,7 @@ public:
                 return;
             }
             if (log_.redo(project_)) {
+                recovery_notice_message_.clear();
                 status_->setText("Redo applied");
                 refresh();
                 refresh_save_status();
@@ -299,6 +301,7 @@ private:
     QString project_path_;
     std::filesystem::path autosave_journal_path_;
     bool recovery_notice_shown_{false};
+    QString recovery_notice_message_;
     QString project_save_error_;
     QTableWidget* table_{};
     QLabel* status_{};
@@ -337,7 +340,9 @@ private:
             QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
             return;
         }
+        file.close();
         project_save_error_.clear();
+        recovery_notice_shown_ = false;
         const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
         bool recovered_snapshot = false;
         bool recovered_project_persisted = false;
@@ -378,11 +383,11 @@ private:
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
         refresh_save_status();
         if (recovered_snapshot && !recovery_notice_shown_) {
-            if (project_save_error_.isEmpty())
-                save_status_->setText("Recovered snapshot · " + QString::fromStdString(journal_path.string()));
-            else
+            recovery_notice_message_ = "Recovered snapshot · " + QString::fromStdString(journal_path.string());
+            if (!project_save_error_.isEmpty())
                 status_->setText("Recovery applied; project write failed · " + QString::fromStdString(journal_path.string()));
             recovery_notice_shown_ = true;
+            refresh_save_status();
         }
     }
 
@@ -425,6 +430,7 @@ private:
             return false;
         }
         log_.mark_saved();
+        recovery_notice_message_.clear();
         status_->setText("Saved · " + QFileInfo(path).fileName());
         refresh_save_status();
         return true;
@@ -448,6 +454,8 @@ private:
             save_status_->setText("⚠ Project save failed: " + project_save_error_);
         } else if (autosave_ && autosave_->last_save_error() != hush::SaveError::None) {
             save_status_->setText("⚠ Save error: " + QString::fromStdString(autosave_->last_save_message()));
+        } else if (!recovery_notice_message_.isEmpty()) {
+            save_status_->setText(recovery_notice_message_);
         } else if (log_.dirty()) {
             save_status_->setText("● Unsaved changes");
         } else if (!project_path_.isEmpty()) {
@@ -528,6 +536,7 @@ private:
             return;
         }
         if (log_.apply_and_append(project_, std::move(operation))) {
+            recovery_notice_message_.clear();
             status_->setText("Edited · undo history " + QString::number(log_.cursor()));
             refresh_save_status();
         }
