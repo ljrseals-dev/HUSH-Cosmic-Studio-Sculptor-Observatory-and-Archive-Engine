@@ -1,41 +1,395 @@
 HUSH Unified DAW — Full Prompt Sequence to Completion
 
-
-
 This is the complete, ordered prompt set from 0.2 through a finished product. Hand them to a coding agent or team one at a time, in order. Each prompt is self-contained and ends with a gate that must pass before the next begins. Do not merge prompts. Do not skip gates.
-
-
 
 The overall arc:
 
-
-
 · 0.2 — Persistence + real-time Linux engine + bus routing (headless)
-
 · 0.3 — Mixer GUI, then arrangement view
-
 · 0.4 — Recording, takes, comping, punch
-
 · 0.5 — MIDI, pattern sequencing, clip launcher, scenes
-
 · 0.6 — VST3 plugin hosting
-
 · 0.7 — Windows platform parity
-
 · 0.8 — Automation, undo hardening, project interchange (AAF/OMF/RPP converters)
-
 · 0.9 — HUSH voice / AOC Magic integration
-
 · 1.0 — Release hardening, macOS, docs, installer
-
-
 
 Each prompt follows the same shape: Goal → Contracts to lock → Implementation → Gates → Deliverables → Do-not-ship list. This mirrors the discipline that made 0.1.0 and 0.2 trustworthy.
 
+---
 
+PROMPT 1 — HUSH 0.2 (consolidated)
+
+Goal. Ship HUSH 0.2: persistent sessions + real-time Linux audio engine + general bus routing. Headless only. No GUI, no recording, no MIDI, no plugins, no voice control.
+
+Contracts to lock before coding.
+
+1. Project schema v1 (JSON), stable UUIDs, schema_version = 1, round-trip structural equality.
+2. Structured errors: {code, entity_id, message, severity} at every API boundary.
+3. Pan law: explicit, project-level, default equal-power −3 dB center; document Soundcraft's ~−4.5 dB as a selectable option.
+4. Float contract: internal float32, export 32-bit IEEE float WAV, no dither, no clamping beyond IEEE range.
+5. Solo/mute semantics: solo-in-place and channel mute implemented; PFL/AFL and monitor-mute fields reserved in schema.
+6. Undo/redo: append-only operation log, invertible, replayable. No snapshots.
+7. Real-time graph: preallocated, lock-free parameter queue, lock-free graph swap with documented memory reclamation (pick deferred-free, hazard pointers, or epoch; justify in decision log).
+8. Meters: lock-free readout, polled. Xrun/underrun counters exposed.
+9. Voice-command pipeline shape reserved in spec. No implementation.
+
+Implementation (in this order).
+
+1. Schema v1 writer/reader + round-trip tests.
+2. Operation-log undo/redo + invertibility tests.
+3. Autosave (timer + transport-stop) + crash recovery (journal + replay).
+4. ALSA backend (JACK/PipeWire as optional compile-time backends, stubbed).
+5. Preallocated processing graph + lock-free parameter queue.
+6. Lock-free graph swap with documented reclamation.
+7. Bus-to-bus routing + hard cycle detection + pre/post sends + insert stubs + meters.
+8. Full test suite.
+
+Gates (all must pass in CI).
+
+· Persistence round-trip structural equality.
+· Undo-all → redo-all structural equality.
+· Kill -9 mid-session → recover → state matches last durable point.
+· 60-minute real-time run, 48 kHz / 128 samples, zero xruns on reference Linux box.
+· Loopback latency measured in samples and ms.
+· Underrun injection → counters correct, no crash.
+· Nested-bus render byte-identical to flat-bus render at unity gain.
+· 8-hour soak: flat memory, no leaked handles.
+· 500 tracks × 200 clips × 20 automation lanes → open/mutate/save/reopen under 2 s.
+· All 0.1.0 tests still pass.
+
+Deliverables. Source ZIP (CMake Linux-green, Windows-portable), 0.2 architecture spec, decision log, validation report (with distro/kernel/CPU/ALSA version), honest limitations list, release notes in 0.1.0 format.
+
+Do not ship. GUI, recording, MIDI, plugins, voice control, arrangement, comping, Windows build.
 
 ---
 
+PROMPT 2 — HUSH 0.3a (mixer GUI)
 
+Goal. Ship a mixer-only native GUI reading from the canonical project model. No arrangement view. No parallel state.
 
-PROMPT 1 — HUSH 0.2 (consolidated)
+Contracts to lock.
+
+1. GUI reads and writes only through the project-model API. Any direct struct access is a bug.
+2. All GUI mutations go through the undo log.
+3. Meters are polled from the lock-free readout; never pushed from audio thread.
+4. UI toolkit choice (recommend a cross-platform toolkit that survives Windows, e.g. Dear ImGui for engineering builds or Qt for product UI — record the choice and tradeoff in decision log).
+5. Layout: channel strips (gain, pan, mute, solo, meter, sends, insert stubs), buses, master. No plugin UIs, no plugin editors.
+6. No hidden state — closing and reopening the GUI produces identical view state from the project file.
+
+Implementation.
+
+1. GUI skeleton + project-model binding.
+2. Channel strip rendering.
+3. Bus and master strips.
+4. Send and insert-stub UI.
+5. Undo-aware controls (every drag produces one invertible op on release, not one per pixel).
+6. CLI/GUI parity test: same mutation via CLI and via GUI produces identical project file.
+
+Gates.
+
+· GUI-vs-CLI parity test passes.
+· All 0.2 gates still pass with GUI built.
+· 1-hour GUI session, no leaks, no xruns introduced.
+· No direct project-model mutation outside the API (enforced by code review + lint rule).
+
+Deliverables. Source ZIP, 0.3a GUI spec, decision log entry for toolkit, validation report, release notes.
+
+Do not ship. Arrangement view, plugin editors, recording, MIDI, voice control.
+
+---
+
+PROMPT 3 — HUSH 0.3b (arrangement view)
+
+Goal. Ship the arrangement/timeline view. Read-only playback of existing project state first; editing second.
+
+Contracts to lock.
+
+1. Timeline zoom, scroll, and selection state are view state, not project state — persisted separately as a "view file" beside the project.
+2. All timeline edits are undo-log operations, same contract as 0.3a.
+3. Clip model: timeline events reference project entities by stable UUID. No parallel clip store.
+4. Snapping and grid semantics named explicitly (bar/beat/sample; document grid resolution options).
+
+Implementation.
+
+1. Timeline rendering of tracks, buses, clips (from existing project model).
+2. Playhead, transport, follow-playhead.
+3. Selection, zoom, scroll.
+4. Clip creation/move/trim (undo-logged).
+5. View-state persistence.
+
+Gates.
+
+· GUI-vs-CLI parity extended to timeline operations.
+· 2-hour session, no leaks, no xruns.
+· All prior gates still pass.
+
+Deliverables. Source ZIP, timeline spec, validation report, release notes.
+
+Do not ship. Recording, MIDI editing, comping, plugins, voice.
+
+---
+
+PROMPT 4 — HUSH 0.4 (recording, takes, comping, punch)
+
+Goal. Ship multitrack recording, takes/playlists, comping, punch-in/out.
+
+Contracts to lock.
+
+1. Recording writes to disk in a preallocated ring buffer flushed off-thread. No file I/O in the audio callback — recording is exempt from nothing.
+2. Take model: each take is a first-class entity with a UUID; a track's "active take" pointer is a project-state field.
+3. Playlist model: per-track ordered list of takes; comp is a derived overlay with a UUID.
+4. Punch model: punch-in/out points are project-state; pre-roll and post-roll are project-state; recording mode is project-state.
+5. Latency compensation contract: input latency measured and reported; user can set compensation offset per device.
+6. Crossfade contract: default shape, duration, and boundary rules documented.
+
+Implementation.
+
+1. Ring-buffer recording path + off-thread disk flush.
+2. Take capture and playlist assembly.
+3. Punch modes (auto-punch, manual punch, loop-record).
+4. Comping UI (region-based selection across takes).
+5. Crossfades.
+6. Latency compensation.
+
+Gates.
+
+· Record 8 tracks × 10 minutes → play back → sample-accurate length and no dropped frames.
+· Punch-in/out sample-accurate to ±1 sample.
+· Comping: switch active take N times → render comparison bit-identical to manually assembled reference.
+· Latency loopback measurement reported and stable across sessions.
+· All prior gates pass.
+
+Deliverables. Source ZIP, recording spec, validation report, release notes, expanded limitations list.
+
+Do not ship. MIDI, plugins, voice.
+
+---
+
+PROMPT 5 — HUSH 0.5 (MIDI, patterns, clip launcher, scenes)
+
+Goal. Ship MIDI tracks, MIDI editing, pattern sequencing, clip launcher, scenes, tempo synchronization.
+
+Contracts to lock.
+
+1. MIDI events are sample-accurate and timestamped to the engine's sample clock, not wall clock.
+2. Session vs. arrangement: clip-launcher state is project-state; both views read the same clips. Document the model explicitly (Ableton-style clip = clip; scene = ordered clip set).
+3. Tempo map: multiple tempo events, warp markers, and a documented contract for which clips warp and which don't.
+4. MIDI import/export: SMF type 0 and type 1, round-trip tested.
+5. Pattern sequencing (Studio One-style) is a view over clip data, not a separate store.
+
+Implementation.
+
+1. MIDI track type + MIDI event model.
+2. MIDI editing UI (piano roll) tied to arrangement view.
+3. Clip launcher view + scene model.
+4. Tempo map + warp markers + tempo-synchronized effects stub (no plugin host yet).
+5. SMF import/export.
+
+Gates.
+
+· SMF round-trip: import → export → import yields structurally identical MIDI.
+· Tempo map with 3 tempo changes → render comparison bit-identical to hand-computed reference.
+· Clip launcher: launch scene, switch scenes mid-playback → no clicks (measure discontinuity energy).
+· All prior gates pass.
+
+Deliverables. Source ZIP, MIDI/clip spec, validation report, release notes.
+
+Do not ship. Plugins, voice.
+
+---
+
+PROMPT 6 — HUSH 0.6 (VST3 plugin hosting)
+
+Goal. Ship VST3 hosting on Linux and prepare Windows. No CLAP, no AU in this milestone.
+
+Contracts to lock.
+
+1. Plugin processes out-of-process by default (sandboxed host process). In-process is an opt-in for trusted plugins. Record the tradeoff (stability vs. latency/CPU) in the decision log.
+2. Plugin state is part of the project state, saved/restored per instance.
+3. Plugin failures (crash, hang) must not take down the engine — sandbox restart with a structured error.
+4. Latency reporting: plugin latency reported and compensated automatically; user-visible.
+5. Scan safety: plugin scan runs in a sandbox with a watchdog.
+6. Insert model: previous "stub" points become real insert points; schema bump to schema_version = 2 with a migration from v1.
+
+Implementation.
+
+1. VST3 SDK integration on Linux.
+2. Out-of-process host process + IPC contract.
+3. Sandbox crash/hang handling.
+4. Plugin scanning UI and safety.
+5. Insert points activated on tracks, buses, master.
+6. Plugin editors (embed in sandbox window).
+7. Latency compensation integration.
+8. Schema v2 migration from v1.
+
+Gates.
+
+· Load 50 plugins across 20 tracks → engine runs 60 minutes, zero xruns.
+· Kill a plugin process mid-session → engine survives, project state consistent, structured error logged.
+· Plugin-state round-trip: save project with plugin states → reload → bit-identical render.
+· Schema v1 project opens under v2 with migration and renders identically to pre-migration.
+· All prior gates pass.
+
+Deliverables. Source ZIP, plugin-hosting spec, sandbox IPC spec, schema v2 migration doc, validation report, release notes.
+
+Do not ship. CLAP, AU, Windows-specific hosting, voice.
+
+---
+
+PROMPT 7 — HUSH 0.7 (Windows parity)
+
+Goal. Ship a Windows build at feature parity with Linux. No new features; this milestone is port and parity only.
+
+Contracts to lock.
+
+1. No Win32-specific code in the engine. All OS differences behind interfaces (device backend, file I/O, threading, IPC).
+2. Windows device backend choice recorded (WASAPI exclusive/shared, ASIO optional) with tradeoffs.
+3. Cross-platform file format: project schema v2 loads and saves identically on both platforms; render comparisons must be bit-identical cross-platform for identical inputs.
+4. Build system: CMake presets for both platforms; CI matrix (Linux + Windows).
+5. File paths, line endings, and case-sensitivity handled explicitly.
+
+Implementation.
+
+1. Windows device backend.
+2. Windows IPC for plugin sandbox.
+3. Windows file I/O interface.
+4. Windows threading abstractions.
+5. CMake presets + CI matrix.
+6. Installer (recommend WiX or Inno Setup; record choice).
+
+Gates.
+
+· Full test suite green on Windows in CI.
+· Cross-platform render comparison: same project → bit-identical output on Linux and Windows.
+· Plugin sandbox works on Windows with the same crash/hang survival semantics.
+· All prior gates pass on both platforms.
+· Installer produces a working install.
+
+Deliverables. Source ZIP, Windows build instructions, CI config, cross-platform parity report, release notes.
+
+Do not ship. macOS (deferred to 1.0), voice.
+
+---
+
+PROMPT 8 — HUSH 0.8 (automation + interchange)
+
+Goal. Ship full automation, harden undo, and ship first session-interchange converters.
+
+Contracts to lock.
+
+1. Automation is a first-class project entity (UUID), on any track/bus/master parameter, with curve types (linear, exponential, S-curve) and modes (read, touch, latch, write).
+2. Undo log size budget: document growth rate and compaction policy; no unbounded memory.
+3. Interchange scope: AAF and OMF in, REAPER .RPP in (best-effort, lossily documented), AAF out. Pro Tools .ptx and Ableton .als are out of scope (no public spec).
+4. Interchange guarantees documented per converter: what round-trips losslessly, what warns, what refuses.
+
+Implementation.
+
+1. Automation entity + editing UI + curve types + modes.
+2. Undo-log compaction + stress test.
+3. AAF/OMF import.
+4. REAPER .RPP import with documented fidelity.
+5. AAF export.
+
+Gates.
+
+· Automation render comparison: 20 automated parameters → render bit-identical to hand-authored reference.
+· Undo log compaction: 10,000 operations → memory flat after compaction, no loss of undo history within budget.
+· AAF round-trip within HUSH: export → import → render bit-identical.
+· .RPP import on a corpus of 10 reference projects: documented fidelity report, no crashes.
+· All prior gates pass.
+
+Deliverables. Source ZIP, automation spec, interchange fidelity report per converter, validation report, release notes.
+
+Do not ship. Pro Tools/Ableton import, voice.
+
+---
+
+PROMPT 9 — HUSH 0.9 (voice + AOC Magic)
+
+Goal. Ship HUSH voice control with AOC Magic safety gates.
+
+Contracts to lock.
+
+1. Pipeline: parser → intent → authorization → preview/confirm → execute → audit log. Every stage is a distinct module with a testable interface.
+2. Destructive operations require explicit confirmation. "Delete tracks," "overwrite takes," "clear automation" — all gated.
+3. Every voice action is undo-logged and is a normal project operation. Voice has no privileged path.
+4. Audit log is append-only, separate from the undo log, and records: intent, resolved action, confirmation, result, timestamp.
+5. Voice intent taxonomy documented: at minimum track creation/deletion, arm/disarm, transport control, bus creation, send creation, comp assembly, scene launch.
+6. No voice command may bypass the preview step. Even non-destructive commands are previewed (with the option to "confirm and don't preview again for this command type," stored per project).
+7. Fail-closed: if intent is ambiguous, refuse and ask.
+
+Implementation.
+
+1. Parser (grammar spec + tests).
+2. Intent resolver against the project model.
+3. Authorization module.
+4. Preview UI (in mixer and arrangement views).
+5. Confirmation flow.
+6. Audit log.
+7. Intent taxonomy implementation for §5 list.
+
+Gates.
+
+· Every voice intent in the taxonomy has a passing end-to-end test.
+· Destructive command without confirmation → refused, audit-logged.
+· Every executed voice command produces an undo-log entry invertible by the same undo system as GUI/CLI.
+· Fuzz test: 1,000 malformed commands → no crash, all fail-closed.
+· Ambiguous command → refuse + structured prompt, not guess.
+· All prior gates pass.
+
+Deliverables. Source ZIP, voice/AOC spec, intent taxonomy doc, audit-log format doc, validation report, release notes.
+
+Do not ship. 1.0 marketing claims, macOS, Pro Tools/Ableton import.
+
+---
+
+PROMPT 10 — HUSH 1.0 (release)
+
+Goal. Ship HUSH 1.0: feature-complete on Linux + Windows, macOS at parity, installers, docs, and a stable schema.
+
+Contracts to lock.
+
+1. Schema v2 is frozen at 1.0. Any post-1.0 schema change requires a formal migration path and version bump.
+2. No feature is claimed that isn't in the limitations list as implemented. Release notes must be exhaustive.
+3. macOS backend choice (CoreAudio; AU plugin format optional in 1.1, not 1.0) recorded.
+4. Documentation is part of the release gate, not an afterthought: user manual, quick-start, voice-command reference, plugin-hosting guide, interchange fidelity guide.
+5. Signed installers for Linux (AppImage or flatpak — record choice), Windows, macOS.
+
+Implementation.
+
+1. macOS port (CoreAudio backend, IPC, threading, file I/O) at full parity.
+2. Documentation set.
+3. Installers for three platforms.
+4. Final performance profiling pass; published baseline specs.
+5. Final validation report across all gates since 0.1.0.
+
+Gates.
+
+· Every gate from 0.1.0 through 0.9 passes on Linux, Windows, and macOS in CI.
+· Cross-platform render comparison: same project → bit-identical output on all three platforms.
+· Installers produce working installs on all three platforms.
+· Full documentation set complete and reviewed.
+· Limitations list is exhaustive and truthful.
+· A new engineer can follow quick-start to a working first session in ≤15 minutes on each platform.
+
+Deliverables. Source ZIP, three signed installers, documentation set (manual, quick-start, voice reference, plugin guide, interchange guide), 1.0 architecture spec (frozen), full validation report, release notes.
+
+Post-1.0 (do not start). AU plugins, CLAP, Pro Tools .ptx import, Ableton .als import, cloud collaboration, remote control apps. These are 1.1+ and require their own prompt sequence.
+
+---
+
+How to run this sequence
+
+1. One prompt at a time. Do not start Prompt N+1 until every gate in Prompt N has passed and the decision log is updated.
+2. Gates are binding. If a gate fails, the milestone does not ship. Extend it. Do not weaken the gate.
+3. Decision log is cumulative. Every milestone appends. It is the institutional memory of why choices were made.
+4. Limitations list is cumulative and honest. Never remove an item unless it's actually implemented.
+5. Contracts in §2 of each prompt are binding. Implementation may refine; it may not contradict.
+6. When in doubt, stop and ask. Record the open question in the decision log with options considered.
+
+Definition of done for the whole sequence: HUSH 1.0 installed and running on Linux, Windows, and macOS; every gate since 0.1.0 passing on all three; exhaustive and truthful limitations list; frozen schema v2; and a documentation set a new user can complete a first session from in 15 minutes.
+
+---
+
+End of full prompt sequence. Ten prompts. Ten gates. No shortcuts.
