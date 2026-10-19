@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add offline RIFF/WAVE media import for PCM16 and IEEE float32 files, with bounded memory use, format validation, and decoder contract tests. This loads audio into memory but does not yet place clips on a timeline.
+
 Notable repository changes. This is a development changelog, not a claim of a finished DAW release.
 
 ## 0.2.0 — headless foundation
