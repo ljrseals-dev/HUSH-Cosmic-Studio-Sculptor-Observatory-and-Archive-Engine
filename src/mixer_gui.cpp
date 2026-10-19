@@ -20,6 +20,7 @@
 #include <QVBoxLayout>
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -98,12 +99,21 @@ public:
 
     // After startup, enqueue only the track touched by the operation. Sending the
     // whole project for every slider release needlessly consumes the bounded queue.
-    bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
+    bool enqueue_track_control_values(const hush::Project& project, const std::string& track_id,
+                                      float gain, float pan, bool mute, bool solo) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-            const auto& track = project.tracks[i];
+            if (project.tracks[i].id == track_id)
+                return mixer_->enqueue_control(i, gain, pan, mute, solo);
+        }
+        return false;
+    }
+
+    bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
+        for (const auto& track : project.tracks) {
             if (track.id == track_id)
-                return mixer_->enqueue_control(i, track.gain, track.pan, track.mute, track.solo);
+                return enqueue_track_control_values(project, track_id, track.gain, track.pan,
+                                                    track.mute, track.solo);
         }
         return false;
     }
@@ -203,25 +213,31 @@ public:
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
-            const std::string track_id = operation ? operation->entity_id : std::string{};
+            if (!operation) return;
+            auto values = live_control_values(operation->entity_id);
+            if (!values) return;
+            apply_value_to_controls(*operation, operation->before_value, *values);
+            if (!enqueue_live_control_values(operation->entity_id, *values)) {
+                status_->setText("Undo not applied: live command queue full; retry after audio drains");
+                return;
+            }
             if (log_.undo(project_)) {
-                if (!sync_live_controls(track_id)) {
-                    status_->setText("Undo applied; live command queue full — retry or stop audio");
-                } else {
-                    status_->setText("Undo applied");
-                }
+                status_->setText("Undo applied");
                 refresh();
             }
         });
         connect(redo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.operation_at(log_.cursor());
-            const std::string track_id = operation ? operation->entity_id : std::string{};
+            if (!operation) return;
+            auto values = live_control_values(operation->entity_id);
+            if (!values) return;
+            apply_value_to_controls(*operation, operation->after_value, *values);
+            if (!enqueue_live_control_values(operation->entity_id, *values)) {
+                status_->setText("Redo not applied: live command queue full; retry after audio drains");
+                return;
+            }
             if (log_.redo(project_)) {
-                if (!sync_live_controls(track_id)) {
-                    status_->setText("Redo applied; live command queue full — retry or stop audio");
-                } else {
-                    status_->setText("Redo applied");
-                }
+                status_->setText("Redo applied");
                 refresh();
             }
         });
@@ -295,6 +311,42 @@ private:
         status_->setText("Saved · " + QFileInfo(path).fileName());
     }
 
+    struct LiveControlValues {
+        float gain{1.0F};
+        float pan{0.0F};
+        bool mute{false};
+        bool solo{false};
+    };
+
+    std::optional<LiveControlValues> live_control_values(const std::string& id) const {
+        const auto it = std::find_if(project_.tracks.begin(), project_.tracks.end(),
+                                     [&](const hush::Track& t) { return t.id == id; });
+        if (it == project_.tracks.end()) return std::nullopt;
+        return LiveControlValues{it->gain, it->pan, it->mute, it->solo};
+    }
+
+    static void apply_value_to_controls(const hush::Operation& operation, float value,
+                                        LiveControlValues& controls) {
+        switch (operation.kind) {
+        case hush::OperationKind::SetGain: controls.gain = value; break;
+        case hush::OperationKind::SetPan: controls.pan = value; break;
+        case hush::OperationKind::SetMute: controls.mute = value != 0.0F; break;
+        case hush::OperationKind::SetSolo: controls.solo = value != 0.0F; break;
+        }
+    }
+
+    bool enqueue_live_control_values(const std::string& id, const LiveControlValues& values) {
+#ifdef HUSH_GUI_HAS_ALSA
+        if (live_.running() &&
+            !live_.enqueue_track_control_values(project_, id, values.gain, values.pan,
+                                                values.mute, values.solo)) return false;
+#else
+        (void)id;
+        (void)values;
+#endif
+        return true;
+    }
+
     void change(const std::string& id, hush::OperationKind kind, float after) {
         const auto it = std::find_if(project_.tracks.begin(), project_.tracks.end(),
                                      [&](const hush::Track& t) { return t.id == id; });
@@ -306,22 +358,20 @@ private:
         case hush::OperationKind::SetMute: before = it->mute ? 1.0F : 0.0F; break;
         case hush::OperationKind::SetSolo: before = it->solo ? 1.0F : 0.0F; break;
         }
-        if (before != after && log_.apply_and_append(project_, {id, kind, before, after})) {
-            if (!sync_live_controls(id)) {
-                status_->setText("Project edited; live command queue full — retry or stop audio");
-            } else {
-                status_->setText("Edited · undo history " + QString::number(log_.cursor()));
-            }
+        if (before == after) return;
+        auto values = LiveControlValues{it->gain, it->pan, it->mute, it->solo};
+        hush::Operation operation{id, kind, before, after};
+        apply_value_to_controls(operation, after, values);
+        // Reserve the live-engine command before committing project state/history. If
+        // the bounded queue is full, neither the model nor undo history advances.
+        if (!enqueue_live_control_values(id, values)) {
+            status_->setText("Edit not applied: live command queue full; retry after audio drains");
+            refresh();
+            return;
         }
-    }
-
-    bool sync_live_controls(const std::string& track_id) {
-#ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() && !live_.enqueue_track_control(project_, track_id)) return false;
-#else
-        (void)track_id;
-#endif
-        return true;
+        if (log_.apply_and_append(project_, std::move(operation))) {
+            status_->setText("Edited · undo history " + QString::number(log_.cursor()));
+        }
     }
 
 #ifdef HUSH_GUI_HAS_ALSA
