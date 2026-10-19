@@ -43,12 +43,10 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 
 ## Evidence and remaining gates
 
-The registered `hush_gui_engine_command_path_tests` is a headless deterministic contract test for the same project/OperationLog → bounded track-command queue → next processing block path used by the GUI. It checks gain preview without a project mutation or undo entry, commit, undo, redo, mute, solo, and bounded-queue rejection against synthetic audio buffers. It requires no Qt display, ALSA device, network, or audio hardware.
-
-This is automated proof of the **command/engine contract**, not yet a click-level Qt UI test or physical audio-device session. It deliberately exercises the real `OperationLog` and `RealtimeTrackMixer` implementations, while reproducing the GUI's track-ID lookup and command-submission contract in the test.
+The registered `hush_gui_engine_command_path_tests` is a headless deterministic contract test for the project/OperationLog → bounded track-command queue → next processing block path. It checks gain preview, commit, undo, redo, mute, solo, and bounded-queue rejection against synthetic audio buffers. The new `tests/gui_interaction_tests.cpp` separately exercises actual `MixerWindow` widgets headlessly: gain/pan slider commits, mute/solo clicks, undo/redo buttons, and ALSA-button availability. It compiles the real GUI implementation with test-only accessors and uses Qt's offscreen platform. The new Qt test is awaiting CI execution on this branch.
 
 Still required before claiming a production live mixer:
-- Qt interaction test that clicks/drags the actual widgets and verifies they submit the expected commands;
+- CI execution and correction of `tests/gui_interaction_tests.cpp` if it fails; a stronger injected-queue assertion at the exact GUI signal boundary;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
