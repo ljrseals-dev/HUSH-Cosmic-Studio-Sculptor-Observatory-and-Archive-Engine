@@ -11,7 +11,7 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added CI for default C++20, ALSA-enabled, Qt 6 GUI, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
-## Unreleased — Phase 1–7 execution tooling
+## Unreleased — automation foundation\n\n- Added an in-memory sample-positioned automation lane with step/linear interpolation, validated ordered points, and immutable-by-convention playback snapshots. `hush_automation_tests` covers interpolation and invalid input. Project persistence, transport integration, snapshot lifetime publication, and automation recording remain open.\n\n## Unreleased — Phase 1–7 execution tooling
 
 - Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.
 - Added recovery journal tests for interrupted record headers and truncated payloads. These additions have not yet been run in this session; performance and soak reports remain outstanding.
