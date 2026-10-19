@@ -37,7 +37,7 @@ cmake --build build-gui --parallel 2 && ctest --test-dir build-gui --output-on-f
 
 ## Gate 7 CI result — commit `20736229f71da41e6fe7cc58cd4a84885809a2db`
 
-GitHub Actions [run 39291495097](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291495097) completed with all seven jobs `success`:
+GitHub Actions [run 39291973496](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291973496) completed with all seven jobs `success`:
 
 - `linux-cxx20`: “Configure offline build”, “Build”, “Contract tests”, and “Smoke-test benchmark and recovery soak harnesses” — success.
 - `linux-alsa-enabled`: “Configure ALSA-enabled build”, “Build ALSA backend and realtime host”, and “Contract tests” — success.
@@ -47,4 +47,18 @@ GitHub Actions [run 39291495097](https://github.com/ljrseals-dev/HUSH-Cosmic-Stu
 - `linux-tsan`: “Configure ThreadSanitizer build”, “Build”, and “Contract tests” — success.
 - `repo-artifact-hygiene`: “Reject committed build outputs and new binary archives” — success.
 
-This validates the code at the listed commit. The documentation update that adds this entry requires its own fresh run before claiming the latest PR head is green. The local CMake commands above remain unrun here because GitHub clone access failed DNS resolution; no local output has been fabricated.
+This validates the code at the listed commit. The source, test, and CMake revision at commit `30d58d6f49b1854a6d0bbc8b4375ee98f8ffeff5` is green in run 39291973496. This subsequent change is documentation-only; the tested source/build/test files are unchanged. The local CMake commands above remain unrun here because GitHub clone access failed DNS resolution; no local output has been fabricated.
+
+## Latest Gate 7 source/build/test revision — commit `30d58d6f49b1854a6d0bbc8b4375ee98f8ffeff5`
+
+GitHub Actions [run 39291973496](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291973496) completed with all seven jobs `success`:
+
+- `linux-cxx20`: configure offline build, build, contract tests, benchmark/recovery-soak smoke tests — success.
+- `linux-alsa-enabled`: configure ALSA build, build ALSA backend and host, contract tests — success.
+- `linux-qt6-mixer-gui`: configure GUI build, build GUI/contracts, contract tests — success.
+- `linux-qt6-alsa-live-mixer`: configure combined GUI+ALSA build, build GUI/ALSA monitor, contract tests — success.
+- `linux-asan`: configure, build, contract tests — success.
+- `linux-tsan`: configure, build, contract tests — success.
+- `repo-artifact-hygiene`: archive/build-output hygiene check — success.
+
+This includes the privacy source audit registered in the default contract-test suite. It does not cover a real ALSA device, Qt dialog automation, CLI dirty-quit failure, power-loss durability, or long-duration hardware tests.
