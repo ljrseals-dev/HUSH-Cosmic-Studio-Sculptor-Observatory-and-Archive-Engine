@@ -88,3 +88,11 @@ Every item below is **unverified/incomplete** until its evidence is committed. *
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
 
 See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEASE_GATES.md](Docs/RELEASE_GATES.md), [Docs/REPO_AUDIT.md](Docs/REPO_AUDIT.md), and [ROADMAP.md](ROADMAP.md). Do not infer hardware readiness, performance, soak stability, release readiness, or a verified zero-network guarantee from green CI alone.
+
+## Current engineering handoff
+
+- [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
+- [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
+- [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
+- The Qt mixer shell is **not yet connected to live audio**. Do not describe this repository as a finished DAW or claim hardware validation, long-duration stability, or a verified release build without committed evidence.
+
