@@ -54,7 +54,10 @@ int main() {
                 break;
             }
             const float gain = output_left[0];
+            // The initial valid snapshot (0.5) may be observed before the
+            // control thread publishes the first replacement.
             if (std::abs(gain - 0.25F) > 1.0e-6F &&
+                std::abs(gain - 0.5F) > 1.0e-6F &&
                 std::abs(gain - 0.75F) > 1.0e-6F) {
                 invalid_output.store(true, std::memory_order_relaxed);
                 break;
