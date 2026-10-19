@@ -35,7 +35,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 ## Realtime contract
 
 - `RealtimeTrackMixer` is configured and its track buffers are allocated before starting the backend.
-- GUI gain, pan, mute, and solo edits enqueue complete track-control snapshots; undo/redo also synchronize the model's controls to the engine.
+- GUI gain, pan, mute, and solo edits enqueue a complete control snapshot for the affected track; undo/redo locate the touched operation and enqueue only that track. Startup still seeds all tracks before audio begins. This avoids consuming queue capacity proportional to total track count on every edit.
 - The bounded queue is single-producer (GUI thread) / single-consumer (audio callback). A rejected/full queue is reported; the GUI does not wait for the audio callback.
 - The callback uses preallocated buffers and performs no allocation, locking, logging, or file/network I/O.
 - The backend callback thread is stopped and joined before live mixer state is destroyed or replaced.
