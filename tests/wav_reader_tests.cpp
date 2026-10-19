@@ -5,15 +5,9 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
-
-namespace {
-std::vector<unsigned char> bytes_of(const std::filesystem::path& path) {
-    std::ifstream in(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
-}
 
 int main() {
     const auto root = std::filesystem::temp_directory_path();
