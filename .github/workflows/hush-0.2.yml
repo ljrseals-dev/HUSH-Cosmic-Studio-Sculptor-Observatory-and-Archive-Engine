@@ -16,3 +16,18 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Contract tests
         run: ctest --test-dir build --output-on-failure
+
+  linux-alsa-enabled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ALSA development headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libasound2-dev
+      - name: Configure ALSA-enabled build
+        run: cmake -S . -B build-alsa -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_ENABLE_ALSA=ON
+      - name: Build ALSA backend and realtime host
+        run: cmake --build build-alsa --parallel 2
+      - name: Contract tests
+        run: ctest --test-dir build-alsa --output-on-failure
