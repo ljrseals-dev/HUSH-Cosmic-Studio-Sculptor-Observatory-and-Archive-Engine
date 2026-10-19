@@ -1,8 +1,11 @@
 #include "hush/project.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <regex>
 #include <sstream>
+#include <limits>
+#include <unordered_set>
 
 namespace hush {
 namespace {
@@ -82,6 +85,28 @@ std::string to_json(const Project& p) {
           << "\", \"tap\": \"" << tap_name(r.tap) << "\", \"gain\": " << r.gain << "}";
     }
     if (!p.routes.empty()) o << "\n  ";
+    o << "],\n  \"media_sources\": [";
+    for (std::size_t i=0;i<p.media_sources.size();++i) {
+        const auto& source=p.media_sources[i];
+        o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(source.id)
+          << "\", \"relative_path\": \"" << escape_json(source.relative_path)
+          << "\", \"sample_rate\": " << source.sample_rate
+          << ", \"channels\": " << source.channels
+          << ", \"frame_count\": " << source.frame_count << "}";
+    }
+    if (!p.media_sources.empty()) o << "\n  ";
+    o << "],\n  \"clips\": [";
+    for (std::size_t i=0;i<p.clips.size();++i) {
+        const auto& clip=p.clips[i];
+        o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(clip.id)
+          << "\", \"track_id\": \"" << escape_json(clip.track_id)
+          << "\", \"source_id\": \"" << escape_json(clip.source_id)
+          << "\", \"timeline_start_frame\": " << clip.timeline_start_frame
+          << ", \"source_start_frame\": " << clip.source_start_frame
+          << ", \"frame_count\": " << clip.frame_count
+          << ", \"gain\": " << clip.gain << "}";
+    }
+    if (!p.clips.empty()) o << "\n  ";
     o << "]\n}\n";
     return o.str();
 }
@@ -154,6 +179,62 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         if (!graph.configure(p.buses,p.routes,routing_error)) {
             e={routing_error.code,routing_error.entity_id,routing_error.message,"error"}; return false;
         }
+    }
+
+    if (!extract_array(s,"media_sources",body,false,e)) return false;
+    const std::regex source_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"relative_path"\s*:\s*"([^"]*)"\s*,\s*"sample_rate"\s*:\s*(\d+)\s*,\s*"channels"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),source_re);
+    std::unordered_set<std::string> source_ids;
+    for (auto it=begin;it!=end;++it) {
+        const auto& x=*it;
+        try {
+            const auto rate=std::stoull(x[3].str());
+            const auto channels=std::stoull(x[4].str());
+            const auto frames=std::stoull(x[5].str());
+            if (rate==0U || rate>std::numeric_limits<std::uint32_t>::max() ||
+                channels==0U || channels>8U || frames==0U ||
+                x[1].str().empty() || x[2].str().empty() || !source_ids.insert(x[1].str()).second) {
+                e={"media_source_invalid",x[1].str(),"Media source metadata or ID is invalid/duplicated","error"}; return false;
+            }
+            p.media_sources.push_back({x[1].str(),x[2].str(),static_cast<std::uint32_t>(rate),
+                static_cast<std::uint16_t>(channels),static_cast<std::uint64_t>(frames)});
+        } catch (...) { e={"media_source_number_invalid",x[1].str(),"Media source numeric metadata is invalid","error"}; return false; }
+    }
+    if (body.find('{')!=std::string::npos && p.media_sources.empty()) {
+        e={"media_source_parse_failed","","Media source object did not match schema-v1 fields","error"}; return false;
+    }
+
+    if (!extract_array(s,"clips",body,false,e)) return false;
+    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
+    std::unordered_set<std::string> clip_ids;
+    for (auto it=begin;it!=end;++it) {
+        const auto& x=*it;
+        try {
+            AudioClip clip;
+            clip.id=x[1].str(); clip.track_id=x[2].str(); clip.source_id=x[3].str();
+            clip.timeline_start_frame=std::stoull(x[4].str());
+            clip.source_start_frame=std::stoull(x[5].str());
+            clip.frame_count=std::stoull(x[6].str());
+            clip.gain=std::stof(x[7].str());
+            const auto track=std::find_if(p.tracks.begin(),p.tracks.end(),
+                [&](const Track& t){ return t.id==clip.track_id; });
+            const auto source=std::find_if(p.media_sources.begin(),p.media_sources.end(),
+                [&](const MediaSource& m){ return m.id==clip.source_id; });
+            if (clip.id.empty() || clip.track_id.empty() || clip.source_id.empty() ||
+                !clip_ids.insert(clip.id).second || track==p.tracks.end() ||
+                source==p.media_sources.end() || clip.frame_count==0U ||
+                !std::isfinite(clip.gain) || clip.gain<0.0F ||
+                clip.source_start_frame>source->frame_count ||
+                clip.frame_count>source->frame_count-clip.source_start_frame ||
+                clip.timeline_start_frame>std::numeric_limits<std::uint64_t>::max()-clip.frame_count) {
+                e={"audio_clip_invalid",clip.id,"Clip IDs, references, gain, or frame bounds are invalid","error"}; return false;
+            }
+            p.clips.push_back(std::move(clip));
+        } catch (...) { e={"audio_clip_number_invalid",x[1].str(),"Clip frame positions or gain are invalid","error"}; return false; }
+    }
+    if (body.find('{')!=std::string::npos && p.clips.empty()) {
+        e={"audio_clip_parse_failed","","Clip object did not match schema-v1 fields","error"}; return false;
     }
     out=std::move(p); e={}; return true;
 }

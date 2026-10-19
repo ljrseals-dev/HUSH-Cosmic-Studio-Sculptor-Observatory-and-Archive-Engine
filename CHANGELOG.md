@@ -8,7 +8,8 @@
 
 ## Unreleased
 
-- Add offline RIFF/WAVE media import for PCM16 and IEEE float32 files, with bounded memory use, format validation, and decoder contract tests. This loads audio into memory but does not yet place clips on a timeline.
+- Add schema-v1-compatible media-source references and sample-positioned audio clips, with track/source reference checks, source-frame bounds validation, and persistence tests. Full arrangement rendering remains a separate step.
+- Add offline RIFF/WAVE media import for PCM16 and IEEE float32 files, with bounded memory use, format validation, and decoder contract tests.
 
 Notable repository changes. This is a development changelog, not a claim of a finished DAW release.
 
