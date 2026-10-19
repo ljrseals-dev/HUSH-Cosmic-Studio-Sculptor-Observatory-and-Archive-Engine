@@ -1,0 +1,14 @@
+{
+  "harness": "loopback_latency",
+  "result": "NOT_RUN",
+  "machine": {
+    "uname": "NOT_RUN — requires named Linux kernel/OS",
+    "cpu": "NOT RUN — requires named CPU",
+    "alsa_version": "NOT_RUN — requires installed ALSA version",
+    "device": "NOT_RUN — requires named loopback-capable device"
+  },
+  "started_at": "NOT_RUN — human target-machine run required",
+  "duration_s": null,
+  "metrics": {},
+  "notes": "NOT RUN — requires a physical loopback cable or explicitly configured virtual ALSA loopback and documented impulse path."
+}

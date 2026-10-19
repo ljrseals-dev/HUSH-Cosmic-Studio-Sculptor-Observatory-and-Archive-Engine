@@ -1,0 +1,14 @@
+{
+  "harness": "soak_8h",
+  "result": "NOT_RUN",
+  "machine": {
+    "uname": "NOT_RUN — requires named Linux kernel/OS",
+    "cpu": "NOT_RUN — requires named CPU",
+    "alsa_version": "NOT_RUN — not applicable unless ALSA host is measured",
+    "device": "NOT_RUN — identify device if a live backend is used"
+  },
+  "started_at": "NOT_RUN — human target-machine run required",
+  "duration_s": null,
+  "metrics": {},
+  "notes": "NOT RUN — requires a completed eight-hour run on a named machine and a declared maximum memory-drift bound; no soak stability is implied."
+}
