@@ -29,3 +29,9 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
+
+## Unreleased — headless Qt interaction coverage
+
+- Added `tests/gui_interaction_tests.cpp` to exercise actual gain/pan slider commits, mute/solo clicks, undo/redo buttons, and live-button availability using Qt's offscreen platform.
+- Added stable widget object names and test-only project/history accessors compiled only for the GUI test target.
+- Added `Docs/GUI_INTERACTION_TEST_AUDIT.md` documenting queue payload fields, current coverage, CLI-parity scope, and the remaining loopback/hardware gates. CI execution for the new test is pending; no hardware validation is claimed.
