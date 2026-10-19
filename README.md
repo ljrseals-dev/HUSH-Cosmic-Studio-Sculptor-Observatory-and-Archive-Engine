@@ -1,86 +1,27 @@
-# HUSH Cosmic Studio
+# HUSH Unified DAW — 0.2 headless foundation
 
-> **High-Performance, Zero-Telemetry, Native C++20 Digital Audio Workstation & Audio Processing Engine**
+This branch begins the ordered milestone sequence at **Prompt 1 — HUSH 0.2** in `Docs/Prompt`. Milestone 0.2 is headless only: persistent project state, an operation log, mixer semantics, and the foundation for real-time Linux audio and bus routing. GUI, recording, MIDI, plugins, and voice control are explicitly out of scope.
 
-![HUSH Cosmic Studio Workspace](images/1792375771560.jpg)
+## Build offline
 
----
-
-## Overview
-
-**HUSH Cosmic Studio** is a lightweight, high-performance Digital Audio Workstation (DAW) and audio processing architecture built for Linux environments. Designed with a strict **zero-telemetry** guarantee, it prioritizes user privacy, low-latency buffer management, and predictable real-time execution performance.
-
----
-
-## Key Features
-
-* **C++20 Architecture:** Leverages modern C++ standard features for high-throughput, safety-focused real-time audio computations.
-* **Native X11 Interface:** Implements lightweight, direct window management and rendering without resource-heavy UI frameworks or cloud dependencies.
-* **Zero Telemetry / Absolute Privacy:** Contains no tracking SDKs, analytics hooks, or external telemetry reporting.
-* **Thread-Safe Engine Bridge:** Employs a non-blocking command queue and lock-free synchronization layers between the UI thread and the real-time audio processing core.
-* **Modular Plugin Support:** Easily extensible via native DSP plugin modules (such as the included `DemoGain` module).
-
----
-
-## Repository Structure
-
-```text
-HUSH-Cosmic-Studio/
-├── CMakeLists.txt          # Root CMake build configuration
-├── README.md               # Project documentation
-├── include/
-│   └── hush/
-│       ├── AudioEngine.hpp # Core audio engine interface declarations
-│       └── EngineBridge.hpp# Thread-safe IPC & parameter synchronization
-├── src/
-│   ├── x11_main.cpp        # X11 application entry point & GUI loop
-│   ├── AudioEngine.cpp     # Real-time audio processing implementation
-│   └── EngineBridge.cpp    # Engine bridge and message queue logic
-├── plugins/
-│   └── DemoGain.cpp        # Sample DSP gain staging processor
-├── tests/
-│   └── smoke_test.cpp      # Automated verification and smoke test suite
-└── docs/
-    ├── IMPLEMENTATION_STATUS.md # Feature roadmap and progress tracker
-    ├── DEPENDENCIES.md         # Required external libraries & tools
-    ├── SECURITY_AND_PRIVACY.md # Privacy guarantees and security policies
-    └── RELEASE_CHECKLIST.md    # Release verification steps
-```
-## Getting Started
-
-Prerequisites
-
-To build and run HUSH Cosmic Studio from source, ensure your development environment meets the following requirements:
-
-· A modern C++20 compliant compiler (GCC 11+ or Clang 13+)
-· CMake (version 3.20 or higher)
-· PortAudio development libraries
-· X11 development headers (libx11-dev)
-
-Consult DEPENDENCIES.md for detailed package installation instructions across distributions.
-
-Building the Project
-
-Clone the repository and build using CMake:
-
-```bash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . -j$(nproc)
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
-## Running Tests
+No FetchContent, package bootstrap, network access, telemetry, or update checks are used by this build.
 
-Execute the automated smoke tests to verify system stability:
+## Included
+- C++20 project model with stable entity IDs and schema version 1.
+- JSON serialization/deserialization for the documented model subset.
+- Invertible append-only operation-log primitives with undo/redo tests.
+- Explicit equal-power pan law (−3 dB center) and selectable −4.5 dB legacy law.
+- Float32 mixer primitives, solo-in-place/mute semantics, and deterministic offline render helper.
+- Structured error type.
+- Offline CMake build and contract tests.
 
-```bash
-ctest --output-on-failure
-```
+## Not yet complete / do not claim
+This is a milestone foundation, not a finished DAW release. ALSA device streaming, lock-free real-time graph swapping with safe reclamation, autosave timer/crash journal, actual bus routing/cycle detection, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate still require implementation and target-machine validation. No GUI is included, as required by Prompt 0.2.
 
-## Documentation
-
-· Implementation Status: Track ongoing development milestones and planned features.
-· Security & Privacy Policy: Review our strict offline-first, zero-telemetry code commitments.
-· Release Checklist: Guidelines used by maintainers prior to tagging a new version.
-
-```
+See `Docs/IMPLEMENTATION_STATUS.md`, `Docs/DECISION_LOG.md`, and `Docs/VALIDATION_REPORT.md`.
