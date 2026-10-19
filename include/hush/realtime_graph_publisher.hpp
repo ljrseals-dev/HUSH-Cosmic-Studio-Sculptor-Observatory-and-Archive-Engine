@@ -73,6 +73,12 @@ public:
         if (!reader_active_.load(std::memory_order_seq_cst)) retired_.clear();
     }
 
+    // Control thread only. The returned object remains owned by this publisher;
+    // only call its control-side enqueue APIs and never inspect callback-owned buffers.
+    [[nodiscard]] Graph* active_for_control() noexcept {
+        return active_owner_.get();
+    }
+
     [[nodiscard]] std::size_t retired_count_for_control() const noexcept {
         return retired_.size();
     }
