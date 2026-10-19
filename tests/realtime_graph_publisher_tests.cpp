@@ -23,6 +23,10 @@ static void held_reader_defers_reclamation() {
     {
         auto guard = publisher.acquire_for_audio();
         assert(guard && guard->value == 1U);
+        // The primitive is single-reader; a second/nested guard must fail closed
+        // without clearing the first reader's reclamation hazard.
+        auto overlapping = publisher.acquire_for_audio();
+        assert(!overlapping);
 
         publisher.publish(std::make_unique<ImmutableGraph>(2U, destroyed));
         // Publishing must not destroy the old snapshot while an audio reader
