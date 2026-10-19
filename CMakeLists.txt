@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
-option(HUSH_ENABLE_ALSA "Enable the Linux ALSA backend (future integration point)" OFF)
+option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend" OFF)
 
 add_library(hush_core
     src/project.cpp
@@ -25,6 +25,22 @@ if(MSVC)
   target_compile_options(hush_core PRIVATE /W4 /permissive-)
 else()
   target_compile_options(hush_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+endif()
+
+if(HUSH_ENABLE_ALSA)
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(FATAL_ERROR "HUSH_ENABLE_ALSA is supported only on Linux")
+  endif()
+  find_package(ALSA REQUIRED)
+  add_library(hush_alsa_backend src/alsa_audio_backend.cpp)
+  target_include_directories(hush_alsa_backend PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${ALSA_INCLUDE_DIRS})
+  target_compile_features(hush_alsa_backend PUBLIC cxx_std_20)
+  target_link_libraries(hush_alsa_backend PUBLIC ${ALSA_LIBRARIES})
+  if(MSVC)
+    target_compile_options(hush_alsa_backend PRIVATE /W4 /permissive-)
+  else()
+    target_compile_options(hush_alsa_backend PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+  endif()
 endif()
 
 if(HUSH_BUILD_TESTS)
