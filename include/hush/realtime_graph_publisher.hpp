@@ -11,6 +11,8 @@ namespace hush {
 // Single-control-thread / single-audio-reader publication primitive for immutable
 // graph snapshots. Build a replacement off-thread, publish it, then reclaim retired
 // snapshots on the control thread. Never call reclaim_retired() from the audio thread.
+// The owner must stop/join the audio reader before destroying this publisher. Publication,
+// reclamation, and destruction are single-control-thread operations.
 template <class Graph>
 class RealtimeGraphPublisher {
 public:
@@ -18,7 +20,14 @@ public:
     public:
         AudioReadGuard() = default;
         explicit AudioReadGuard(RealtimeGraphPublisher* owner) noexcept : owner_(owner) {
-            owner_->reader_active_.store(true, std::memory_order_seq_cst);
+            bool expected = false;
+            // The design permits exactly one audio reader. Fail closed instead of
+            // allowing a nested/concurrent guard to clear another reader's hazard.
+            if (!owner_->reader_active_.compare_exchange_strong(
+                    expected, true, std::memory_order_seq_cst, std::memory_order_seq_cst)) {
+                owner_ = nullptr;
+                return;
+            }
             graph_ = owner_->active_.load(std::memory_order_seq_cst);
         }
         AudioReadGuard(const AudioReadGuard&) = delete;
@@ -62,6 +71,12 @@ public:
     // Control thread only. Safe to call periodically after publication.
     void reclaim_retired() noexcept {
         if (!reader_active_.load(std::memory_order_seq_cst)) retired_.clear();
+    }
+
+    // Control thread only. The returned object remains owned by this publisher;
+    // only call its control-side enqueue APIs and never inspect callback-owned buffers.
+    [[nodiscard]] Graph* active_for_control() const noexcept {
+        return active_owner_.get();
     }
 
     [[nodiscard]] std::size_t retired_count_for_control() const noexcept {

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <limits>
 
 int main() {
     using namespace hush;
@@ -33,7 +34,12 @@ int main() {
     assert(std::abs(right[0] - 0.7071067F) < 1.0e-5F);
 
     assert(!mixer.enqueue_control(0, -1.0F, 0.0F, false, false));
+    assert(!mixer.enqueue_control(0, 2.01F, 0.0F, false, false));
     assert(!mixer.enqueue_control(0, 1.0F, 2.0F, false, false));
+    assert(!mixer.enqueue_control(0, 1.0F, -2.0F, false, false));
+    assert(!mixer.enqueue_control(0, std::numeric_limits<float>::quiet_NaN(), 0.0F, false, false));
+    assert(!mixer.enqueue_control(0, 1.0F, std::numeric_limits<float>::infinity(), false, false));
+    assert(!mixer.enqueue_control(99, 1.0F, 0.0F, false, false));
     assert(!mixer.process(inputs, 1, left, right, 2));
     assert(!mixer.process(inputs, 2, left, right, 9));
 
