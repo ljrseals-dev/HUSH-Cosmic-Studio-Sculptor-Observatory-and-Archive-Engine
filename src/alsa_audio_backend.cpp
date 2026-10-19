@@ -70,6 +70,9 @@ bool AlsaAudioBackend::start(const Config& config, ProcessCallback callback, voi
 }
 void AlsaAudioBackend::stop() noexcept {
  stop_requested_.store(true, std::memory_order_release);
+ // Drop wakes a blocking read/write so join does not depend on another device period.
+ if (capture_) (void)snd_pcm_drop(capture_);
+ if (playback_) (void)snd_pcm_drop(playback_);
  if (worker_.joinable()) worker_.join();
  running_.store(false, std::memory_order_release);
  callback_ = nullptr; user_data_ = nullptr;
