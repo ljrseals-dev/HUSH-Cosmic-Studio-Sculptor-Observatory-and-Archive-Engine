@@ -1,4 +1,5 @@
 #pragma once
+#include "hush/bus_graph.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -24,6 +25,9 @@ struct Project {
     std::string id{"project-1"};
     PanLaw pan_law{PanLaw::EqualPowerMinus3dB};
     std::vector<Track> tracks;
+    // Bus routing is part of canonical project state. Validate it with BusGraph before rendering.
+    std::vector<Bus> buses;
+    std::vector<BusRoute> routes;
     bool operator==(const Project&) const = default;
 };
 std::string to_json(const Project& project);
