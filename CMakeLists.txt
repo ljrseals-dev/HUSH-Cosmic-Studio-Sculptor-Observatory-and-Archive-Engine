@@ -12,6 +12,7 @@ add_library(hush_core
     src/project.cpp
     src/operation_log.cpp
     src/mixer.cpp
+    src/bus_graph.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
@@ -26,4 +27,8 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_contract_tests tests/contract_tests.cpp)
   target_link_libraries(hush_contract_tests PRIVATE hush_core)
   add_test(NAME hush_contract_tests COMMAND hush_contract_tests)
+
+  add_executable(hush_bus_graph_tests tests/bus_graph_tests.cpp)
+  target_link_libraries(hush_bus_graph_tests PRIVATE hush_core)
+  add_test(NAME hush_bus_graph_tests COMMAND hush_bus_graph_tests)
 endif()
