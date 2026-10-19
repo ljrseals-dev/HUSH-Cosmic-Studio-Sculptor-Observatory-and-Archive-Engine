@@ -7,13 +7,40 @@
 #include <thread>
 
 struct ImmutableGraph {
-    explicit ImmutableGraph(unsigned int value_in) : value(value_in) {}
+    ImmutableGraph(unsigned int value_in, std::shared_ptr<std::atomic<unsigned int>> destroyed_in)
+        : value(value_in), destroyed(std::move(destroyed_in)) {}
+    ~ImmutableGraph() { destroyed->fetch_add(1U, std::memory_order_relaxed); }
+
     const unsigned int value;
+    std::shared_ptr<std::atomic<unsigned int>> destroyed;
 };
 
-int main() {
+static void held_reader_defers_reclamation() {
+    auto destroyed = std::make_shared<std::atomic<unsigned int>>(0U);
     hush::RealtimeGraphPublisher<ImmutableGraph> publisher;
-    publisher.publish(std::make_unique<ImmutableGraph>(1U));
+    publisher.publish(std::make_unique<ImmutableGraph>(1U, destroyed));
+
+    {
+        auto guard = publisher.acquire_for_audio();
+        assert(guard && guard->value == 1U);
+
+        publisher.publish(std::make_unique<ImmutableGraph>(2U, destroyed));
+        // Publishing must not destroy the old snapshot while an audio reader
+        // could still hold its pointer.
+        assert(destroyed->load(std::memory_order_relaxed) == 0U);
+        assert(publisher.retired_count_for_control() == 1U);
+        assert(guard->value == 1U);
+    }
+
+    publisher.reclaim_retired();
+    assert(destroyed->load(std::memory_order_relaxed) == 1U);
+    assert(publisher.retired_count_for_control() == 0U);
+}
+
+static void concurrent_publication_stress() {
+    auto destroyed = std::make_shared<std::atomic<unsigned int>>(0U);
+    hush::RealtimeGraphPublisher<ImmutableGraph> publisher;
+    publisher.publish(std::make_unique<ImmutableGraph>(1U, destroyed));
     std::atomic<bool> stop{false};
     std::atomic<unsigned int> observed{0U};
 
@@ -29,7 +56,7 @@ int main() {
     });
 
     for (unsigned int value = 2U; value < 20000U; ++value) {
-        publisher.publish(std::make_unique<ImmutableGraph>(value));
+        publisher.publish(std::make_unique<ImmutableGraph>(value, destroyed));
         if ((value % 7U) == 0U) std::this_thread::yield();
     }
     stop.store(true, std::memory_order_release);
@@ -37,5 +64,10 @@ int main() {
     publisher.reclaim_retired();
     assert(observed.load(std::memory_order_relaxed) >= 1U);
     assert(publisher.retired_count_for_control() == 0U);
+}
+
+int main() {
+    held_reader_defers_reclamation();
+    concurrent_publication_stress();
     return 0;
 }
