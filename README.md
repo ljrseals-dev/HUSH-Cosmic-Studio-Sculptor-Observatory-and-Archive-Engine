@@ -41,7 +41,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Preallocated bus processing:** `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `tests/preallocated_bus_processor_tests.cpp`.
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
-- **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
+- **Interleaved stereo adapters:** `include/hush/realtime_bus_audio_adapter.hpp` for the configure-once engine and `include/hush/realtime_bus_engine_host_audio_adapter.hpp` for the published graph host. The host adapter preallocates planar scratch, holds the graph host's callback guard through processing/output copy, and permits same-topology replacement while running. `tests/realtime_bus_engine_host_audio_adapter_tests.cpp` covers output mapping and concurrent graph replacement; fresh CI for this change is pending.
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
 - **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.

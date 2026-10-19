@@ -1,7 +1,7 @@
 #include "hush/alsa_audio_backend.hpp"
 #include "hush/bus_graph.hpp"
-#include "hush/realtime_bus_audio_adapter.hpp"
-#include "hush/realtime_bus_engine.hpp"
+#include "hush/realtime_bus_engine_host.hpp"
+#include "hush/realtime_bus_engine_host_audio_adapter.hpp"
 
 #include <chrono>
 #include <csignal>
@@ -35,17 +35,17 @@ int main() {
     }
 
     constexpr std::size_t max_frames = 4096;
-    RealtimeBusEngine engine;
+    RealtimeBusEngineHost engine_host;
     ProcessorSetupError setup_error;
-    if (!engine.configure(graph, max_frames, setup_error)) {
+    if (!engine_host.replace_graph(graph, max_frames, "master", setup_error)) {
         std::cerr << "Realtime engine setup failed: " << setup_error.code
                   << ": " << setup_error.message << '\n';
         return 1;
     }
 
-    RealtimeBusAudioAdapter adapter;
+    RealtimeBusEngineHostAudioAdapter adapter;
     std::string adapter_error;
-    if (!adapter.configure(engine, 0, 1, max_frames, adapter_error)) {
+    if (!adapter.configure(engine_host, 0, graph.buses().size(), max_frames, adapter_error)) {
         std::cerr << "Audio adapter setup failed: " << adapter_error << '\n';
         return 1;
     }
@@ -55,7 +55,7 @@ int main() {
     config.sample_rate = 48000;
     config.period_frames = 128;
     std::string backend_error;
-    if (!backend.start(config, &RealtimeBusAudioAdapter::alsa_callback,
+    if (!backend.start(config, &RealtimeBusEngineHostAudioAdapter::alsa_callback,
                       &adapter, backend_error)) {
         std::cerr << "ALSA startup failed: " << backend_error << '\n';
         return 1;
@@ -71,6 +71,7 @@ int main() {
     }
 
     backend.stop();
+    engine_host.reclaim_retired();
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
               << backend.xrun_count() << '\n';

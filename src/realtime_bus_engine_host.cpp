@@ -87,4 +87,9 @@ std::size_t RealtimeBusEngineHost::bus_count_for_control() const noexcept {
     return snapshot == nullptr ? 0U : snapshot->engine.bus_count();
 }
 
+std::size_t RealtimeBusEngineHost::max_frames_for_control() const noexcept {
+    auto* snapshot = publisher_.active_for_control();
+    return snapshot == nullptr ? 0U : snapshot->engine.max_frames();
+}
+
 } // namespace hush

@@ -21,6 +21,7 @@ add_library(hush_core
     src/realtime_bus_engine_host.cpp
     src/realtime_track_mixer.cpp
     src/realtime_bus_audio_adapter.cpp
+    src/realtime_bus_engine_host_audio_adapter.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
@@ -119,6 +120,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_bus_audio_adapter_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_bus_audio_adapter_tests COMMAND hush_realtime_bus_audio_adapter_tests)
 
+  add_executable(hush_realtime_bus_engine_host_audio_adapter_tests tests/realtime_bus_engine_host_audio_adapter_tests.cpp)
+  target_link_libraries(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE hush_core Threads::Threads)
+  add_test(NAME hush_realtime_bus_engine_host_audio_adapter_tests COMMAND hush_realtime_bus_engine_host_audio_adapter_tests)
+
   add_executable(hush_realtime_track_mixer_tests tests/realtime_track_mixer_tests.cpp)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
@@ -153,6 +158,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_host_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE /UNDEBUG)
   else()
@@ -166,6 +172,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_host_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE -UNDEBUG)
   endif()
