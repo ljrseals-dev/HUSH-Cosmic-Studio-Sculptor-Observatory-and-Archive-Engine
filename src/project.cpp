@@ -1,4 +1,5 @@
 #include "hush/project.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <regex>
