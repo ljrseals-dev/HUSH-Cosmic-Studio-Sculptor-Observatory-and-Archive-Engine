@@ -40,8 +40,8 @@ int main() {
     if (!seed(payload_path)) return 4;
     {
         std::ofstream file(payload_path, std::ios::binary | std::ios::app);
-        file << "HUSHJ1 50\\n";
-        file.write("{\\\"schema_version\\\":", 18); // shorter than declared payload
+        file << "HUSHJ1 50\n";
+        file.write("{\"schema_version\":", 18); // shorter than declared payload
         file.flush();
         if (!file) return 5;
     }
