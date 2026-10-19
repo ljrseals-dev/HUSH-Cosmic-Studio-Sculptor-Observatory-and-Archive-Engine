@@ -120,6 +120,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_bus_audio_adapter_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_bus_audio_adapter_tests COMMAND hush_realtime_bus_audio_adapter_tests)
 
+  add_executable(hush_realtime_bus_engine_host_audio_adapter_tests tests/realtime_bus_engine_host_audio_adapter_tests.cpp)
+  target_link_libraries(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE hush_core Threads::Threads)
+  add_test(NAME hush_realtime_bus_engine_host_audio_adapter_tests COMMAND hush_realtime_bus_engine_host_audio_adapter_tests)
+
   add_executable(hush_realtime_track_mixer_tests tests/realtime_track_mixer_tests.cpp)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
