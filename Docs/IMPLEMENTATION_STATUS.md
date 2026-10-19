@@ -16,16 +16,17 @@
 - [x] Fixed-capacity single-producer/single-consumer parameter queue primitive and deterministic contract tests.
 - [x] Preallocated bus processor with control-thread setup, fixed-capacity buffers, indexed routes, and an allocation-free process path.
 - [x] RealtimeBusEngine composes the preallocated processor with the bounded SPSC fader-parameter queue; queue updates are applied at processing-block boundaries.
-- [x] Interleaved-stereo adapter deinterleaves device input, injects it into a configured graph input bus, runs RealtimeBusEngine, and interleaves the configured master bus output; scratch is preallocated and offline contract tests are added.
-- [x] Optional Linux ALSA capture/playback worker target and callback contract (device validation pending).
+- [x] Interleaved-stereo adapter injects device input into a selected graph input bus, runs RealtimeBusEngine, and emits the selected master's post-fader output; scratch is preallocated and offline contract tests pass in CI.
+- [x] Optional Linux ALSA capture/playback worker target and callback contract.
+- [x] Optional Linux host executable constructs a capture-to-master graph, configures engine and adapter, starts ALSA, and stops cleanly on SIGINT/SIGTERM.
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
-- [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
-- [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; the current subprocess test covers completed writes, not power loss or mid-write termination.
-- [ ] Wire a running host/device lifecycle that constructs BusGraph, configures RealtimeBusEngine and RealtimeBusAudioAdapter, and starts/stops AlsaAudioBackend; the reusable callback adapter is implemented, but no app host currently owns that lifecycle.
+- [ ] Build the ALSA-enabled configuration on a Linux host with ALSA development headers/libraries; the default CI job builds/tests with ALSA disabled.
+- [ ] Test device startup/shutdown on named ALSA hardware, verify parameter atomics are lock-free on target hardware, and measure callback timing/xruns.
+- [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in a host UI/log.
+- [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; current subprocess test covers completed writes, not power loss or mid-write termination.
 - [ ] Optional JACK/PipeWire compile-time backends.
-- [ ] Verify parameter atomics are lock-free on target hardware and test ALSA device behavior.
 - [ ] Safe graph swap and deferred reclamation; current processor is configure-once and must not be destroyed while processing.
 - [ ] Integrate track-to-bus assignment, inserts, solo/mute semantics, meters, and xrun counters into the processing path.
 - [ ] 60-minute 48 kHz/128-frame zero-xrun reference run.
@@ -34,4 +35,4 @@
 - [ ] 8-hour soak and 500-track/200-clip/20-lane performance gate.
 - [ ] Preserve all 0.1.0 tests (not available in this repository's current source archive).
 
-Do not mark 0.2 release-ready until all required gates have evidence. A passing unit-test job does not prove real-time audio behavior.
+Do not mark 0.2 release-ready until all required gates have evidence. A passing default CI job does not prove real-time audio behavior or compile the optional ALSA target.
