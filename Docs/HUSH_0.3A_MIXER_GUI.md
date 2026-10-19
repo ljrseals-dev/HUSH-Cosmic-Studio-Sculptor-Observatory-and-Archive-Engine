@@ -41,3 +41,10 @@ On Debian/Ubuntu, install `qt6-base-dev` before configuring.
 - GUI leak/xrun soak tests and hardware validation.
 
 A passing GUI build proves only that this optional target compiles and its registered tests pass. It does not establish live-audio control, hardware latency, zero-xrun behavior, or long-soak stability.
+
+
+## Gate 1 wiring audit
+
+See [GUI_ENGINE_WIRING_AUDIT.md](GUI_ENGINE_WIRING_AUDIT.md) for the widget-by-widget source audit, current SPSC payloads, proposed widget-to-command mapping, and the blocker preventing safe live wiring.
+
+**Current status remains project-editor-only.** The Qt target has no audio backend lifecycle or callback consuming `RealtimeTrackMixer` commands, and the current project model does not provide track audio buffers. Do not wire widgets to a queue that no running callback consumes. The gate requires an application host that owns/configures the audio backend and track mixer, a defined track-audio source, and a GUI-to-host producer endpoint. No GUI interaction test has yet proven live control.
