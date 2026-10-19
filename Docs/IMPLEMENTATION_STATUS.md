@@ -12,14 +12,14 @@
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
 - [x] Optional ALSA backend/host compiles and contract tests run in CI; this is not hardware validation.
-- [x] Optional Qt 6 mixer shell compiles and contract tests run in CI; the GUI is not yet connected to the live engine.
+- [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. CI evidence for this branch is pending; hardware validation is not implied.
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
 ## Open gates — do not claim complete
-- [ ] GUI fader/pan/mute/solo commands queued to the live engine at block boundaries, plus GUI interaction test and GUI/CLI parity.
+- [ ] GUI interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; GUI-to-engine queue wiring exists in source, but automated UI/loopback evidence and GUI/CLI parity remain open.
 - [ ] Safe graph swap and deferred reclamation; graph remains configure-once.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, meters, and xrun counters.
-- [ ] ASan/TSan CI jobs pass and provide useful evidence for current code; no graph swap exists to stress yet.
+- [ ] ASan/TSan jobs must pass on this branch and graph-swap race coverage remains open; no graph swap exists to stress yet.
 - [ ] Real-device ALSA startup/shutdown, callback timing, lock-free atomics verification on target, and xrun reporting.
 - [ ] 60-minute zero-xrun run, loopback latency, and underrun injection on a named target device.
 - [ ] 500-track performance report with configurable budget.
