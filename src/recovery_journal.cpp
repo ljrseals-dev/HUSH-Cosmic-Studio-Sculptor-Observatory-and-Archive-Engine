@@ -104,4 +104,16 @@ bool RecoveryJournal::recover_latest(Project& out, Error& error) const {
     error={};
     return true;
 }
+bool RecoveryJournal::recover_if_different(Project& in_out, bool& applied, Error& error) const {
+    Project recovered;
+    applied = false;
+    if (!recover_latest(recovered, error)) return false;
+    if (recovered != in_out) {
+        in_out = std::move(recovered);
+        applied = true;
+    }
+    error = {};
+    return true;
+}
+
 }

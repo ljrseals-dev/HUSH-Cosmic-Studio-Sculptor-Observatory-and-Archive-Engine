@@ -334,6 +334,7 @@ private:
             QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
             return;
         }
+        project_save_error_.clear();
         const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
         bool recovered_snapshot = false;
         bool recovered_project_persisted = false;
