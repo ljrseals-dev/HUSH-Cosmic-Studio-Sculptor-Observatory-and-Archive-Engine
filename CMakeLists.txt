@@ -22,6 +22,7 @@ add_library(hush_core
     src/realtime_bus_audio_adapter.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
+    src/automation.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
@@ -83,6 +84,10 @@ if(HUSH_BUILD_TESTS)
       -DHUSH_SOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
       -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/privacy_source_audit.cmake
   )
+  add_executable(hush_automation_tests tests/automation_tests.cpp)
+  target_link_libraries(hush_automation_tests PRIVATE hush_core)
+  add_test(NAME hush_automation_tests COMMAND hush_automation_tests)
+
   add_executable(hush_contract_tests tests/contract_tests.cpp)
   target_link_libraries(hush_contract_tests PRIVATE hush_core)
   add_test(NAME hush_contract_tests COMMAND hush_contract_tests)
@@ -132,6 +137,7 @@ if(HUSH_BUILD_TESTS)
   add_test(NAME hush_recovery_partial_write_tests COMMAND hush_recovery_partial_write_tests)
   # Keep assert-based contract checks active even when users build Release.
   if(MSVC)
+    target_compile_options(hush_automation_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
@@ -144,6 +150,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE /UNDEBUG)
   else()
+    target_compile_options(hush_automation_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
