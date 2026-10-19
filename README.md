@@ -44,6 +44,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
+- **Automation interpolation foundation:** `include/hush/automation.hpp`, `src/automation.cpp`, `tests/automation_tests.cpp`. This is a tested in-memory lane/snapshot primitive only; schema-v2 persistence, safe snapshot publication/reclamation, transport, and recording are not yet implemented.
 - **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.
 - **Optional Qt 6 project mixer shell:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. It edits project state only; it is not connected to live audio.
 - **Privacy contract and source audit:** `Docs/PRIVACY_CONTRACT.md`, `tools/privacy_source_audit.cmake`, registered by `CMakeLists.txt`.
