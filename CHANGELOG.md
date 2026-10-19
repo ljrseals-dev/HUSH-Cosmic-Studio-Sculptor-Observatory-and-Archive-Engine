@@ -26,6 +26,9 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 
 ## Unreleased — GUI live mixer wiring
 
+- Made live GUI edits, undo, and redo transactional with respect to bounded-queue acceptance: if the queue is full, the operation is not committed to project state/history and the UI restores canonical values.
+- Expanded realtime track-mixer tests for non-finite values, invalid track indices, upper/lower bounds, block-boundary output changes, and queue saturation. Qt interaction and physical loopback tests remain open.
+
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
