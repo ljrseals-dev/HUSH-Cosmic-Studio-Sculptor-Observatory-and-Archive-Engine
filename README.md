@@ -98,5 +98,5 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 - [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
 - [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
-- The Qt mixer shell is **not yet connected to live audio**. Do not describe this repository as a finished DAW or claim hardware validation, long-duration stability, or a verified release build without committed evidence.
+- The Qt mixer shell is **not yet connected to live audio**. See [Docs/GUI_ENGINE_WIRING_AUDIT.md](Docs/GUI_ENGINE_WIRING_AUDIT.md) for the widget-by-widget audit and the missing host/callback boundary. Do not describe this repository as a finished DAW or claim hardware validation, long-duration stability, or a verified release build without committed evidence.
 
