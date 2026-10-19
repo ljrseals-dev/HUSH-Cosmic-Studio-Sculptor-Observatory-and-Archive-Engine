@@ -30,7 +30,7 @@ cmake --build build-gui --parallel 2 && ctest --test-dir build-gui --output-on-f
 ## Gate 7 status
 
 - Branch: `feat/autosave-lifecycle-gate7-main`.
-- Fresh CI for this branch has not reported at the time of this entry.
+- Fresh CI for the source/test revision passed all seven jobs in [run 39291973496](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291973496); see the latest entry below. The subsequent commit changes documentation only.
 - Do not mark Gate 7 build/test checks green until a fresh run or an owner-provided local transcript is available.
 - The privacy source audit is registered in CTest but has not been rerun for this branch.
 - Power-loss durability, target-device validation, long soak stability, and zero-network runtime verification are not claimed.
