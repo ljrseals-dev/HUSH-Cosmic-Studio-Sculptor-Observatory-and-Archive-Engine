@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — voice processor audit baseline
+
+- Documented the current realtime track mixer as gain/pan/mute/solo processing, not a broadcast voice chain.
+- Added an offline benchmark harness for ten million frames in 512-frame blocks; measured results, vectorization reports, SIMD comparisons, and DSP-stage validation remain pending.
+- No AVX2, broadcast-quality, 96 kHz input/resampling, or hardware-validation claim is made.
+
 ## Unreleased
 
 - Add offline RIFF/WAVE media import for PCM16 and IEEE float32 files, with bounded memory use, format validation, and decoder contract tests. This loads audio into memory but does not yet place clips on a timeline.
