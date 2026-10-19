@@ -10,13 +10,17 @@ namespace {
 std::atomic<int> append_calls{0};
 std::atomic<bool> inject_failure{false};
 std::thread::id expected_writer_thread{};
+std::thread::id forbidden_audio_thread{};
 std::atomic<bool> writer_on_expected_thread{false};
+std::atomic<bool> writer_on_audio_thread{false};
 
 bool injected_writer(const std::filesystem::path& path, const hush::Project& project,
                      hush::Error& error) {
     append_calls.fetch_add(1, std::memory_order_relaxed);
     writer_on_expected_thread.store(std::this_thread::get_id() == expected_writer_thread,
                                     std::memory_order_relaxed);
+    writer_on_audio_thread.store(std::this_thread::get_id() == forbidden_audio_thread,
+                                 std::memory_order_relaxed);
     if (inject_failure.load(std::memory_order_relaxed)) {
         error = {"journal_write_failed", project.id, "injected journal write failure", "error"};
         return false;
@@ -88,6 +92,14 @@ int main() {
     inject_failure.store(false);
     Project snapshot = project;
     expected_writer_thread = std::thread::id{};
+    std::atomic<bool> audio_thread_ready{false};
+    std::atomic<bool> release_audio_thread{false};
+    std::thread fake_audio_thread([&] {
+        forbidden_audio_thread = std::this_thread::get_id();
+        audio_thread_ready.store(true, std::memory_order_release);
+        while (!release_audio_thread.load(std::memory_order_acquire)) std::this_thread::yield();
+    });
+    while (!audio_thread_ready.load(std::memory_order_acquire)) std::this_thread::yield();
     std::atomic<bool> save_ok{false};
     std::thread save_thread([&] {
         expected_writer_thread = std::this_thread::get_id();
@@ -99,6 +111,9 @@ int main() {
     save_thread.join();
     assert(save_ok.load(std::memory_order_relaxed));
     assert(writer_on_expected_thread.load(std::memory_order_relaxed));
+    assert(!writer_on_audio_thread.load(std::memory_order_relaxed));
+    release_audio_thread.store(true, std::memory_order_release);
+    fake_audio_thread.join();
 
     // Every current operation kind marks dirty on apply, undo, and redo.
     const OperationKind kinds[] = {OperationKind::SetGain, OperationKind::SetPan,
