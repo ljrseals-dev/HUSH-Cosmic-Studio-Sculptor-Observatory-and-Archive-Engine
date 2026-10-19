@@ -12,11 +12,11 @@
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
 - [x] Optional ALSA backend/host compiles and contract tests run in CI; this is not hardware validation.
-- [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. CI evidence for this branch is pending; hardware validation is not implied.
+- [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. All seven jobs passed in [GitHub Actions run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377); hardware validation is not implied.
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
 ## Open gates — do not claim complete
-- [ ] GUI interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; GUI-to-engine queue wiring exists in source, but automated UI/loopback evidence and GUI/CLI parity remain open.
+- [ ] GUI interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; source now queues only the changed track for ordinary edits and undo/redo, but automated UI/loopback evidence and GUI/CLI parity remain open.
 - [ ] Safe graph swap and deferred reclamation; graph remains configure-once.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, meters, and xrun counters.
 - [ ] ASan/TSan jobs must pass on this branch and graph-swap race coverage remains open; no graph swap exists to stress yet.
