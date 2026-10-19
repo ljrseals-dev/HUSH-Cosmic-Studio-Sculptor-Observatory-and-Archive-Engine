@@ -7,7 +7,7 @@
 1. Construct and call `configure(graph, max_frames, error)` on a control/setup thread.
 2. Configure once only. The graph topology and all buffers are fixed for this object's lifetime.
 3. One control/UI producer may call `enqueue_fader_change(bus_index, gain)`; the queue is bounded at 1024 entries. Invalid bus indices and gains outside [0, 16] are rejected. A full queue returns false; callers should retain/retry or surface the rejected update.
-4. One audio-thread consumer calls `process(inputs, count, frames)`. Inputs follow `BusGraph::buses()` order. Queued fader changes are drained in FIFO order at the start of a valid processing call; if multiple changes target one bus in the same batch, the last one wins.
+4. One audio-thread consumer calls `process(inputs, count, frames)`. Audio-only input views follow `BusGraph::buses()` order; fader gains are controlled only through the parameter queue. Queued fader changes are drained in FIFO order at the start of a valid processing call; if multiple changes target one bus in the same batch, the last one wins.
 5. Query output views only when processing is not concurrently mutating them, unless the caller guarantees a safe read arrangement.
 
 ## Real-time properties and limits
