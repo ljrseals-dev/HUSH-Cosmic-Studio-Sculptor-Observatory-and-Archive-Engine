@@ -22,9 +22,9 @@ int main() {
     const float source_r[] = {0.5F, 1.0F, -0.5F};
     const float master_l[] = {0.0F, 0.0F, 0.0F};
     const float master_r[] = {0.0F, 0.0F, 0.0F};
-    const BusInputView inputs[] = {
-        {source_l, source_r, 1.0F},
-        {master_l, master_r, 1.0F}
+    const BusAudioInputView inputs[] = {
+        {source_l, source_r},
+        {master_l, master_r}
     };
 
     // Updates are queued from the control side and applied by the next process call.
@@ -48,9 +48,9 @@ int main() {
     assert(!engine.enqueue_fader_change(0, -1.0F));
     assert(!engine.enqueue_fader_change(0, 17.0F));
 
-    const BusInputView invalid[] = {
-        {nullptr, source_r, 1.0F},
-        {master_l, master_r, 1.0F}
+    const BusAudioInputView invalid[] = {
+        {nullptr, source_r},
+        {master_l, master_r}
     };
     assert(engine.process(invalid, 2, 1) == RealtimeProcessStatus::NullChannel);
 
