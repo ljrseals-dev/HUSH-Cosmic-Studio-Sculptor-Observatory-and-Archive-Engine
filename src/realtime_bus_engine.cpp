@@ -39,7 +39,7 @@ bool RealtimeBusEngine::enqueue_fader_change(std::size_t bus_index, float gain) 
         {static_cast<std::uint32_t>(bus_index), gain});
 }
 
-RealtimeProcessStatus RealtimeBusEngine::process(const BusInputView* inputs,
+RealtimeProcessStatus RealtimeBusEngine::process(const BusAudioInputView* inputs,
                                                  std::size_t input_count,
                                                  std::size_t frame_count) noexcept {
     if (!configured_) return RealtimeProcessStatus::NotConfigured;
@@ -55,9 +55,6 @@ RealtimeProcessStatus RealtimeBusEngine::process(const BusInputView* inputs,
     for (std::size_t i = 0; i < input_count; ++i) {
         if (inputs[i].left == nullptr || inputs[i].right == nullptr)
             return RealtimeProcessStatus::NullChannel;
-        if (!std::isfinite(inputs[i].fader_gain) || inputs[i].fader_gain < 0.0F ||
-            inputs[i].fader_gain > 16.0F)
-            return RealtimeProcessStatus::InvalidFaderGain;
     }
 
     BusFaderChange change{};
@@ -68,8 +65,7 @@ RealtimeProcessStatus RealtimeBusEngine::process(const BusInputView* inputs,
     }
 
     for (std::size_t i = 0; i < input_count; ++i) {
-        input_scratch_[i] = inputs[i];
-        input_scratch_[i].fader_gain = fader_gains_[i];
+        input_scratch_[i] = {inputs[i].left, inputs[i].right, fader_gains_[i]};
     }
     return processor_.process(input_scratch_.data(), input_scratch_.size(), frame_count);
 }
