@@ -19,6 +19,7 @@ struct Track {
     float pan{0.0F};
     bool mute{false};
     bool solo{false};
+    bool operator==(const Track&) const = default;
 };
 struct Project {
     std::uint32_t schema_version{1};
