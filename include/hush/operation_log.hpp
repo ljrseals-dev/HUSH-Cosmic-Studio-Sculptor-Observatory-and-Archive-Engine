@@ -17,7 +17,11 @@ public:
         return index < operations_.size() ? &operations_[index] : nullptr;
     }
     std::size_t cursor() const noexcept { return cursor_; }
+    [[nodiscard]] bool dirty() const noexcept { return dirty_; }
+    // Call only after the canonical project save and recovery-journal save both succeed.
+    void mark_saved() noexcept { dirty_ = false; }
 private:
+    bool dirty_{false};
     std::vector<Operation> operations_;
     std::size_t cursor_{0};
     static bool apply_value(Project&, const Operation&, bool forward);

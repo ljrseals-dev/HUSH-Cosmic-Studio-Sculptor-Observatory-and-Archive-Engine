@@ -23,13 +23,19 @@ int main() {
     assert(!from_json(cyclic,loaded,err)); assert(err.code=="bus_route_cycle");
 
     OperationLog log; const Project before=p;
+    assert(!log.dirty());
     log.append({"track-1",OperationKind::SetGain,0.75F,0.25F});
+    assert(log.dirty());
+    log.mark_saved(); assert(!log.dirty());
+    log.append({"track-1",OperationKind::SetGain,0.75F,0.25F});
+    assert(log.dirty());
     assert(log.operation_at(0) != nullptr);
     assert(log.operation_at(0)->entity_id == "track-1");
     assert(log.operation_at(1) == nullptr);
-    p.tracks[0].gain=0.25F; assert(log.undo(p)); assert(p.tracks[0].gain==0.75F);
-    assert(log.redo(p)); assert(p.tracks[0].gain==0.25F);
-    assert(log.undo(p)); assert(p==before);
+    p.tracks[0].gain=0.25F; assert(log.undo(p)); assert(p.tracks[0].gain==0.75F); assert(log.dirty());
+    log.mark_saved(); assert(!log.dirty());
+    assert(log.redo(p)); assert(p.tracks[0].gain==0.25F); assert(log.dirty());
+    assert(log.undo(p)); assert(p==before); assert(log.dirty());
 
     std::vector<std::vector<float>> audio{{1.0F,0.5F},{1.0F,0.5F}};
     p.tracks[0].solo=true;

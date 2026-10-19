@@ -3,7 +3,7 @@
 namespace hush {
 void OperationLog::append(Operation op) {
     if (cursor_ < operations_.size()) operations_.erase(operations_.begin()+static_cast<std::ptrdiff_t>(cursor_),operations_.end());
-    operations_.push_back(std::move(op)); cursor_=operations_.size();
+    operations_.push_back(std::move(op)); cursor_=operations_.size(); dirty_=true;
 }
 bool OperationLog::apply_value(Project& p,const Operation& op,bool forward) {
     auto it=std::find_if(p.tracks.begin(),p.tracks.end(),[&](const Track& t){return t.id==op.entity_id;});
@@ -24,11 +24,11 @@ bool OperationLog::apply_and_append(Project& project, Operation op) {
 bool OperationLog::undo(Project& p) {
     if(cursor_==0) return false;
     if(!apply_value(p,operations_[cursor_-1],false)) return false;
-    --cursor_; return true;
+    --cursor_; dirty_=true; return true;
 }
 bool OperationLog::redo(Project& p) {
     if(cursor_>=operations_.size()) return false;
     if(!apply_value(p,operations_[cursor_],true)) return false;
-    ++cursor_; return true;
+    ++cursor_; dirty_=true; return true;
 }
 }
