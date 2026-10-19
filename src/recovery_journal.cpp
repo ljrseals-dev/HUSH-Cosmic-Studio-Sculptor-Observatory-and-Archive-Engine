@@ -33,6 +33,7 @@ bool sync_file(const std::filesystem::path& path) {
 }
 }
 bool RecoveryJournal::append_snapshot(const Project& project, Error& error) const {
+    if (append_writer_) return append_writer_(path_, project, error);
     const std::string payload = to_json(project);
     if (payload.size() > kMaxRecordBytes) {
         error={"journal_record_too_large",project.id,"Snapshot exceeds the 64 MiB journal record limit","error"};
