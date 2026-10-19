@@ -12,5 +12,10 @@
 
 ## 0.2 bus-routing foundation
 10. Directed acyclic bus graph: routes point from source to destination; cycles and self-routes are rejected before render order is exposed.
-11. Send tap metadata: pre-fader and post-fader taps are represented; audio summing semantics remain deferred until the processing graph exists.
+11. Send tap metadata: pre-fader and post-fader taps are represented; audio summing semantics are covered by offline and preallocated reference tests.
 12. Graph validation uses standard containers on the setup/control side only and must not run inside the audio callback.
+
+## 0.2 preallocated processor
+13. Bus topology and route IDs are resolved to numeric indices on the control thread; the processing path uses preallocated buffers and does not perform graph lookups.
+14. The first processor API returns enum errors on the process path to avoid diagnostic-string allocation. Configuration and object lifetime remain host responsibilities.
+15. Live graph replacement is still blocked on safe reclamation; do not atomically swap owning pointers and destroy the old graph on the audio thread.
