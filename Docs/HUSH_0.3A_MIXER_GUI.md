@@ -49,6 +49,6 @@ Still required before claiming a production live mixer:
 - automated Qt interaction test proving fader/pan/mute/solo and undo/redo are reflected in the next audio block;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
-- target-device startup/shutdown, callback timing, lock-free atomic checks, xrun reporting, and a documented soak/latency report.
+- target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
 
 Do not claim recording, MIDI, automation, plugin hosting, multitrack live source routing, or zero-xrun hardware behavior as delivered by this change.
