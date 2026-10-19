@@ -24,6 +24,12 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.
 - Added recovery journal tests for interrupted record headers and truncated payloads. These additions have not yet been run in this session; performance and soak reports remain outstanding.
 
+## Unreleased — GUI engine wiring audit
+
+- Added a widget-by-widget audit of the Qt mixer shell and the existing track/bus SPSC command payloads.
+- Recorded the blocker: the Qt executable has no running audio host/callback consuming track-mixer commands, and project tracks do not yet provide audio buffers. The live-wiring gate remains open; no fake timer-based or queue-only integration is claimed.
+- Linked the audit from the mixer GUI documentation and README. No live GUI wiring tests have been added yet.
+
 ## Unreleased — repository hygiene
 
 - Added tracked-file, historical rename, and archive audit in `Docs/REPO_AUDIT.md`.
