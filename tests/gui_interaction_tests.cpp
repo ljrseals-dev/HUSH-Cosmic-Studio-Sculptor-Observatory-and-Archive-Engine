@@ -14,9 +14,7 @@ private slots:
         QCoreApplication::processEvents();
 
         auto* gain = window.findChild<QSlider*>(QStringLiteral("gain_track-1"));
-        auto* pan = window.findChild<QSlider*>(QStringLiteral("pan_track-1"));
         QVERIFY(gain);
-        QVERIFY(pan);
 
         gain->setSliderDown(true);
         gain->setValue(125);
@@ -24,6 +22,8 @@ private slots:
         QCOMPARE(window.test_project().tracks.at(0).gain, 1.25F);
         QCOMPARE(window.test_operation_log().cursor(), std::size_t{1});
 
+        auto* pan = window.findChild<QSlider*>(QStringLiteral("pan_track-1"));
+        QVERIFY(pan);
         pan->setSliderDown(true);
         pan->setValue(35);
         pan->setSliderDown(false);
@@ -35,7 +35,7 @@ private slots:
         QVERIFY(undo);
         QVERIFY(redo);
         QTest::mouseClick(undo, Qt::LeftButton);
-        QCOMPARE(window.test_project().tracks.at(0).pan, 0.0F);
+        QCOMPARE(window.test_project().tracks.at(0).pan, -1.0F);
         QCOMPARE(window.test_operation_log().cursor(), std::size_t{1});
         QTest::mouseClick(redo, Qt::LeftButton);
         QCOMPARE(window.test_project().tracks.at(0).pan, 0.35F);
