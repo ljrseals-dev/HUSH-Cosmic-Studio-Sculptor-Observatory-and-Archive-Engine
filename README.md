@@ -42,7 +42,6 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
 - **Transport sample-counter foundation (not wired to a device/GUI):** `include/hush/realtime_transport.hpp`, `tests/realtime_transport_tests.cpp`; play/stop/seek commands are consumed at block boundaries.
 - **Automation lane foundation (not persisted or wired to transport):** `include/hush/automation_lane.hpp`, `tests/automation_lane_tests.cpp`; Hold/Linear interpolation and lane normalization.
-- **Automation lane foundation (not yet persisted or connected to transport):** `include/hush/automation_lane.hpp`, `tests/automation_lane_tests.cpp`; deterministic Hold/Linear interpolation and control-thread normalization.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
 - **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
