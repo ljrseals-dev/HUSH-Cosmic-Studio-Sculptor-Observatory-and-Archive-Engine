@@ -23,3 +23,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Preserved two non-empty archives whose full contents could not be verified; they remain explicit audit debt and must not be treated as source dependencies.
 - Added artifact ignore rules, contribution guidance, and security reporting policy.
 - Published history remains intact; no filter-repo, force-push, or history rewrite was performed.
+
+
+## Unreleased — transport and automation foundations
+
+- Added a bounded block-boundary transport sample counter with queued play/stop/seek commands and contract tests. This is an internal clock primitive; it is not yet wired to an audio device or GUI and does not provide tempo-map scheduling.
+- Added an automation-lane model with deterministic Hold/Linear interpolation and normalization checks, plus contract tests. Lanes are not yet persisted, published to the live engine, or recordable.
+- Added the transport/MIDI/automation design proposal and owner decision checklist. No hardware, latency, zero-network, or soak claim is implied.
