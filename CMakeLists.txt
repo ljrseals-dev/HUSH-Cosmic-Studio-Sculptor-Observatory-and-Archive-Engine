@@ -142,6 +142,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_recovery_restart_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_restart_tests COMMAND hush_recovery_restart_tests)
 
+  if(HUSH_ENABLE_ALSA)
+    add_test(NAME hush_alsa_host_help COMMAND hush_alsa_realtime_host --help)
+  endif()
+
   add_executable(hush_recovery_partial_write_tests tests/recovery_partial_write_tests.cpp)
   target_link_libraries(hush_recovery_partial_write_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_partial_write_tests COMMAND hush_recovery_partial_write_tests)

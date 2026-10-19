@@ -355,6 +355,11 @@ private:
                 recovered_file.flush() && recovered_file.error() == QFileDevice::NoError) {
                 recovered_file.close();
                 recovered_project_persisted = !recovered_file.error();
+                if (!recovered_project_persisted) {
+                    project_save_error_ = recovered_file.errorString().isEmpty()
+                        ? QStringLiteral("Recovered project could not be closed cleanly.")
+                        : recovered_file.errorString();
+                }
             } else {
                 project_save_error_ = recovered_file.errorString().isEmpty()
                     ? QStringLiteral("Recovered project could not be persisted to the project file.")
