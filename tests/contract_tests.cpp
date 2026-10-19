@@ -24,6 +24,9 @@ int main() {
 
     OperationLog log; const Project before=p;
     log.append({"track-1",OperationKind::SetGain,0.75F,0.25F});
+    assert(log.operation_at(0) != nullptr);
+    assert(log.operation_at(0)->entity_id == "track-1");
+    assert(log.operation_at(1) == nullptr);
     p.tracks[0].gain=0.25F; assert(log.undo(p)); assert(p.tracks[0].gain==0.75F);
     assert(log.redo(p)); assert(p.tracks[0].gain==0.25F);
     assert(log.undo(p)); assert(p==before);
