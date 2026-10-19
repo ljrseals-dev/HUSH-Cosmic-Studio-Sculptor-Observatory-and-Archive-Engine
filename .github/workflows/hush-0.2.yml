@@ -85,6 +85,21 @@ jobs:
       - name: Contract tests
         run: ctest --test-dir build-gui --output-on-failure
 
+  linux-qt6-alsa-live-mixer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 6 and ALSA development dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y qt6-base-dev libasound2-dev
+      - name: Configure combined live mixer GUI build
+        run: cmake -S . -B build-gui-alsa -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON -DHUSH_ENABLE_ALSA=ON
+      - name: Build GUI and ALSA live monitor
+        run: cmake --build build-gui-alsa --parallel 2
+      - name: Contract tests
+        run: ctest --test-dir build-gui-alsa --output-on-failure
+
   linux-asan:
     runs-on: ubuntu-latest
     steps:

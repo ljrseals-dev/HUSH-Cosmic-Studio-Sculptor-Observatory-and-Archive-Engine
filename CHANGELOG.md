@@ -7,8 +7,8 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - C++20 CMake project with schema-v1 persistence, bus graph validation, offline/reference rendering, preallocated bus processing, and a bounded SPSC parameter queue.
 - Added realtime stereo adapter and optional ALSA backend/host.
 - Added recovery journal, autosave policy controller, and operation-log undo/redo primitives.
-- Added optional Qt 6 mixer shell; project-state editing is not live audio control.
-- Added CI for default C++20, ALSA-enabled, Qt 6 GUI, ASan, and TSan configurations.
+- Added optional Qt 6 mixer shell and an explicitly started ALSA live-input monitor when both GUI and ALSA options are enabled; GUI fader/pan/mute/solo edits and undo/redo enqueue bounded realtime track-mixer commands. Current live input mapping is limited to stereo capture channels on the first two tracks.
+- Added CI for default C++20, ALSA-enabled, Qt 6 GUI, combined Qt + ALSA live-mixer build, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
 ## Unreleased — Phase 1–7 execution tooling
@@ -23,3 +23,9 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Preserved two non-empty archives whose full contents could not be verified; they remain explicit audit debt and must not be treated as source dependencies.
 - Added artifact ignore rules, contribution guidance, and security reporting policy.
 - Published history remains intact; no filter-repo, force-push, or history rewrite was performed.
+
+## Unreleased — GUI live mixer wiring
+
+- Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
+- Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
+- Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
