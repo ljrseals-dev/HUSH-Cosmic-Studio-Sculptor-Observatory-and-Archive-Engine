@@ -97,13 +97,26 @@ public:
     }
 
     // After startup, enqueue only the track touched by the operation. Sending the
-    // whole project for every slider release needlessly consumes the bounded queue.
+    // whole project for every slider movement needlessly consumes the bounded queue.
     bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             const auto& track = project.tracks[i];
             if (track.id == track_id)
                 return mixer_->enqueue_control(i, track.gain, track.pan, track.mute, track.solo);
+        }
+        return false;
+    }
+
+    // Preview gain/pan in the audio engine while the user drags. This command does
+    // not mutate project state or add undo entries; slider release commits the edit.
+    bool enqueue_track_preview(const hush::Project& project, const std::string& track_id,
+                               float gain, float pan) noexcept {
+        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
+        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
+            const auto& track = project.tracks[i];
+            if (track.id == track_id)
+                return mixer_->enqueue_control(i, gain, pan, track.mute, track.solo);
         }
         return false;
     }
@@ -324,6 +337,21 @@ private:
         return true;
     }
 
+    bool preview_live_controls(const std::string& track_id, float gain, float pan) {
+#ifdef HUSH_GUI_HAS_ALSA
+        if (live_.running() &&
+            !live_.enqueue_track_preview(project_, track_id, gain, pan)) {
+            status_->setText("Live preview queue full — release slider or stop audio");
+            return false;
+        }
+#else
+        (void)track_id;
+        (void)gain;
+        (void)pan;
+#endif
+        return true;
+    }
+
 #ifdef HUSH_GUI_HAS_ALSA
     void poll_live_status() {
         if (live_.running()) {
@@ -393,6 +421,20 @@ private:
             id->setFlags(id->flags() & ~Qt::ItemIsEditable);
             table_->setItem(row, 5, id);
             const auto track_id = t.id;
+            // Realtime preview follows the drag; the release event creates exactly
+            // one undoable project operation for the final value.
+            connect(gain, &QSlider::valueChanged, this,
+                    [this, gain, pan, track_id](int value) {
+                        (void)value;
+                        preview_live_controls(track_id, gain->value() / 100.0F,
+                                              pan->value() / 100.0F);
+                    });
+            connect(pan, &QSlider::valueChanged, this,
+                    [this, gain, pan, track_id](int value) {
+                        (void)value;
+                        preview_live_controls(track_id, gain->value() / 100.0F,
+                                              pan->value() / 100.0F);
+                    });
             connect(gain, &QSlider::sliderReleased, this,
                     [this, gain, track_id] { change(track_id, hush::OperationKind::SetGain, gain->value() / 100.0F); });
             connect(pan, &QSlider::sliderReleased, this,
