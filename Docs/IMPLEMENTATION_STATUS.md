@@ -5,7 +5,7 @@
 - [x] Schema-v1 project model and JSON round-trip for tracks, buses, and routes; older schema-v1 files without bus/route arrays remain readable.
 - [x] Bus-routing validation at project-load boundary, including unknown endpoints, duplicate/empty IDs, self-routes, invalid gain, and cycles.
 - [x] Append-only recovery journal with length-framed full-project snapshots and truncated-tail recovery.
-- [x] Dirty-aware autosave scheduling policy, typed `SaveError` state, synchronous journal save path, and injectable journal-writer seam; all save calls remain non-audio-thread-only. Gate 7 lifecycle CI is pending.
+- [x] Dirty-aware autosave scheduling policy, typed `SaveError` state, synchronous journal save path, and injectable journal-writer seam; all save calls remain non-audio-thread-only. The lifecycle test and all seven CI jobs passed in [run 39291495097](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291495097).
 - [x] Invertible operation-log primitives, undo/redo tests, and dirty tracking on append/apply/undo/redo with explicit `mark_dirty()` / `mark_saved()`.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
@@ -26,7 +26,7 @@
 - [ ] 500-track performance report with configurable budget.
 - [ ] 8-hour soak report with an explicit memory-growth bound.
 - [ ] Power-loss durability: explicitly not claimed. Current coverage is process-restart recovery of completed records and truncated-tail handling.
-- [ ] Gate 7 lifecycle integration: GUI project open/save/quit and main-thread timer hooks, recovery snapshot handling, and a dirty/error indicator are implemented on the review branch. The CLI accepts `--project` / `--journal`, handles recovery, and documents exit codes, but has no project-edit command surface so dirty-edit/quit-failure behavior is not currently reachable through ordinary use. Fresh CI is pending; Qt close-dialog automation and actual GUI/CLI recovery-notice assertions remain open.
+- [ ] Gate 7 lifecycle integration: GUI project open/save/quit and main-thread timer hooks, recovery snapshot handling, and a dirty/error indicator are implemented on the review branch. The CLI accepts `--project` / `--journal`, handles recovery, and documents exit codes, but has no project-edit command surface so dirty-edit/quit-failure behavior is not currently reachable through ordinary use. All seven CI jobs passed in [run 39291495097](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291495097); Qt close-dialog automation and actual GUI/CLI recovery-notice assertions remain open.
 - [ ] Review the contents and intended disposition of the committed `hush-daw-codex-hush-processor-integration-starter (1).zip`; do not delete or relocate it before review.
 - [ ] Optional JACK/PipeWire backends and preservation of historical 0.1.0 tests are not present in this source archive.
 

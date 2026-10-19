@@ -49,11 +49,11 @@ The branch adds `tests/autosave_lifecycle_tests.cpp` for:
 
 Existing `tests/recovery_restart_tests.cpp`, `tests/recovery_partial_write_tests.cpp`, and `tests/contract_tests.cpp` continue to cover process-restart recovery, truncated tails, and the original scheduling contract. The branch also registers `hush_alsa_host_help` so CLI help/exit code can be tested without opening an audio device.
 
-Fresh CI has not reported for this branch at the time of this audit. Qt close-dialog behavior, actual GUI status-label behavior, and CLI dirty-quit failure remain open.
+Fresh CI passed all seven jobs in [run 39291495097](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39291495097), including default/ALSA/Qt+ALSA builds, ASan, TSan, and repository hygiene. Qt close-dialog behavior, actual GUI status-label behavior, and CLI dirty-quit failure remain open.
 
 ## 5. Risk-ordered residual gaps
 
-1. Fresh default, ALSA, GUI+ALSA, ASan, TSan, and privacy-audit CI for this exact branch revision.
+1. Re-run default, ALSA, GUI+ALSA, ASan, TSan, and privacy-audit CI after any subsequent source changes; all passed in run 39291495097.
 2. Qt headless test for save failure blocking close and the status/error surface.
 3. CLI test for dirty final-save failure; the current host has no edit command to make that state reachable.
 4. Host-level test proving a recovery notice is emitted once and not on a second start.
