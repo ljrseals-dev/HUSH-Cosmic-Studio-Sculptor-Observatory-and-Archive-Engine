@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
 option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend and host" OFF)
 option(HUSH_BUILD_GUI "Build the optional Qt 6 mixer GUI" OFF)
+option(HUSH_BUILD_STRESS_TOOLS "Build offline benchmark and soak tools" ON)
 
 add_library(hush_core
     src/project.cpp
@@ -60,6 +61,17 @@ if(HUSH_ENABLE_ALSA)
   else()
     target_compile_options(hush_alsa_realtime_host PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
   endif()
+endif()
+
+
+if(HUSH_BUILD_STRESS_TOOLS)
+  add_executable(hush_routing_benchmark tools/hush_routing_benchmark.cpp)
+  target_link_libraries(hush_routing_benchmark PRIVATE hush_core)
+  target_compile_features(hush_routing_benchmark PRIVATE cxx_std_20)
+
+  add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
+  target_link_libraries(hush_headless_soak PRIVATE hush_core)
+  target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
 endif()
 
 if(HUSH_BUILD_TESTS)
