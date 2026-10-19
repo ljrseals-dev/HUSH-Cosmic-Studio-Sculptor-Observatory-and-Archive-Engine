@@ -16,6 +16,7 @@
 #include <QSlider>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <memory>
@@ -81,6 +82,8 @@ public:
     }
 
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
+    [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
+    [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
@@ -200,6 +203,8 @@ public:
         });
 #ifdef HUSH_GUI_HAS_ALSA
         connect(live_button_, &QPushButton::clicked, this, [this] { toggle_live(); });
+        connect(&status_timer_, &QTimer::timeout, this, [this] { poll_live_status(); });
+        status_timer_.start(250);
 #endif
 
         project_.id = "hush-demo";
@@ -223,6 +228,7 @@ private:
     QPushButton* live_button_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
+    QTimer status_timer_;
 #endif
 
     void openProject() {
@@ -293,6 +299,23 @@ private:
     }
 
 #ifdef HUSH_GUI_HAS_ALSA
+    void poll_live_status() {
+        if (live_.running()) {
+            status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
+                             " · xruns/recoveries " + QString::number(live_.xrun_count()));
+            return;
+        }
+        if (live_button_->text() == "Stop Live ALSA") {
+            const auto callbacks = live_.callback_count();
+            const auto xruns = live_.xrun_count();
+            live_.stop();
+            live_button_->setText("Start Live ALSA");
+            refresh();
+            status_->setText("ALSA stopped · callbacks " + QString::number(callbacks) +
+                             " · xruns/recoveries " + QString::number(xruns));
+        }
+    }
+
     void toggle_live() {
         if (live_.running()) {
             live_.stop();
