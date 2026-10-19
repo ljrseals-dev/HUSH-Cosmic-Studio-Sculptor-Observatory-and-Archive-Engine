@@ -32,6 +32,10 @@ This is a milestone foundation, not a finished DAW release. Autosave scheduling 
 
 See `Docs/IMPLEMENTATION_STATUS.md`, `Docs/DECISION_LOG.md`, `Docs/VALIDATION_REPORT.md`, and `Docs/RECOVERY_JOURNAL.md`.
 
-## Optional ALSA backend\n\nEnable with `-DHUSH_ENABLE_ALSA=ON` on Linux with ALSA development files installed. See [`Docs/ALSA_AUDIO_BACKEND.md`](Docs/ALSA_AUDIO_BACKEND.md). This backend provides a stereo float capture/process/playback worker, but it is not yet wired to `RealtimeBusEngine`; do not infer device readiness from compilation alone.\n\n## Realtime bus engine integration
+## Optional ALSA backend
+
+Enable with `-DHUSH_ENABLE_ALSA=ON` on Linux with ALSA development files installed. See [`Docs/ALSA_AUDIO_BACKEND.md`](Docs/ALSA_AUDIO_BACKEND.md). This backend provides a stereo float capture/process/playback worker, but it is not yet wired to `RealtimeBusEngine`; do not infer device readiness from compilation alone.
+
+## Realtime bus engine integration
 
 `RealtimeBusEngine` integrates queued fader changes with the preallocated bus processor. See [`Docs/REALTIME_BUS_ENGINE.md`](Docs/REALTIME_BUS_ENGINE.md) for the single-producer/single-consumer contract and limitations. This is not yet an ALSA/JACK/PipeWire device backend, and does not establish hardware real-time readiness.
