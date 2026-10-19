@@ -44,7 +44,7 @@ HUSH-Cosmic-Studio/
     ├── SECURITY_AND_PRIVACY.md # Privacy guarantees and security policies
     └── RELEASE_CHECKLIST.md    # Release verification steps
 ```
-Getting Started
+## Getting Started
 
 Prerequisites
 
@@ -67,7 +67,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j$(nproc)
 ```
 
-Running Tests
+## Running Tests
 
 Execute the automated smoke tests to verify system stability:
 
@@ -75,7 +75,7 @@ Execute the automated smoke tests to verify system stability:
 ctest --output-on-failure
 ```
 
-Documentation
+## Documentation
 
 · Implementation Status: Track ongoing development milestones and planned features.
 · Security & Privacy Policy: Review our strict offline-first, zero-telemetry code commitments.
