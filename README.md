@@ -31,3 +31,7 @@ No FetchContent, package bootstrap, network access, telemetry, or update checks 
 This is a milestone foundation, not a finished DAW release. Autosave scheduling is not yet connected to an application lifecycle. ALSA device streaming, queue integration into the real audio callback, safe graph swapping/reclamation, full track-to-bus/insert/solo/mute integration, meters/xrun reporting, 60-minute zero-xrun validation, loopback latency measurement, 8-hour soak, and the 500-track performance gate still require implementation and target-machine validation. No GUI is included.
 
 See `Docs/IMPLEMENTATION_STATUS.md`, `Docs/DECISION_LOG.md`, `Docs/VALIDATION_REPORT.md`, and `Docs/RECOVERY_JOURNAL.md`.
+
+## Realtime bus engine integration
+
+`RealtimeBusEngine` integrates queued fader changes with the preallocated bus processor. See [`Docs/REALTIME_BUS_ENGINE.md`](Docs/REALTIME_BUS_ENGINE.md) for the single-producer/single-consumer contract and limitations. This is not yet an ALSA/JACK/PipeWire device backend, and does not establish hardware real-time readiness.
