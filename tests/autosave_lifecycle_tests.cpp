@@ -9,7 +9,6 @@
 namespace {
 std::atomic<int> append_calls{0};
 std::atomic<bool> inject_failure{false};
-std::atomic<bool> writer_threw{false};
 std::thread::id expected_writer_thread{};
 std::atomic<bool> writer_on_expected_thread{false};
 
@@ -33,7 +32,6 @@ int main() {
     std::filesystem::remove(path, cleanup);
     append_calls.store(0);
     inject_failure.store(false);
-    writer_threw.store(false);
 
     Project project;
     project.id = "lifecycle";
@@ -71,6 +69,9 @@ int main() {
     assert(dirty);
     assert(controller.last_save_error() == SaveError::JournalWriteFailed);
     assert(controller.last_save_message() == "injected journal write failure");
+    controller.report_project_write_failure("injected project file failure");
+    assert(controller.last_save_error() == SaveError::ProjectWriteFailed);
+    assert(controller.last_save_message() == "injected project file failure");
 
     // Explicit synchronous save follows the same journal path and error contract.
     inject_failure.store(false);

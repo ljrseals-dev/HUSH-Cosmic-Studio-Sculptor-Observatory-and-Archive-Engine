@@ -296,6 +296,7 @@ private:
     QString project_path_;
     std::filesystem::path autosave_journal_path_;
     bool recovery_notice_shown_{false};
+    QString project_save_error_;
     QTableWidget* table_{};
     QLabel* status_{};
     QLabel* save_status_{};
@@ -367,17 +368,22 @@ private:
         if (path.isEmpty()) return false;
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            project_save_error_ = file.errorString();
+            refresh_save_status();
             QMessageBox::warning(this, "Save failed", file.errorString());
             return false;
         }
         const auto json = hush::to_json(project_);
         if (file.write(json.data(), static_cast<qint64>(json.size())) != static_cast<qint64>(json.size()) ||
             !file.flush() || file.error() != QFileDevice::NoError) {
-            QMessageBox::warning(this, "Save failed", file.errorString().isEmpty()
-                ? QStringLiteral("The project file could not be fully written.") : file.errorString());
+            project_save_error_ = file.errorString().isEmpty()
+                ? QStringLiteral("The project file could not be fully written.") : file.errorString();
+            refresh_save_status();
+            QMessageBox::warning(this, "Save failed", project_save_error_);
             return false;
         }
         file.close();
+        project_save_error_.clear();
         project_path_ = path;
         const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
         if (!autosave_ || autosave_journal_path_ != journal_path) {
@@ -413,7 +419,9 @@ private:
     }
 
     void refresh_save_status() {
-        if (autosave_ && autosave_->last_save_error() != hush::SaveError::None) {
+        if (!project_save_error_.isEmpty()) {
+            save_status_->setText("⚠ Project save failed: " + project_save_error_);
+        } else if (autosave_ && autosave_->last_save_error() != hush::SaveError::None) {
             save_status_->setText("⚠ Save error: " + QString::fromStdString(autosave_->last_save_message()));
         } else if (log_.dirty()) {
             save_status_->setText("● Unsaved changes");

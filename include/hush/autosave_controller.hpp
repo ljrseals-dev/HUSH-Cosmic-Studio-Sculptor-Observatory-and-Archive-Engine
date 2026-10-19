@@ -39,6 +39,7 @@ public:
 
     [[nodiscard]] SaveError last_save_error() const noexcept { return last_save_error_; }
     [[nodiscard]] const std::string& last_save_message() const noexcept { return last_save_message_; }
+    void report_project_write_failure(std::string message);
     [[nodiscard]] std::chrono::milliseconds interval() const noexcept { return interval_; }
     void reset() noexcept;
 

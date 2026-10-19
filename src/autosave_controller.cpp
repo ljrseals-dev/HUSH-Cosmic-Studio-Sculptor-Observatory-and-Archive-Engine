@@ -26,6 +26,11 @@ void AutosaveController::record_error(const Error& error) {
     }
 }
 
+void AutosaveController::report_project_write_failure(std::string message) {
+    last_save_error_ = SaveError::ProjectWriteFailed;
+    last_save_message_ = message.empty() ? "Project file write failed." : std::move(message);
+}
+
 void AutosaveController::clear_error() noexcept {
     last_save_error_ = SaveError::None;
     last_save_message_.clear();
