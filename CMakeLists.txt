@@ -118,6 +118,11 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_graph_publisher_tests PRIVATE Threads::Threads)
   add_test(NAME hush_realtime_graph_publisher_tests COMMAND hush_realtime_graph_publisher_tests)
 
+  add_executable(hush_realtime_transport_tests tests/realtime_transport_tests.cpp)
+  target_include_directories(hush_realtime_transport_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_compile_features(hush_realtime_transport_tests PRIVATE cxx_std_20)
+  add_test(NAME hush_realtime_transport_tests COMMAND hush_realtime_transport_tests)
+
   add_executable(hush_automation_lane_tests tests/automation_lane_tests.cpp)
   target_include_directories(hush_automation_lane_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_automation_lane_tests PRIVATE cxx_std_20)
