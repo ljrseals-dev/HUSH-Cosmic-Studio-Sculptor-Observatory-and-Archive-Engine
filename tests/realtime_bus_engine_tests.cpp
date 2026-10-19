@@ -15,7 +15,8 @@ int main() {
     ProcessorSetupError setup_error;
     assert(engine.configure(graph, 16, setup_error));
     assert(engine.bus_count() == 2);
-    assert(engine.parameter_atomics_are_lock_free() == engine.parameter_atomics_are_lock_free());
+    // This is a diagnostic only; strict lock-free status must be checked on target hardware.
+    (void)engine.parameter_atomics_are_lock_free();
 
     const float source_l[] = {1.0F, 2.0F, -1.0F};
     const float source_r[] = {0.5F, 1.0F, -0.5F};
