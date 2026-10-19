@@ -6,7 +6,7 @@ This audit reflects `src/mixer_gui.cpp`, `include/hush/realtime_track_mixer.hpp`
 
 The README bullet being closed is quoted verbatim:
 
-> **GUI-to-live-engine automated interaction test and GUI/CLI parity:** the optional Qt + ALSA path now queues GUI edits and undo/redo to the live callback; automated Qt interaction/loopback coverage and target-device validation remain outstanding.
+> **GUI-to-live-engine automated interaction test and GUI/CLI parity:** a headless Qt widget test now exercises actual gain/pan sliders, mute/solo clicks, undo/redo buttons, and ALSA-button availability (`tests/gui_interaction_tests.cpp`); deterministic queue/engine behavior remains covered by `tests/gui_engine_command_path_tests.cpp`. The new test awaits CI execution. Direct observation of the queue from the exact widget signal boundary, two-channel loopback, target-device validation, and any project-editing CLI parity remain open; no track-editing CLI currently exists.
 
 ## Interactive controls and evidence
 
