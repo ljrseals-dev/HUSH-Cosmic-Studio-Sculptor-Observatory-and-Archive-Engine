@@ -20,6 +20,8 @@
 #include <QVBoxLayout>
 #include <algorithm>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #ifdef HUSH_GUI_HAS_ALSA
