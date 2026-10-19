@@ -40,6 +40,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Offline/reference bus-buffer renderer:** `include/hush/bus_renderer.hpp`, `src/bus_renderer.cpp`, `tests/bus_renderer_tests.cpp`.
 - **Preallocated bus processing:** `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `tests/preallocated_bus_processor_tests.cpp`.
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
+- **Automation lane foundation (not yet persisted or connected to transport):** `include/hush/automation_lane.hpp`, `tests/automation_lane_tests.cpp`; deterministic Hold/Linear interpolation and control-thread normalization.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
 - **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
@@ -77,7 +78,7 @@ ctest --test-dir build-gui --output-on-failure
 
 Every item below is **unverified/incomplete** until its evidence is committed. **Owner:** project maintainer. **Target-machine requirements** apply where specified.
 
-- **GUI-to-live-engine commands and GUI interaction/CLI parity:** no complete GUI binding test; requires the Qt GUI and engine running together.
+- **GUI-to-live-engine commands and GUI interaction/CLI parity:** still open; `RealtimeTrackMixer` has a queued control API, but `src/mixer_gui.cpp` currently updates project state only and is not connected to an audio callback.
 - **Safe graph replacement/deferred reclamation:** no graph swap implementation or reclamation stress test; requires ASan/TSan and a target Linux build.
 - **Full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters:** not implemented as a complete live mixer; requires unit/integration tests and target audio-device tests.
 - **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
@@ -98,3 +99,6 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
 - The Qt mixer shell is **not yet connected to live audio**. Do not describe this repository as a finished DAW or claim hardware validation, long-duration stability, or a verified release build without committed evidence.
 
+
+
+Transport, MIDI input/learn, and automation playback/recording are not complete. The design proposal and owner decision checklist are in [Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md](Docs/PROPOSAL_TRANSPORT_MIDI_AUTOMATION.md). The automation lane header is an initial tested-by-source foundation only; project persistence, transport scheduling, live engine integration, and GUI controls remain open.
