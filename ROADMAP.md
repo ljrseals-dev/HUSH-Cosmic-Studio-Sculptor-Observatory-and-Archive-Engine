@@ -17,7 +17,7 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [ ] Commit 60-minute zero-xrun, loopback-latency, and underrun-injection evidence.
 - [ ] Run `hush_routing_benchmark 500 <seconds>` and commit its JSON output with a documented real-time budget threshold.
 - [ ] Run `hush_headless_soak 28800` and commit its JSON output; define and enforce a memory-drift threshold.
-- [ ] Integrate autosave with application lifecycle and surface save failures.
+- [ ] Finish Gate 7 verification: GUI lifecycle hooks, dirty/error indicator, CLI project-open/recovery hooks, and failure-injection contract tests are in PR #36; fresh CI, Qt close-dialog tests, CLI dirty-quit-failure behavior, and one-time recovery-notice test remain open.
 - [x] Add partial-header and truncated-payload recovery fault tests (test execution still needs CI evidence).
 - [ ] Establish durability claims with power-loss tests before making them; until then, only process-restart recovery is claimed.
 
@@ -29,7 +29,7 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 4. **ALSA validation:** target-machine startup/shutdown, callback timing, loopback latency, underrun injection, and sustained zero-xrun evidence.
 5. **Performance and soak:** reproducible 500-track budget test and 8-hour soak with memory-growth report.
 6. **Journal durability:** test failure modes and power-loss behavior before expanding guarantees.
-7. **Release hygiene:** offline dependency policy, complete archive audit, green CI, traceable README claims, and documented evidence.
+7. **Autosave lifecycle and release hygiene:** validate PR #36 on fresh CI; close remaining GUI/CLI lifecycle tests; preserve the power-loss non-claim; then complete archive audit, offline dependency review, and traceable release evidence.
 
 ## Out of scope for the 0.2 foundation
 

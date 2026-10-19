@@ -15,13 +15,13 @@ Audit target: `feat/autosave-lifecycle-gate7`, based on `feat/gui-live-mixer-wir
 
 | Event | Current behavior | Hook needed |
 |---|---|---|
-| Application start / recovery check | GUI constructs a demo project in `src/mixer_gui.cpp:246-252`; no recovery journal is checked. ALSA host builds a fixed graph in `src/alsa_realtime_host.cpp:25-47`. | GUI startup/project-session controller; CLI host needs a project/session argument and recovery policy before audio starts. |
-| Project open | `src/mixer_gui.cpp:271-293` opens JSON and replaces project state; no autosave controller starts and no journal recovery notice appears. | `MixerWindow::openProject` after successful parse. |
+| Application start / recovery check | GUI constructs a demo project in `src/mixer_gui.cpp` and checks the selected project's adjacent journal after open. ALSA host accepts `--project` / `--journal`, loads JSON, and checks recovery before starting audio. | Implemented in the review branch; recovery-notice-once test remains open. |
+| Project open | `MixerWindow::openProject` parses JSON, checks the adjacent journal, creates the controller, and surfaces an applied recovery snapshot in the save-status label. The CLI does the same before audio start. | Source hook implemented; automated host lifecycle verification pending. |
 | Project close / replace | GUI stops live ALSA before validating the candidate project (`src/mixer_gui.cpp:274-285)); no dirty guard or final save. | GUI project replacement/close flow. |
 | Quit while dirty | `src/mixer_gui.cpp:254-258` only stops live audio in the destructor; no close-event dirty check. ALSA host exits after signal and backend stop (`src/alsa_realtime_host.cpp:68-79`). | GUI `closeEvent`; CLI shutdown path before successful return. |
 | Crash recovery next start | Journal recovery exists in `src/recovery_journal.cpp:61-94`, but neither host invokes it or surfaces a notice. | GUI startup/open path and CLI startup path. |
 | Dirty transitions | `src/mixer_gui.cpp:319-330` mutates through `OperationLog::apply_and_append`; undo/redo at lines 218-241 mutate project. No dirty bit exists. `OperationLog::append` at `src/operation_log.cpp:4-6` can append history without a project/dirty callback. | One explicit dirty-state chokepoint around successful apply, undo, redo, and project replacement/save baseline. |
-| User-initiated save | `src/mixer_gui.cpp:295-309` writes JSON to a path selected with QFileDialog. It does not update a canonical project path, journal snapshot, or dirty state. | GUI save path and shared save operation. |
+| User-initiated save | GUI writes JSON, flushes/checks the file, writes a journal snapshot synchronously, then clears operation-log dirty state only after both succeed. | Source hook implemented; save-failure tests and fresh CI pending. |
 | Live ALSA start/stop | `src/mixer_gui.cpp:374-394` starts/stops only the live monitor. The policy is not called. | Do not couple autosave to the audio callback; session timer stays on GUI/main thread and starts only after a project is loaded. |
 
 ## 3. Failure propagation / silent-failure audit
@@ -60,6 +60,10 @@ Audit target: `feat/autosave-lifecycle-gate7`, based on `feat/gui-live-mixer-wir
 6. **Operation-log bypass:** centralize dirty-state changes around successful apply/undo/redo and make the dirty state testable.
 7. **No command-line session surface:** `src/alsa_realtime_host.cpp` currently takes no arguments and creates a hard-coded graph. CLI project open/save/recovery requires an explicit scope change to its current demo-host behavior.
 8. **Baseline evidence gap:** GitHub Actions has passed the default, ALSA, and Qt+ALSA build/test jobs on run 39255426377, but no local terminal transcript is available to record verbatim from this execution environment. Do not fabricate shell output.
+
+## Gate 7 implementation delta and remaining limits
+
+The review branch now adds `SaveError`, `poll_if_dirty`, `save_now`, an injectable `RecoveryJournal::AppendWriter`, operation-log dirty tracking, `tests/autosave_lifecycle_tests.cpp`, GUI main-thread timer/snapshot/save/quit hooks, and CLI `--project` / `--journal` / `--help` handling. The CLI host still has no project-edit command surface, so its dirty-edit/final-save failure branch is defensive but not exercised by normal host operation. The lifecycle tests do not yet prove Qt close-dialog behavior or the one-time recovery notice. Fresh CI for the review branch has not reported at the time of this audit.
 
 ## Threading boundary
 

@@ -29,3 +29,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
+
+## Unreleased — Gate 7 autosave lifecycle (PR #36, validation pending)
+
+- Added dirty-aware autosave policy, typed `SaveError` state, synchronous recovery-journal save path, and an injectable append-writer seam for deterministic failure tests.
+- Added operation-log dirty tracking for append/apply/undo/redo and lifecycle contract tests for clean ticks, due writes, injected failures, synchronous save, snapshot isolation, and operation-kind dirty transitions.
+- Wired the Qt GUI's project open/save/quit lifecycle, main-thread autosave timer, recovery snapshot check, and dirty/error status indicator. Added project-open/recovery support and documented exit codes to the optional ALSA host.
+- Validation is pending for this PR revision. CLI edit/dirty-quit parity, Qt dialog automation, recovery-notice-once testing, and all target-machine tests remain open. Power-loss durability remains explicitly not claimed.

@@ -42,7 +42,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
 - **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
-- **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
+- **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; dirty-aware scheduling and typed `SaveError` surface in `src/autosave_controller.cpp`; injected-writer lifecycle contracts in `tests/autosave_lifecycle_tests.cpp` (fresh CI result pending).
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
 - **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.
 - **Optional Qt 6 mixer GUI:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. With both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON`, its explicit Start Live ALSA action connects gain/pan/mute/solo and undo/redo to the bounded realtime track-mixer queue. The current capture mapping is limited to stereo input channels → tracks 1–2; this is not complete multitrack routing.
@@ -83,7 +83,7 @@ Every item below is **unverified/incomplete** until its evidence is committed. *
 - **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
 - **60-minute zero-xrun test, loopback latency, and underrun injection:** no completed report; requires a physical/reference ALSA machine and machine-labelled results.
 - **500-track performance budget and 8-hour soak/memory-drift report:** no completed report; requires a named machine, reproducible harness, and committed results.
-- **Autosave lifecycle/failure surfacing:** policy code exists, but host-application lifecycle integration is incomplete.
+- **Autosave lifecycle/failure surfacing:** GUI open/save/quit hooks, dirty status, recovery-journal snapshots, and CLI project-open/recovery hooks are implemented in the current review branch. Fresh CI for the new lifecycle tests and host changes is pending; GUI click/close-dialog tests, complete CLI dirty-edit/quit-failure coverage, and a one-time recovery-notice test remain open.
 - **Power-loss durability:** explicitly not claimed. Current evidence covers completed journal records across process restart and truncated-tail handling only.
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
 
@@ -95,6 +95,7 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 
 - [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
 - [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
+- [PR #36 — autosave lifecycle gate](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/36) is a draft review branch; do not treat its unverified changes as merged or release-ready.
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
 - The Qt mixer has an optional, explicitly started ALSA live-input monitor when both GUI and ALSA build options are enabled. It currently routes the capture device's two channels to the first two tracks only; full track-source/bus routing, GUI interaction tests, and hardware validation remain outstanding. Do not describe this repository as a finished DAW or claim long-duration stability or a verified release build without committed evidence.
 

@@ -4,10 +4,10 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 
 | Gate | Current evidence | Status |
 |---|---|---|
-| C++20 headless configure/build/contracts | GitHub Actions [run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377), job `linux-cxx20` | Pass on tested revision; re-run after subsequent commits |
-| ALSA-enabled configure/build/contracts | Same run, job `linux-alsa-enabled`; compile/contracts only | Pass on tested revision; not hardware validation |
-| Qt 6 mixer configure/build/contracts | Same run, job `linux-qt6-mixer-gui` | Pass on tested revision; Qt interaction test remains open |
-| Qt 6 + ALSA live mixer | Same run, job `linux-qt6-alsa-live-mixer` | Pass on tested revision; audible hardware/loopback verification remains open |
+| C++20 headless configure/build/contracts | GitHub Actions [run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377), job `linux-cxx20` | Pass on pre-Gate-7 baseline; new branch revision still needs CI |
+| ALSA-enabled configure/build/contracts | Same run, job `linux-alsa-enabled`; compile/contracts only | Pass on pre-Gate-7 baseline; new host changes still need CI; not hardware validation |
+| Qt 6 mixer configure/build/contracts | Same run, job `linux-qt6-mixer-gui` | Pass on pre-Gate-7 baseline; GUI lifecycle changes still need CI; Qt interaction test remains open |
+| Qt 6 + ALSA live mixer | Same run, job `linux-qt6-alsa-live-mixer` | Pass on pre-Gate-7 baseline; GUI lifecycle changes still need CI; audible hardware/loopback verification remains open |
 | ASan instrumented CI | Same run, job `linux-asan` | Pass on tested revision; production graph-swap integration/stress remains open |
 | TSan instrumented CI | Same run, job `linux-tsan` | Pass on tested revision; production graph-swap integration/race coverage remains open |
 | Repository artifact hygiene | Same run, job `repo-artifact-hygiene` | Pass on tested revision; legacy ZIP disposition still requires content review |
@@ -23,7 +23,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` emits JSON counters/RSS where available; no 8-hour report or pass threshold attached | Partial; run and threshold required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
-| Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |
+| Autosave lifecycle | PR #36 adds dirty-aware policy, typed save errors, an injectable journal writer, GUI open/save/quit/timer hooks, CLI project-open/recovery handling, and lifecycle contract tests | In progress; fresh CI has not yet reported for this branch; Qt close-dialog and CLI dirty-quit failure tests remain open |
 | Legacy ZIP disposition | Committed ZIP remains; content has not yet been reviewed in this gate ledger | Open; do not delete or relocate before review |
 
 ## Report requirements

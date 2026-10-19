@@ -5,8 +5,8 @@
 - [x] Schema-v1 project model and JSON round-trip for tracks, buses, and routes; older schema-v1 files without bus/route arrays remain readable.
 - [x] Bus-routing validation at project-load boundary, including unknown endpoints, duplicate/empty IDs, self-routes, invalid gain, and cycles.
 - [x] Append-only recovery journal with length-framed full-project snapshots and truncated-tail recovery.
-- [x] Autosave scheduling policy; caller must poll from a non-audio thread.
-- [x] Invertible operation-log primitives and undo/redo tests.
+- [x] Dirty-aware autosave scheduling policy, typed `SaveError` state, synchronous journal save path, and injectable journal-writer seam; all save calls remain non-audio-thread-only. Fresh lifecycle-test CI is pending.
+- [x] Invertible operation-log primitives, undo/redo tests, and dirty tracking on append/apply/undo/redo with explicit `mark_saved()` / `mark_dirty()`.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
@@ -19,7 +19,7 @@
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
 ## Open gates — do not claim complete
-- [ ] Qt widget-interaction test proving actual fader/pan/mute/solo and undo/redo signals invoke the command path. The headless command/engine contract test is added, but must pass CI; UI click-level and loopback evidence and GUI/CLI parity remain open.
+- [ ] Qt widget-interaction test proving actual fader/pan/mute/solo and undo/redo signals invoke the command path. The headless command/engine contract test passed in run 39255426377; UI click-level and loopback evidence and GUI/CLI parity remain open.
 - [ ] Connect PublishedRealtimeBusEngine to the application/ALSA host and validate callback-load replacement under fresh ASan/TSan CI; no host integration or hardware evidence is claimed.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
 - [ ] Re-run ASan/TSan after the latest source changes and add race coverage for production graph-swap integration.
@@ -28,7 +28,7 @@
 - [ ] 500-track performance report with configurable budget.
 - [ ] 8-hour soak report with an explicit memory-growth bound.
 - [ ] Power-loss durability: explicitly not claimed. Current coverage is process-restart recovery of completed records and truncated-tail handling.
-- [ ] Autosave controller integrated into an application lifecycle with save-failure surfacing.
+- [ ] Gate 7 lifecycle integration: GUI project open/save/close and timer hooks plus a dirty/error indicator are implemented in PR #36; CLI supports project open/recovery and documents exit codes, but it has no edit command surface and therefore cannot yet exercise dirty-edit/quit-failure behavior. Fresh CI for the new tests and host changes is pending; Qt close-dialog and recovery-notice-once tests remain open.
 - [ ] Review the contents and intended disposition of the committed `hush-daw-codex-hush-processor-integration-starter (1).zip`; do not delete or relocate it before review.
 - [ ] Optional JACK/PipeWire backends and preservation of historical 0.1.0 tests are not present in this source archive.
 
