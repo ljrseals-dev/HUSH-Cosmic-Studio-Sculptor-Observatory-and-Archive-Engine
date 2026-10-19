@@ -2,6 +2,8 @@
 
 > **High-Performance, Zero-Telemetry, Native C++20 Digital Audio Workstation & Audio Processing Engine**
 
+![HUSH Cosmic Studio Workspace](1683.jpg)
+
 ---
 
 ## Overview
