@@ -1,6 +1,6 @@
 # HUSH Cosmic Studio — 0.2 headless foundation
 
-HUSH is an offline-first C++20 audio-engine foundation, not a finished DAW release. The current tree contains project persistence, bus-graph validation, an offline reference renderer, preallocated bus processing, a bounded SPSC parameter queue, a stereo audio adapter, an optional ALSA host, an optional Qt 6 mixer shell, and recovery/operation-log primitives. Recording, MIDI, plugin hosting, and voice control remain out of scope.
+HUSH is an offline-first C++20 audio-engine foundation, not a finished DAW release. The current tree contains project persistence, bus-graph validation, an offline reference renderer, preallocated bus processing, a bounded SPSC parameter queue, a stereo audio adapter, an initial transport/tempo-map core, an initial automation-lane evaluator, an optional ALSA host, an optional Qt 6 mixer shell, and recovery/operation-log primitives. The transport and automation utilities are not yet connected to the running audio callback or GUI and are not yet persisted in project files. Recording, MIDI, plugin hosting, and voice control remain out of scope.
 
 ## Privacy and offline operation
 
@@ -41,6 +41,8 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Preallocated bus processing:** `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `tests/preallocated_bus_processor_tests.cpp`.
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
+- **Initial transport/tempo-map core:** `include/hush/transport_engine.hpp`, `src/transport_engine.cpp`; fixed-capacity play/stop/pause/seek commands and sample/beat conversion. Not yet wired to a live callback or GUI.
+- **Initial automation lane evaluator:** `include/hush/automation_lane.hpp`, `src/automation_lane.cpp`; step and linear interpolation over validated points. Treat lanes as immutable during playback; project persistence and live parameter application remain open.
 - **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
