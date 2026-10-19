@@ -18,6 +18,7 @@ add_library(hush_core
     src/preallocated_bus_processor.cpp
     src/realtime_bus_engine.cpp
     src/realtime_bus_audio_adapter.cpp
+    src/mixer_engine_bridge.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
@@ -92,6 +93,10 @@ if(HUSH_BUILD_TESTS)
   target_compile_features(hush_parameter_queue_tests PRIVATE cxx_std_20)
   add_test(NAME hush_parameter_queue_tests COMMAND hush_parameter_queue_tests)
 
+  add_executable(hush_mixer_engine_bridge_tests tests/mixer_engine_bridge_tests.cpp)
+  target_link_libraries(hush_mixer_engine_bridge_tests PRIVATE hush_core)
+  add_test(NAME hush_mixer_engine_bridge_tests COMMAND hush_mixer_engine_bridge_tests)
+
   add_executable(hush_recovery_restart_tests tests/recovery_restart_tests.cpp)
   target_link_libraries(hush_recovery_restart_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_restart_tests COMMAND hush_recovery_restart_tests)
@@ -105,6 +110,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_parameter_queue_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_mixer_engine_bridge_tests PRIVATE /UNDEBUG)
   else()
     target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
@@ -114,5 +120,6 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_parameter_queue_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_mixer_engine_bridge_tests PRIVATE -UNDEBUG)
   endif()
 endif()
