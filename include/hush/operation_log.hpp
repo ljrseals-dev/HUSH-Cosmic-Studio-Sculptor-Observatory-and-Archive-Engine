@@ -18,6 +18,7 @@ public:
     }
     std::size_t cursor() const noexcept { return cursor_; }
     [[nodiscard]] bool dirty() const noexcept { return dirty_; }
+    void mark_dirty() noexcept { dirty_ = true; }
     // Call only after the canonical project save and recovery-journal save both succeed.
     void mark_saved() noexcept { dirty_ = false; }
 private:

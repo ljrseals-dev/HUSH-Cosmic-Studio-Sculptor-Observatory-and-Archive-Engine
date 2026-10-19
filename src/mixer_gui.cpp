@@ -351,13 +351,14 @@ private:
         if (recovered_snapshot) log_.mark_dirty();
         project_path_ = path;
         autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
+        autosave_journal_path_ = journal_path;
         refresh();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
+        refresh_save_status();
         if (recovered_snapshot && !recovery_notice_shown_) {
             save_status_->setText("Recovered snapshot · " + QString::fromStdString(journal_path.string()));
             recovery_notice_shown_ = true;
         }
-        refresh_save_status();
     }
 
     bool saveProject() {
