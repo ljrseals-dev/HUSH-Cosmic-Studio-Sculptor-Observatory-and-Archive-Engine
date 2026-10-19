@@ -46,6 +46,14 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Contract tests
         run: ctest --test-dir build --output-on-failure
+      - name: Smoke-test benchmark and recovery soak harnesses
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build/hush_routing_benchmark 500 1 | tee /tmp/hush-routing-benchmark.json
+          ./build/hush_headless_soak 1 /tmp/hush-soak-smoke.journal | tee /tmp/hush-headless-soak.json
+          python3 -c 'import json; [json.load(open(p)) for p in ("/tmp/hush-routing-benchmark.json", "/tmp/hush-headless-soak.json")]'
+          rm -f /tmp/hush-soak-smoke.journal
 
   linux-alsa-enabled:
     runs-on: ubuntu-latest

@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
 option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend and host" OFF)
 option(HUSH_BUILD_GUI "Build the optional Qt 6 mixer GUI" OFF)
+option(HUSH_BUILD_STRESS_TOOLS "Build offline benchmark and soak tools" ON)
 
 add_library(hush_core
     src/project.cpp
@@ -17,6 +18,7 @@ add_library(hush_core
     src/bus_renderer.cpp
     src/preallocated_bus_processor.cpp
     src/realtime_bus_engine.cpp
+    src/realtime_track_mixer.cpp
     src/realtime_bus_audio_adapter.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
@@ -61,6 +63,17 @@ if(HUSH_ENABLE_ALSA)
   endif()
 endif()
 
+
+if(HUSH_BUILD_STRESS_TOOLS)
+  add_executable(hush_routing_benchmark tools/hush_routing_benchmark.cpp)
+  target_link_libraries(hush_routing_benchmark PRIVATE hush_core)
+  target_compile_features(hush_routing_benchmark PRIVATE cxx_std_20)
+
+  add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
+  target_link_libraries(hush_headless_soak PRIVATE hush_core)
+  target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
+endif()
+
 if(HUSH_BUILD_TESTS)
   enable_testing()
   add_executable(hush_contract_tests tests/contract_tests.cpp)
@@ -87,6 +100,17 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_bus_audio_adapter_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_bus_audio_adapter_tests COMMAND hush_realtime_bus_audio_adapter_tests)
 
+  add_executable(hush_realtime_track_mixer_tests tests/realtime_track_mixer_tests.cpp)
+  target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
+  add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
+
+  find_package(Threads REQUIRED)
+  add_executable(hush_realtime_graph_publisher_tests tests/realtime_graph_publisher_tests.cpp)
+  target_include_directories(hush_realtime_graph_publisher_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_compile_features(hush_realtime_graph_publisher_tests PRIVATE cxx_std_20)
+  target_link_libraries(hush_realtime_graph_publisher_tests PRIVATE Threads::Threads)
+  add_test(NAME hush_realtime_graph_publisher_tests COMMAND hush_realtime_graph_publisher_tests)
+
   add_executable(hush_parameter_queue_tests tests/parameter_queue_tests.cpp)
   target_include_directories(hush_parameter_queue_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_parameter_queue_tests PRIVATE cxx_std_20)
@@ -95,24 +119,34 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_recovery_restart_tests tests/recovery_restart_tests.cpp)
   target_link_libraries(hush_recovery_restart_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_restart_tests COMMAND hush_recovery_restart_tests)
+
+  add_executable(hush_recovery_partial_write_tests tests/recovery_partial_write_tests.cpp)
+  target_link_libraries(hush_recovery_partial_write_tests PRIVATE hush_core)
+  add_test(NAME hush_recovery_partial_write_tests COMMAND hush_recovery_partial_write_tests)
   # Keep assert-based contract checks active even when users build Release.
   if(MSVC)
     target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_recovery_partial_write_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_realtime_track_mixer_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_realtime_graph_publisher_tests PRIVATE /UNDEBUG)
   else()
     target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_recovery_partial_write_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_parameter_queue_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_engine_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_bus_audio_adapter_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_realtime_track_mixer_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_realtime_graph_publisher_tests PRIVATE -UNDEBUG)
   endif()
 endif()
