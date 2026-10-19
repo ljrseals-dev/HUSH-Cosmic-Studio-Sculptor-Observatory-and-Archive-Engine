@@ -338,13 +338,9 @@ private:
         bool recovered_snapshot = false;
         std::error_code filesystem_error;
         if (std::filesystem::exists(journal_path, filesystem_error) && !filesystem_error) {
-            hush::Project recovered;
             hush::Error recovery_error;
-            if (hush::RecoveryJournal(journal_path).recover_latest(recovered, recovery_error) &&
-                recovered != candidate) {
-                candidate = std::move(recovered);
-                recovered_snapshot = true;
-            }
+            (void)hush::RecoveryJournal(journal_path).recover_if_different(
+                candidate, recovered_snapshot, recovery_error);
         }
         project_ = std::move(candidate);
         log_ = hush::OperationLog{};

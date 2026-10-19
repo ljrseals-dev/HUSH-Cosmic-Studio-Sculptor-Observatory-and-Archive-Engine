@@ -115,11 +115,10 @@ int main(int argc, char** argv) {
         autosave = std::make_unique<AutosaveController>(RecoveryJournal(journal_path));
         std::error_code filesystem_error;
         if (std::filesystem::exists(journal_path, filesystem_error) && !filesystem_error) {
-            Project recovered;
             Error recovery_error;
-            if (RecoveryJournal(journal_path).recover_latest(recovered, recovery_error) &&
-                recovered != project) {
-                project = std::move(recovered);
+            bool recovery_applied = false;
+            if (RecoveryJournal(journal_path).recover_if_different(project, recovery_applied, recovery_error) &&
+                recovery_applied) {
                 if (!write_project_file(project_path, project, project_error)) {
                     std::cerr << "HUSH_RECOVERY_SAVE_FAILED path=" << project_path.string()
                               << " message=" << project_error.message << '\n';

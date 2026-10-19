@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cassert>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 
 namespace {
@@ -59,6 +60,27 @@ int main() {
     assert(!dirty && append_calls.load() == 1);
     assert(controller.last_save_error() == SaveError::None);
     assert(RecoveryJournal(path).recover_latest(project, error));
+
+    // Recovery applies the newest complete snapshot once; after the host persists
+    // that state as its canonical project, the next start does not re-announce it.
+    Project on_disk;
+    on_disk.id = "older-disk-state";
+    Project recovered_state;
+    recovered_state.id = "newer-recovery-state";
+    recovered_state.tracks.push_back({"recover-track", "Recovered", 0.8F, 0.1F, false, false});
+    const auto recovery_path = std::filesystem::temp_directory_path() / "hush-autosave-recovery-notice.journal";
+    std::filesystem::remove(recovery_path, cleanup);
+    assert(RecoveryJournal(recovery_path).append_snapshot(recovered_state, error));
+    { std::ofstream tail(recovery_path, std::ios::binary | std::ios::app); tail << "HUSHJ1 99\\npartial"; }
+    bool recovery_applied = false;
+    assert(RecoveryJournal(recovery_path).recover_if_different(on_disk, recovery_applied, error));
+    assert(recovery_applied && on_disk == recovered_state);
+    // Simulate the host persisting the recovered state before exiting; on next start
+    // the same journal is no longer a state change and must not trigger a notice.
+    recovery_applied = true;
+    assert(RecoveryJournal(recovery_path).recover_if_different(on_disk, recovery_applied, error));
+    assert(!recovery_applied && on_disk == recovered_state);
+    std::filesystem::remove(recovery_path, cleanup);
 
     // Dirty changes before the interval do not cause excess writes.
     dirty = true;
