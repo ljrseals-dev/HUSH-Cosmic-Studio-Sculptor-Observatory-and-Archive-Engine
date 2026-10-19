@@ -13,6 +13,7 @@ add_library(hush_core
     src/operation_log.cpp
     src/mixer.cpp
     src/bus_graph.cpp
+    src/bus_renderer.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
@@ -34,6 +35,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_bus_graph_tests PRIVATE hush_core)
   add_test(NAME hush_bus_graph_tests COMMAND hush_bus_graph_tests)
 
+  add_executable(hush_bus_renderer_tests tests/bus_renderer_tests.cpp)
+  target_link_libraries(hush_bus_renderer_tests PRIVATE hush_core)
+  add_test(NAME hush_bus_renderer_tests COMMAND hush_bus_renderer_tests)
+
   add_executable(hush_recovery_restart_tests tests/recovery_restart_tests.cpp)
   target_link_libraries(hush_recovery_restart_tests PRIVATE hush_core)
   add_test(NAME hush_recovery_restart_tests COMMAND hush_recovery_restart_tests)
@@ -42,9 +47,11 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
   else()
     target_compile_options(hush_contract_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_graph_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
   endif()
 endif()
