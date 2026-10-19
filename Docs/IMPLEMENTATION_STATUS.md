@@ -16,15 +16,16 @@
 - [x] Fixed-capacity single-producer/single-consumer parameter queue primitive and deterministic contract tests.
 - [x] Preallocated bus processor with control-thread setup, fixed-capacity buffers, indexed routes, and an allocation-free process path.
 - [x] RealtimeBusEngine composes the preallocated processor with the bounded SPSC fader-parameter queue; queue updates are applied at processing-block boundaries.
+- [x] Interleaved-stereo adapter deinterleaves device input, injects it into a configured graph input bus, runs RealtimeBusEngine, and interleaves the configured master bus output; scratch is preallocated and offline contract tests are added.
+- [x] Optional Linux ALSA capture/playback worker target and callback contract (device validation pending).
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
 - [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
 - [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; the current subprocess test covers completed writes, not power loss or mid-write termination.
-- [x] Optional Linux ALSA capture/playback worker target and callback contract (device validation pending).
-- [ ] Wire the ALSA callback to RealtimeBusEngine with explicit graph input/output/master-bus semantics.
+- [ ] Wire a running host/device lifecycle that constructs BusGraph, configures RealtimeBusEngine and RealtimeBusAudioAdapter, and starts/stops AlsaAudioBackend; the reusable callback adapter is implemented, but no app host currently owns that lifecycle.
 - [ ] Optional JACK/PipeWire compile-time backends.
-- [ ] Integrate RealtimeBusEngine with an actual ALSA/device callback and verify atomics are lock-free on target hardware. Current integration is a callback-ready processing component, not a device backend.
+- [ ] Verify parameter atomics are lock-free on target hardware and test ALSA device behavior.
 - [ ] Safe graph swap and deferred reclamation; current processor is configure-once and must not be destroyed while processing.
 - [ ] Integrate track-to-bus assignment, inserts, solo/mute semantics, meters, and xrun counters into the processing path.
 - [ ] 60-minute 48 kHz/128-frame zero-xrun reference run.
