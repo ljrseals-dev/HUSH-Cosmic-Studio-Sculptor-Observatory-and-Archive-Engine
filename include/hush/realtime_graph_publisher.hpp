@@ -75,7 +75,7 @@ public:
 
     // Control thread only. The returned object remains owned by this publisher;
     // only call its control-side enqueue APIs and never inspect callback-owned buffers.
-    [[nodiscard]] Graph* active_for_control() noexcept {
+    [[nodiscard]] Graph* active_for_control() const noexcept {
         return active_owner_.get();
     }
 
