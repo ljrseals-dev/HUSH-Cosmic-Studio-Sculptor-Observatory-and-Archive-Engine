@@ -91,6 +91,8 @@ See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEAS
 
 ## Current engineering handoff
 
+- [Master Builder Prompt — Open All Implementation Gates](Docs/MASTER_BUILDER_PROMPT.md) authorizes the implementation sequence without repeated approval pauses, while preserving the privacy contract and requiring evidence for every claimed result.
+
 - [PR #21 — repository audit and baseline](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/21) is merged.
 - [PR #22 — privacy source-contract regression check](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/pull/22) contains the privacy-contract changes and remains a draft pending review.
 - [Privacy contract](Docs/PRIVACY_CONTRACT.md) defines the intended offline/local-first behavior; the source audit is only a regression check, not proof of zero runtime network activity.
