@@ -1,11 +1,41 @@
 name: HUSH 0.2 headless contracts
 on:
   push:
-    branches: [codex/hush-0.2-headless-foundation, milestone/0.3b-release-gate-harnesses]
+    branches: [main, codex/hush-0.2-headless-foundation, milestone/0.3b-release-gate-harnesses]
   pull_request:
     branches: [main]
   workflow_dispatch:
 jobs:
+  repo-artifact-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject committed build outputs and new binary archives
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          tracked="$(git ls-files)"
+          forbidden="$(printf '%s\n' "$tracked" | grep -E '(^|/)(build|build-[^/]*)(/|$)|(^|/)\.DS_Store$|\.zip$' | grep -v -E '^(Source/HUSH-Cosmic-Studio-0\.2\.1-GitHub-Source\.zip|hush-daw-codex-hush-processor-integration-starter \(1\)\.zip)$' || true)"
+          if [[ -n "$forbidden" ]]; then
+            echo "Forbidden tracked build artifact(s) or unapproved archive(s):"
+            printf '%s\n' "$forbidden"
+            exit 1
+          fi
+          # Temporary allowlist is only for two pre-existing, unverified archives documented
+          # in Docs/REPO_AUDIT.md. New or modified ZIPs must fail until those archives are resolved.
+          if [[ -n "${BASE_SHA:-}" && "${BASE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+            changed="$(git diff --name-only --diff-filter=AM "$BASE_SHA" HEAD -- '*.zip' || true)"
+            if [[ -n "$changed" ]]; then
+              echo "Do not add or modify committed ZIP archives; publish binaries as release assets:"
+              printf '%s\n' "$changed"
+              exit 1
+            fi
+          fi
+
   linux-cxx20:
     runs-on: ubuntu-latest
     steps:

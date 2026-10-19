@@ -1,8 +1,10 @@
-# HUSH Unified DAW — 0.2 headless foundation
+# HUSH Cosmic Studio — 0.2 headless foundation
 
-This project follows the ordered milestone sequence in `Docs/Prompt`. It includes persisted bus routing, a local recovery-journal API, an offline reference renderer, a bounded SPSC parameter queue, a preallocated bus processor, a realtime interleaved-stereo adapter, and an optional first-pass 0.3a mixer GUI. Recording, MIDI, plugin hosting, and voice control remain out of scope.
+HUSH is an offline-first C++20 audio-engine foundation, not a finished DAW release. The current tree contains project persistence, bus-graph validation, an offline reference renderer, preallocated bus processing, a bounded SPSC parameter queue, a stereo audio adapter, an optional ALSA host, an optional Qt 6 mixer shell, and recovery/operation-log primitives. Recording, MIDI, plugin hosting, and voice control remain out of scope.
 
 ## Build offline
+
+Dependencies must already be installed on the machine. The project build does not download or bootstrap dependencies.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON
@@ -10,53 +12,59 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-No FetchContent, package bootstrap, network access, telemetry, or update checks are used by CMake or the runtime engine.
+No FetchContent, package bootstrap, telemetry, update checks, or runtime network requests are part of the CMake/runtime design. CI may install system build dependencies before configuration.
 
-## Included
+## Included — source and test evidence
 
-- C++20 project model with stable entity IDs and schema version 1.
-- JSON serialization/deserialization for tracks, buses, and routes; older schema-v1 projects without bus/route arrays remain readable.
-- Bus-route validation at project load, including cycle detection.
-- Offline/reference bus-buffer renderer with pre-fader and post-fader sends.
-- Preallocated bus processor with control-thread setup, numeric route indices, fixed buffers, and a processing function that does not explicitly allocate, lock, log, or perform file I/O.
-- Fixed-capacity SPSC parameter-command queue with explicit full/empty behavior.
-- RealtimeBusEngine applies queued fader updates at processing-block boundaries.
-- RealtimeBusAudioAdapter maps interleaved stereo capture into a selected graph input bus and emits the selected master's post-fader signal, with preallocated scratch.
-- Optional Linux ALSA capture/playback backend and minimal host, disabled by default.
-- Append-only full-snapshot recovery journal with length framing, sync request, and truncated-tail recovery.
-- Non-audio-thread autosave controller policy; application lifecycle integration remains required.
-- Process-restart integration test for recovering a completed journal append.
-- Invertible append-only operation-log primitives with undo/redo tests.
-- Optional Qt 6 mixer shell with schema-v1 project open/save and gain/pan/mute/solo/undo/redo controls.
+- **Schema-v1 project model and JSON reader/writer:** `include/hush/project.hpp`, `src/project.cpp`; contract coverage in `tests/contract_tests.cpp`.
+- **Bus graph validation and cycle detection:** `include/hush/bus_graph.hpp`, `src/bus_graph.cpp`, `tests/bus_graph_tests.cpp`.
+- **Offline/reference bus-buffer renderer:** `include/hush/bus_renderer.hpp`, `src/bus_renderer.cpp`, `tests/bus_renderer_tests.cpp`.
+- **Preallocated bus processing:** `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `tests/preallocated_bus_processor_tests.cpp`.
+- **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
+- **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
+- **Interleaved stereo adapter:** `include/hush/realtime_bus_audio_adapter.hpp`, `src/realtime_bus_audio_adapter.cpp`, `tests/realtime_bus_audio_adapter_tests.cpp`.
+- **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
+- **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
+- **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.
+- **Optional Qt 6 project mixer shell:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. It edits project state only; it is not connected to live audio.
+- **Build/test registration:** `CMakeLists.txt`; CI configurations and sanitizer jobs: `.github/workflows/hush-0.2.yml`.
 
 ## Optional ALSA host
 
-On Linux with ALSA development headers/libraries installed:
+With Linux ALSA development headers/libraries already installed:
 
 ```sh
 cmake -S . -B build-alsa -DHUSH_ENABLE_ALSA=ON -DHUSH_BUILD_TESTS=ON
 cmake --build build-alsa
+ctest --test-dir build-alsa --output-on-failure
 ./build-alsa/hush_alsa_realtime_host
 ```
 
-The host uses the ALSA `default` capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. It is a minimal integration host, not the finished DAW GUI or full track mixer.
+The minimal host uses ALSA `default` capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. Compilation and contract tests are not a substitute for testing on a named physical audio device.
 
-## Optional mixer GUI (0.3a)
+## Optional mixer GUI
 
-Install Qt 6 Widgets from your system package manager, then build the optional desktop mixer:
+With Qt 6 Widgets already installed:
 
 ```sh
 cmake -S . -B build-gui -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
 cmake --build build-gui --parallel 2
+ctest --test-dir build-gui --output-on-failure
 ./build-gui/hush_mixer_gui
 ```
 
-See [Docs/HUSH_0.3A_MIXER_GUI.md](Docs/HUSH_0.3A_MIXER_GUI.md) for scope and limitations. The GUI currently edits project state only; it is not connected to live audio processing.
+## Not yet complete — do not claim as delivered
 
-## Release gates and limitations
+Every item below is **unverified/incomplete** until its evidence is committed. **Owner:** project maintainer. **Target-machine requirements** apply where specified.
 
-This is not a finished DAW release. The standard, ALSA-enabled, and Qt 6 CI jobs compile and run the current contract tests. ASan/TSan CI jobs are being added, but their results must be green before they count as evidence.
+- **GUI-to-live-engine commands and GUI interaction/CLI parity:** no complete GUI binding test; requires the Qt GUI and engine running together.
+- **Safe graph replacement/deferred reclamation:** no graph swap implementation or reclamation stress test; requires ASan/TSan and a target Linux build.
+- **Full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters:** not implemented as a complete live mixer; requires unit/integration tests and target audio-device tests.
+- **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
+- **60-minute zero-xrun test, loopback latency, and underrun injection:** no completed report; requires a physical/reference ALSA machine and machine-labelled results.
+- **500-track performance budget and 8-hour soak/memory-drift report:** no completed report; requires a named machine, reproducible harness, and committed results.
+- **Autosave lifecycle/failure surfacing:** policy code exists, but host-application lifecycle integration is incomplete.
+- **Power-loss durability:** explicitly not claimed. Current evidence covers completed journal records across process restart and truncated-tail handling only.
+- **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
 
-The following remain open: GUI-to-live-engine command binding and GUI interaction tests; safe graph swap/reclamation; complete track-to-bus/master routing with inserts and mute/solo; graph meters and xrun readouts; real-device startup/shutdown; callback timing; 60-minute zero-xrun validation; loopback latency and underrun injection; 500-track performance; and 8-hour soak with memory-drift reporting. See [Docs/RELEASE_GATES.md](Docs/RELEASE_GATES.md) and [ROADMAP.md](ROADMAP.md).
-
-**Durability scope:** recovery of completed journal records after process restart is tested, and truncated-tail recovery is covered. HUSH does **not** currently claim power-loss durability. Do not infer target-hardware real-time readiness from CI compile/test success.
+See [Docs/IMPLEMENTATION_STATUS.md](Docs/IMPLEMENTATION_STATUS.md), [Docs/RELEASE_GATES.md](Docs/RELEASE_GATES.md), and [ROADMAP.md](ROADMAP.md). Do not infer hardware readiness, performance, soak stability, or release readiness from green CI alone.

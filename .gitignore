@@ -1,16 +1,25 @@
-# CMake build trees
+# CMake build trees and generated output
 /build/
 /build-*/
 /cmake-build-*/
 /out/
-
-# CMake generated files
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 CTestTestfile.cmake
 Makefile
 compile_commands.json
+
+# Compiled objects and libraries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.pdb
 
 # IDE/editor and local test output
 .vscode/
@@ -20,10 +29,15 @@ compile_commands.json
 *.log
 *.report.json
 
+# OS cruft
+.DS_Store
+Thumbs.db
+Desktop.ini
+
 # Local audio/test artifacts
 *.wav
 *.raw
 *.pcm
 
-# Archives should be published as release assets, not committed to source
+# ZIP archives are release assets, not source commits
 *.zip

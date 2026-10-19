@@ -1,10 +1,20 @@
 # Changelog
 
-Notable repository changes are recorded here. This is a development changelog, not a claim of a finished DAW release.
+Notable repository changes. This is a development changelog, not a claim of a finished DAW release.
 
-## Unreleased
+## 0.2.0 — headless foundation
 
-- Added optional Qt 6 0.3a mixer shell with schema-v1 project open/save, gain/pan/mute/solo controls, and undo/redo.
-- Added CI coverage for standard C++20, ALSA-enabled compilation/contracts, and Qt 6 GUI compilation/contracts.
-- Explicitly retain live-engine binding, safe graph reclamation, hardware audio validation, soak, and performance gates as incomplete.
-- Clarify journal claims: process-restart recovery is tested; power-loss durability is not established.
+- C++20 CMake project with schema-v1 persistence, bus graph validation, offline/reference rendering, preallocated bus processing, and a bounded SPSC parameter queue.
+- Added realtime stereo adapter and optional ALSA backend/host.
+- Added recovery journal, autosave policy controller, and operation-log undo/redo primitives.
+- Added optional Qt 6 mixer shell; project-state editing is not live audio control.
+- Added CI for default C++20, ALSA-enabled, Qt 6 GUI, ASan, and TSan configurations.
+- Added release-gate ledger and documented unverified hardware/performance/durability gates.
+
+## Unreleased — repository hygiene
+
+- Added tracked-file, historical rename, and archive audit in `Docs/REPO_AUDIT.md`.
+- Removed four malformed 2-byte ZIP placeholders and the unreferenced `images/1792375771560.jpg`.
+- Preserved two non-empty archives whose full contents could not be verified; they remain explicit audit debt and must not be treated as source dependencies.
+- Added artifact ignore rules, contribution guidance, and security reporting policy.
+- Published history remains intact; no filter-repo, force-push, or history rewrite was performed.
