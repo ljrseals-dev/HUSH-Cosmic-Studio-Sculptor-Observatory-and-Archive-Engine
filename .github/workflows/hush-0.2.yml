@@ -1,7 +1,7 @@
 name: HUSH 0.2 headless contracts
 on:
   push:
-    branches: [codex/hush-0.2-headless-foundation]
+    branches: [codex/hush-0.2-headless-foundation, milestone/0.3b-release-gate-harnesses]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -46,3 +46,29 @@ jobs:
         run: cmake --build build-gui --parallel 2
       - name: Contract tests
         run: ctest --test-dir build-gui --output-on-failure
+
+  linux-asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AddressSanitizer build
+        run: cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DHUSH_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+      - name: Build
+        run: cmake --build build-asan --parallel 2
+      - name: Contract tests
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+        run: ctest --test-dir build-asan --output-on-failure
+
+  linux-tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure ThreadSanitizer build
+        run: cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=Debug -DHUSH_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
+      - name: Build
+        run: cmake --build build-tsan --parallel 2
+      - name: Contract tests
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+        run: ctest --test-dir build-tsan --output-on-failure

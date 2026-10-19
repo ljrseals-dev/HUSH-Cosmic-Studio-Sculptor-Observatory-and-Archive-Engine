@@ -1,0 +1,29 @@
+# CMake build trees
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+compile_commands.json
+
+# IDE/editor and local test output
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+*.report.json
+
+# Local audio/test artifacts
+*.wav
+*.raw
+*.pcm
+
+# Archives should be published as release assets, not committed to source
+*.zip
