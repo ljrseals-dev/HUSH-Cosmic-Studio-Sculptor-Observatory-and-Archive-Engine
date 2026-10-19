@@ -343,6 +343,7 @@ private:
         file.close();
         project_save_error_.clear();
         recovery_notice_shown_ = false;
+        recovery_notice_message_.clear();
         const auto journal_path = std::filesystem::path(path.toStdString() + ".hush-recovery.journal");
         bool recovered_snapshot = false;
         bool recovered_project_persisted = false;
