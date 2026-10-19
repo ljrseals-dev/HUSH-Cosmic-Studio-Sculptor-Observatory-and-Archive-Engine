@@ -23,7 +23,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` emits JSON counters/RSS where available; no 8-hour report or pass threshold attached | Partial; run and threshold required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
-| Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |
+| Autosave lifecycle | Gate 7 review branch adds dirty-aware policy, typed save errors, journal writer injection, operation-log dirty state, GUI open/save/quit/timer hooks, CLI project-open/recovery handling, and lifecycle tests | In progress; fresh CI has not reported for this revision; Qt close-dialog and CLI dirty-quit failure tests remain open |
 | Legacy ZIP disposition | Committed ZIP remains; content has not yet been reviewed in this gate ledger | Open; do not delete or relocate before review |
 
 ## Report requirements
