@@ -13,7 +13,8 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 
 ## Unreleased — repository hygiene
 
-- Added a tracked-file and archive audit in `Docs/REPO_AUDIT.md`.
-- Removed malformed 2-byte ZIP placeholders and an unreferenced image; preserved non-empty archives whose contents could not be verified.
-- Added artifact-reintroduction CI guard, contribution guidance, and security reporting policy.
+- Added tracked-file, historical rename, and archive audit in `Docs/REPO_AUDIT.md`.
+- Removed four malformed 2-byte ZIP placeholders and the unreferenced `images/1792375771560.jpg`.
+- Preserved two non-empty archives whose full contents could not be verified; they remain explicit audit debt and must not be treated as source dependencies.
+- Added artifact ignore rules, contribution guidance, and security reporting policy.
 - Published history remains intact; no filter-repo, force-push, or history rewrite was performed.
