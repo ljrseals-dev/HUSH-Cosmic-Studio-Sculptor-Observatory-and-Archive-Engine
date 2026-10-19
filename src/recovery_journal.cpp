@@ -33,6 +33,7 @@ bool sync_file(const std::filesystem::path& path) {
 }
 }
 bool RecoveryJournal::append_snapshot(const Project& project, Error& error) const {
+    if (append_writer_) return append_writer_(path_, project, error);
     const std::string payload = to_json(project);
     if (payload.size() > kMaxRecordBytes) {
         error={"journal_record_too_large",project.id,"Snapshot exceeds the 64 MiB journal record limit","error"};
@@ -91,4 +92,16 @@ bool RecoveryJournal::recover_latest(Project& out, Error& error) const {
     error={};
     return true;
 }
+bool RecoveryJournal::recover_if_different(Project& in_out, bool& applied, Error& error) const {
+    Project recovered;
+    applied = false;
+    if (!recover_latest(recovered, error)) return false;
+    if (recovered != in_out) {
+        in_out = std::move(recovered);
+        applied = true;
+    }
+    error = {};
+    return true;
+}
+
 }
