@@ -13,6 +13,7 @@ add_library(hush_core
     src/operation_log.cpp
     src/mixer.cpp
     src/bus_graph.cpp
+    src/recovery_journal.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
