@@ -11,10 +11,12 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added CI for default C++20, ALSA-enabled, Qt 6 GUI, combined Qt + ALSA live-mixer build, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
-## Unreleased — offline project bus-to-WAV export
+## Unreleased — offline WAV media import and project bus-to-WAV export
 
 - Connected schema-v1 project bus/route validation and the offline bus renderer to PCM16/float32 WAV output through an explicit selected output bus.
-- Added contract coverage for routing-to-WAV samples and invalid output-bus/project cases. CI validation is pending; this does not yet load media files or render an arrangement timeline.
+- Added contract coverage for routing-to-WAV samples and invalid output-bus/project cases.
+- Added offline WAV media decoding for PCM16 and IEEE float32, with chunk-boundary, alignment, truncation, non-finite float, and configurable data-size checks. Import allocates/reads only on a control thread and does not resample or remix.
+- CI validation of this increment is pending; project schema-v1 still has no clip timeline/media-source references and cannot yet render a complete arrangement.
 
 ## Unreleased — Phase 1–7 execution tooling
 
