@@ -28,6 +28,8 @@ int main() {
     std::string error;
     assert(adapter.configure(host, 0, 2, 32, error));
     assert(error.empty());
+    RealtimeBusEngineHostAudioAdapter oversized;
+    assert(!oversized.configure(host, 0, 2, 64, error));
 
     const float input[] = {1.0F, 0.5F, -1.0F, -0.25F, 0.5F, 1.0F};
     float output[6]{};
