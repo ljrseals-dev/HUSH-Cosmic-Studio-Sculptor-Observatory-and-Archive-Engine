@@ -10,12 +10,13 @@
 - [x] Explicit pan law options.
 - [x] Float32 mixing primitives and solo/mute semantics.
 - [x] Contract tests for implemented primitives, routing persistence, cycle rejection, and torn-tail recovery.
+- [x] Child-process exit/restart test for recovering a completed journal snapshot.
 - [x] Bus graph validation, send tap metadata, and source-before-destination render order.
 - [x] GUI, recording, MIDI, plugins, and voice remain out of scope.
 
 ## Remaining release gates
 - [ ] Integrate the autosave controller into a running application lifecycle and surface save failures in the host UI/log. The current repository has no running app/transport lifecycle.
-- [ ] Add a kill/restart integration test on supported target filesystems and verify directory-entry durability where required.
+- [ ] Validate kill/restart behavior on supported target filesystems and verify directory-entry durability where required; the current subprocess test covers completed writes, not power loss or mid-write termination.
 - [ ] ALSA real-time backend and optional JACK/PipeWire compile-time backends.
 - [ ] Preallocated processing graph and bounded lock-free parameter queue.
 - [ ] Graph swap with documented and implemented safe reclamation.
