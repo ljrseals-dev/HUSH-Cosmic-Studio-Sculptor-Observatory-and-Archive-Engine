@@ -1,30 +1,33 @@
 # HUSH Cosmic Studio roadmap
 
-This roadmap follows the ordered gates in [Docs/Prompt](Docs/Prompt). A milestone is not complete merely because its source compiles; the listed tests and target-machine evidence are required.
+This roadmap tracks the 0.2 foundation toward a release. A milestone is not complete merely because its source compiles; required tests and target-machine evidence must be recorded.
 
-## Current state — 0.3a GUI foundation
+## Current baseline — 0.2.0 / optional 0.3a GUI shell
 
-- [x] Headless C++20 project model, schema-v1 persistence, bus graph validation, offline renderer, preallocated bus processor, SPSC fader queue.
-- [x] Optional ALSA host and CI compile/test job.
-- [x] Optional Qt 6 mixer shell and CI compile/test job.
-- [ ] GUI controls bound to live audio via a block-boundary parameter command path.
-- [ ] GUI test for queued command → engine application; GUI/CLI project parity.
-- [ ] Safe graph replacement and deferred reclamation.
-- [ ] End-to-end track → bus → master routing, inserts, mute/solo, meters and xrun readouts.
-- [ ] Target-machine ALSA startup/shutdown, xrun, loopback latency and 60-minute validation evidence.
-- [ ] 500-track performance report and 8-hour soak report.
-- [ ] Automated sanitizer CI and hardware-aware release evidence.
+- [x] Headless C++20 project model, schema-v1 persistence, bus graph validation, offline renderer, preallocated bus processor, SPSC parameter queue.
+- [x] Optional ALSA backend/host and CI configuration.
+- [x] Optional Qt 6 mixer shell and CI configuration.
+- [x] Recovery journal process-restart test and truncated-tail handling.
+- [ ] Verify remaining committed archive contents and remove redundant binary archives.
+- [ ] Wire GUI controls to live audio; add queued-command interaction tests and GUI/CLI parity.
+- [ ] Implement safe graph replacement and deferred reclamation.
+- [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
+- [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
+- [ ] Commit 60-minute zero-xrun, loopback-latency, and underrun-injection evidence.
+- [ ] Commit 500-track performance report and 8-hour soak/memory-drift report.
+- [ ] Integrate autosave with application lifecycle and surface save failures.
+- [ ] Establish durability claims with power-loss tests before making them; until then, only process-restart recovery is claimed.
 
-## Ordered next gates
+## Ordered gates
 
-1. **0.3a integration:** live parameter bridge with a single-producer/single-consumer ownership contract; do not mutate graph topology from GUI/audio callback.
-2. **Graph lifetime:** select and document an epoch/deferred-reclamation design before implementing graph swaps; test under ASan/TSan.
-3. **Routing and observability:** track/bus/master semantics, meter snapshots and xrun counters, all read without callback locks.
-4. **Host validation:** runnable scripts for loopback latency and zero-xrun duration; report JSON and label hardware/environment.
-5. **Scale/soak:** configurable performance budget, long-duration host soak, memory drift checks and JSON reports.
-6. **Durability:** current claim is process-crash/restart recovery only, not a power-loss guarantee.
-7. **Release hygiene:** preserve dependency/offline constraints, keep CI green, document each completed gate with evidence.
+1. **GUI wiring:** connect supported controls to a bounded block-boundary command path without mutating graph topology from the GUI or audio callback.
+2. **Graph lifetime:** choose/document deferred-free, hazard-pointer, or epoch reclamation; stress under sanitizers.
+3. **Full routing:** define and test track/bus/master semantics, inserts, mute/solo, meters, and xrun counters.
+4. **ALSA validation:** target-machine startup/shutdown, callback timing, loopback latency, underrun injection, and sustained zero-xrun evidence.
+5. **Performance and soak:** reproducible 500-track budget test and 8-hour soak with memory-growth report.
+6. **Journal durability:** test failure modes and power-loss behavior before expanding guarantees.
+7. **Release hygiene:** offline dependency policy, complete archive audit, green CI, traceable README claims, and documented evidence.
 
-## Out of scope until later milestones
+## Out of scope for the 0.2 foundation
 
-Recording, MIDI, plugin hosting, Windows/macOS parity, session interchange and HUSH voice/AOC Magic are not part of the current 0.3a gate. See [Docs/Prompt](Docs/Prompt) for the full sequence.
+Recording, MIDI, plugin hosting, Windows/macOS parity, arrangement view, interchange, and HUSH voice/AOC Magic remain later milestones. See [Docs/Prompt](Docs/Prompt) for the full prompt sequence.
