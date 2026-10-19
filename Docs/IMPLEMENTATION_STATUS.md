@@ -13,12 +13,13 @@
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
 - [x] Optional ALSA backend/host compiles and contract tests run in CI; this is not hardware validation.
 - [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. All seven jobs passed in [GitHub Actions run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377) on the tested revision; later commits require a fresh run. Hardware validation is not implied.
-- [x] Header-only RealtimeGraphPublisher primitive and a concurrent publication test exist. The test is being strengthened to assert that an old snapshot is not destroyed while a reader guard holds it; the primitive is not integrated into the production bus/audio engine.
+- [x] Header-only RealtimeGraphPublisher primitive and held-reader/concurrent publication tests.
+- [x] Added PublishedRealtimeBusEngine: replacement RealtimeBusEngine instances are configured on the control thread, published for callback processing, guarded for the full process call, and reclaimed later on the control thread. A concurrent engine-replacement contract test is registered; CI for this revision is pending. This wrapper is not yet connected to the GUI or ALSA host.
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
 ## Open gates — do not claim complete
 - [ ] GUI interaction test proving fader/pan/mute/solo and undo/redo are audible at the next callback block; source queues controls for the explicitly started optional ALSA monitor, but automated UI/loopback evidence and GUI/CLI parity remain open.
-- [ ] Safe graph swap integrated into the actual engine and deferred reclamation verified under callback load; the standalone publication primitive is not production integration.
+- [ ] Connect PublishedRealtimeBusEngine to the application/ALSA host and validate callback-load replacement under fresh ASan/TSan CI; no host integration or hardware evidence is claimed.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
 - [ ] Re-run ASan/TSan after the latest source changes and add race coverage for production graph-swap integration.
 - [ ] Real-device ALSA startup/shutdown, callback timing, lock-free atomics verification on target, and xrun reporting.
