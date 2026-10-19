@@ -9,7 +9,8 @@ bool RealtimeBusEngineHostAudioAdapter::configure(
     RealtimeBusEngineHost& host, std::size_t input_bus_index,
     std::size_t bus_count, std::size_t max_frames, std::string& error) {
     if (max_frames == 0 || bus_count == 0 || input_bus_index >= bus_count ||
-        host.bus_count_for_control() != bus_count) {
+        host.bus_count_for_control() != bus_count ||
+        max_frames > host.max_frames_for_control()) {
         error = "host_adapter_topology_or_capacity_invalid";
         return false;
     }
