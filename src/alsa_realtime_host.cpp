@@ -55,7 +55,7 @@ int main() {
     config.sample_rate = 48000;
     config.period_frames = 128;
     std::string backend_error;
-    if (!backend.start(config, &RealtimeBusAudioAdapter::alsa_callback,
+    if (!backend.start(config, &RealtimeBusEngineHostAudioAdapter::alsa_callback,
                       &adapter, backend_error)) {
         std::cerr << "ALSA startup failed: " << backend_error << '\n';
         return 1;
@@ -71,6 +71,7 @@ int main() {
     }
 
     backend.stop();
+    engine_host.reclaim_retired();
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
               << backend.xrun_count() << '\n';
