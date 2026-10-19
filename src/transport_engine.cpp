@@ -107,7 +107,7 @@ bool TempoMap::beat_to_sample(double beat, std::uint64_t& sample) const noexcept
         if (beat < next_beat || i + 1 == count_) {
             const double value = accumulated_samples + (beat - current_beat) * samples_per_beat;
             if (!std::isfinite(value) || value < 0.0 ||
-                value > static_cast<double>(std::numeric_limits<std::uint64_t>::max())) return false;
+                value > static_cast<double>(std::numeric_limits<long long>::max())) return false;
             sample = static_cast<std::uint64_t>(std::llround(value));
             return true;
         }
