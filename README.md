@@ -45,7 +45,7 @@ No FetchContent, package bootstrap, telemetry, update checks, or runtime network
 - **Recovery journal and restart test:** `include/hush/recovery_journal.hpp`, `src/recovery_journal.cpp`, `tests/recovery_restart_tests.cpp`; policy controller in `src/autosave_controller.cpp`.
 - **Operation-log undo/redo primitives:** `include/hush/operation_log.hpp`, `src/operation_log.cpp`, `tests/contract_tests.cpp`.
 - **Optional ALSA backend/host:** `src/alsa_audio_backend.cpp`, `src/alsa_realtime_host.cpp`, documented in `Docs/ALSA_AUDIO_BACKEND.md`.
-- **Optional Qt 6 mixer GUI:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`. With both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON`, its explicit Start Live ALSA action connects gain/pan/mute/solo and undo/redo to the bounded realtime track-mixer queue. The current capture mapping is limited to stereo input channels → tracks 1–2; this is not complete multitrack routing.
+- **Optional Qt 6 mixer GUI:** `src/mixer_gui.cpp`, documented in `Docs/HUSH_0.3A_MIXER_GUI.md`; headless widget-level tests are in `tests/gui_interaction_tests.cpp`, and the deterministic queue/engine contract test is in `tests/gui_engine_command_path_tests.cpp`. With both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON`, its explicit Start Live ALSA action connects gain/pan/mute/solo and undo/redo to the bounded realtime track-mixer queue. The new Qt test is pending CI on this branch and does not claim hardware loopback; the current capture mapping is limited to stereo input channels → tracks 1–2.
 - **Privacy contract and source audit:** `Docs/PRIVACY_CONTRACT.md`, `tools/privacy_source_audit.cmake`, registered by `CMakeLists.txt`.
 - **Build/test registration:** `CMakeLists.txt`; CI configurations and sanitizer jobs: `.github/workflows/hush-0.2.yml`.
 
@@ -77,8 +77,8 @@ ctest --test-dir build-gui --output-on-failure
 
 Every item below is **unverified/incomplete** until its evidence is committed. **Owner:** project maintainer. **Target-machine requirements** apply where specified.
 
-- **GUI-to-live-engine automated interaction test and GUI/CLI parity:** the optional Qt + ALSA path now queues GUI edits and undo/redo to the live callback; automated Qt interaction/loopback coverage and target-device validation remain outstanding.
-- **Safe graph replacement/deferred reclamation:** no graph swap implementation or reclamation stress test; requires ASan/TSan and a target Linux build.
+- **GUI-to-live-engine automated interaction test and GUI/CLI parity:** a headless Qt widget test now exercises actual gain/pan sliders, mute/solo clicks, undo/redo buttons, and ALSA-button availability (`tests/gui_interaction_tests.cpp`); deterministic queue/engine behavior remains covered by `tests/gui_engine_command_path_tests.cpp`. The new test awaits CI execution. Direct observation of the queue from the exact widget signal boundary, two-channel loopback, target-device validation, and any project-editing CLI parity remain open; no track-editing CLI currently exists.
+- **Safe graph replacement/deferred reclamation:** `RealtimeGraphPublisher` and `PublishedRealtimeBusEngine` plus held-reader/concurrent-publication tests are present, but the published engine is not yet connected to the GUI or ALSA host; fresh ASan/TSan CI and production-host integration remain required.
 - **Full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters:** not implemented as a complete live mixer; requires unit/integration tests and target audio-device tests.
 - **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
 - **60-minute zero-xrun test, loopback latency, and underrun injection:** no completed report; requires a physical/reference ALSA machine and machine-labelled results.
