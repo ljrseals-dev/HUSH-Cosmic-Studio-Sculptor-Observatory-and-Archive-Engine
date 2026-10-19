@@ -2,6 +2,7 @@
 #include "hush/project.hpp"
 #include <filesystem>
 #include <string>
+#include <utility>
 
 namespace hush {
 // Append-only, local recovery journal. Records are length-framed so a torn final write
