@@ -335,7 +335,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"automation_lanes",body,false,e)) return false;
-    const std::regex lane_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"target"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"interpolation"\s*:\s*"(step|linear)"\s*,\s*"points"\s*:\s*\[([^]]*)\]\s*\})json");
+    const std::regex lane_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"target"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"interpolation"\s*:\s*"(step|linear)"\s*,\s*"points"\s*:\s*\[([\s\S]*?)\]\s*\})json");
     const std::regex automation_point_re(R"json(\{\s*"beat"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"value"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),lane_re);
     std::unordered_set<std::string> lane_ids;
