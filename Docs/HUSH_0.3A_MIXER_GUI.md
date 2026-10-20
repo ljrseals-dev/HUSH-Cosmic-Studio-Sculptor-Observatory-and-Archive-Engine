@@ -37,6 +37,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 - `RealtimeTrackMixer` is configured and its track buffers are allocated before starting the backend.
 - While live audio is running, gain and pan enqueue preview snapshots as the sliders move, so changes are heard at a subsequent audio block boundary; releasing the slider commits the final project value as one undoable operation. Mute and solo commit immediately. Undo/redo locate the touched operation and enqueue only that track. Startup seeds all tracks before audio begins. This avoids consuming queue capacity proportional to total track count on every edit.
 - The bounded queue is single-producer (GUI thread) / single-consumer (audio callback). A rejected/full queue is reported; the GUI does not wait for the audio callback.
+- If a committed control snapshot is rejected because the queue is temporarily full, the GUI remembers that track ID and retries the latest committed project state on the UI timer. Each retry is non-blocking, stops after the first full-queue result, and clears when live audio stops. This handles transient saturation without spinning; it cannot guarantee delivery if the audio consumer is not running.
 - The callback uses preallocated buffers and performs no allocation, locking, logging, or file/network I/O.
 - The backend callback thread is stopped and joined before live mixer state is destroyed or replaced.
 - The queue's atomic lock-free properties and actual callback timing must still be checked on target hardware.
