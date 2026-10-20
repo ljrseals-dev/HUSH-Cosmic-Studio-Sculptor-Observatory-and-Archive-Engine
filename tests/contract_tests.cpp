@@ -6,6 +6,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 namespace {
@@ -30,7 +31,11 @@ int main() {
                         {"automation-mute","track-2.mute",ProjectAutomationInterpolation::Step,
                          {{0.0,0.0F},{4.0,1.0F}}}};
     const auto json=to_json(p); Project loaded; Error err;
-    assert(from_json(json,loaded,err)); assert(loaded==p);
+    if (!from_json(json,loaded,err)) {
+        std::cerr << "Project round-trip failed: " << err.code << ": " << err.message << '\\n';
+        return 1;
+    }
+    assert(loaded==p);
     const std::string invalid_tempo=R"({"schema_version":1,"id":"bad-tempo","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":1,"bpm":120}]})";
     assert(!from_json(invalid_tempo,loaded,err)); assert(err.code=="tempo_point_invalid");
     const std::string malformed_tempo_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":0,"bpm":120.5.6}]})";
