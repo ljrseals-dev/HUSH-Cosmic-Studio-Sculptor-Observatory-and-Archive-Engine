@@ -26,7 +26,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |
 | Legacy ZIP disposition | Committed ZIP remains; content has not yet been reviewed in this gate ledger | Open; do not delete or relocate before review |
 
-## Report requirements
+| Bounded track ceiling and process allocation guard | PR #78, CI run [39451685619](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39451685619); schema-v1 accepts 1024 tracks, rejects 1025, and the `RealtimeTrackMixer::process()` allocation guard passes under ASan/TSan | Pass for this test path; GUI/CLI parity, full-ceiling graph-swap stress, RSS, performance and soak remain open |\n\n## Report requirements
 
 Target-machine reports should be JSON and include at least: commit SHA, OS/kernel, CPU, audio interface and driver, sample rate, period size, duration, xrun count, latency method/results, memory measurements, test command, and pass/fail. Missing hardware metadata or an unrun gate must be marked `not_run`, never inferred as passing.
 
