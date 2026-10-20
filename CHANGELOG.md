@@ -1,3 +1,9 @@
+## Unreleased — GUI-to-engine mixer command-path contract
+
+- Added a deterministic synthetic-buffer test using the production `OperationLog` and `RealtimeTrackMixer` to cover slider preview, commit, undo/redo, pan, mute/solo, and next-block output changes.
+- Added stable-track-ID lookup coverage and verified that a saturated bounded queue rejects a gain commit without mutating project state or undo history.
+- Registered the test in CMake and kept assertions enabled in Release builds. CI/build/CTest have not been run in this editing step; a green CI result is required. This is not Qt click-level or physical audio-device validation.
+
 ## Unreleased — closed PR #23 transport/automation follow-up
 
 - Reused the transport, tempo-map, and beat-based automation implementation already present on `main`; did not copy the stale closed PR branch over newer fixes.
