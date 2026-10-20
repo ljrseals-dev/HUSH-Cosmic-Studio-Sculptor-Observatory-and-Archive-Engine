@@ -20,7 +20,7 @@
 ## Open gates — do not claim complete
 - [x] Added `hush_qt_mixer_interaction_tests`, which runs the actual Qt mixer window offscreen and drives gain/pan slider-release signals, mute/solo clicks, and Undo/Redo; it asserts canonical project state and history cursor changes. Fresh Qt CI is pending. This proves widget-to-model/history behavior, not actual ALSA command delivery or loopback; GUI/CLI parity remains open.
 - [ ] The ALSA host now uses `RealtimeBusEngineHost` through `RealtimeBusEngineHostAudioAdapter`, with a concurrent same-topology graph-replacement adapter test registered in CMake. Fresh CI for this branch is pending; real-device lifecycle validation remains separate.
-- [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
+- [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior across the bus graph, and complete xrun reporting. Track-mixer stereo sample peak/RMS diagnostics are implemented; true-peak/loudness and target-device validation remain open.
 - [ ] ASan/TSan passed for the latest source/test revision in [run 39273263409](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39273263409); production graph-swap integration and its race coverage remain open.
 - [ ] Real-device ALSA startup/shutdown, callback timing, lock-free atomics verification on target, and xrun reporting.
 - [ ] 60-minute zero-xrun run, loopback latency, and underrun injection on a named target device.
@@ -38,3 +38,8 @@ A green CI job establishes only the configuration and tests that actually ran. I
 - [x] Added preallocated SPSC interleaved-float capture ring; capture and drain operate on complete frames without allocation or I/O.
 - [x] Overflow is counted as dropped frames and exposed to the control side.
 - [ ] Off-thread disk writer, streaming WAV finalization, track arm/disarm, takes/playlists, punch, comping, crossfades, latency compensation, and ALSA capture-to-file integration remain incomplete. Do not claim recording is production-ready.
+
+
+## Meter diagnostics update
+- Stereo sample peak/RMS values are now calculated per processed track-mixer block and published via lock-free 32-bit atomics; the GUI status timer displays the latest linear values alongside callback/xrun counters.
+- Unit assertions cover the synthetic-buffer peak/RMS calculations. This does not cover true peak, loudness, clipping alarms, or target-device reliability; CI for this revision is pending.
