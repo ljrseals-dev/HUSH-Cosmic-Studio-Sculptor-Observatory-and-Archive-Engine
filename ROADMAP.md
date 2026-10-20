@@ -11,7 +11,7 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [ ] Verify remaining committed archive contents and remove redundant binary archives.
 - [x] Wire GUI fader/pan/mute/solo and undo/redo to bounded realtime commands through an explicitly started ALSA live monitor (source mapping limited to capture L/R → tracks 1–2).
 - [ ] Add Qt interaction/loopback tests and GUI/CLI parity; run combined Qt + ALSA CI and target-device checks.
-- [ ] Implement safe graph replacement and deferred reclamation.
+- [x] Implement safe graph replacement and deferred reclamation primitive; integrate guarded published-engine processing into the standalone ALSA host (fresh CI still required).
 - [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
 - [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
 - [ ] Commit 60-minute zero-xrun, loopback-latency, and underrun-injection evidence.
@@ -24,7 +24,7 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 ## Ordered gates
 
 1. **GUI wiring:** source integration is in place for a user-started ALSA monitor and bounded block-boundary track controls; remaining acceptance gates are combined CI, Qt interaction/loopback tests, and target-device evidence.
-2. **Graph lifetime:** choose/document deferred-free, hazard-pointer, or epoch reclamation; stress under sanitizers.
+2. **Graph lifetime:** guarded publication/deferred reclamation primitive and standalone ALSA-host integration are implemented; next verify fresh sanitizer CI and wire GUI-driven topology changes.
 3. **Full routing:** define and test track/bus/master semantics, inserts, mute/solo, meters, and xrun counters.
 4. **ALSA validation:** target-machine startup/shutdown, callback timing, loopback latency, underrun injection, and sustained zero-xrun evidence.
 5. **Performance and soak:** reproducible 500-track budget test and 8-hour soak with memory-growth report.
