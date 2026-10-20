@@ -8,7 +8,9 @@ namespace hush {
 
 bool AutomationLane::set_points(std::vector<AutomationPoint> points,
                                 AutomationInterpolation interpolation) noexcept {
-    if (points.empty()) return false;
+    if (points.empty() ||
+        (interpolation != AutomationInterpolation::Step &&
+         interpolation != AutomationInterpolation::Linear)) return false;
     double previous = -1.0;
     for (const auto& point : points) {
         if (!std::isfinite(point.beat) || !std::isfinite(point.value) ||
