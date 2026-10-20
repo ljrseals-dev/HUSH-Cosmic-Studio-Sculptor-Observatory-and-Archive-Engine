@@ -51,8 +51,6 @@ bool PublishedRealtimeBusAudioAdapter::process(
         input = {silence_.data(), silence_.data()};
     bus_inputs_[input_bus_index_] = {left_.data(), right_.data()};
 
-    std::vector<float> unused; // Never used; callback path remains preallocated.
-    (void)unused;
     // The guarded engine copies master samples before releasing the graph lifetime guard.
     // Reuse left_/right_ as planar output only after processing has consumed them.
     const auto status = engine_->process_to_master(
