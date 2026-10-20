@@ -4,6 +4,8 @@
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -59,6 +61,15 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
     const std::uint64_t riff_end = static_cast<std::uint64_t>(u32(header + 4)) + 8ULL;
     if (riff_end < 12ULL) return fail(error, "RIFF size is invalid.");
 
+    // Validate the declared container against the actual file before trusting
+    // chunk offsets. Trailing bytes after the RIFF container are permitted.
+    in.seekg(0, std::ios::end);
+    const auto file_end = in.tellg();
+    if (file_end < 0 || static_cast<std::uint64_t>(file_end) < riff_end)
+        return fail(error, "File is shorter than its declared RIFF boundary.");
+    in.seekg(12, std::ios::beg);
+    if (!in) return fail(error, "Could not seek to the first WAV chunk.");
+
     bool have_fmt = false;
     bool have_data = false;
     std::uint16_t format = 0;
@@ -73,7 +84,9 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
         const auto chunk_header_pos = in.tellg();
         if (chunk_header_pos < 0) break;
         const auto chunk_header_offset = static_cast<std::uint64_t>(chunk_header_pos);
-        if (chunk_header_offset > riff_end || riff_end - chunk_header_offset < 8ULL) break;
+        if (chunk_header_offset == riff_end) break;
+        if (chunk_header_offset > riff_end || riff_end - chunk_header_offset < 8ULL)
+            return fail(error, "RIFF container ends with an incomplete chunk header.");
         unsigned char chunk[8]{};
         if (!read_exact(in, reinterpret_cast<char*>(chunk), 8))
             return fail(error, "WAV chunk header is truncated.");
@@ -128,7 +141,13 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
         return fail(error, "WAV sample count exceeds this platform's addressable memory.");
 
     std::vector<float> decoded;
-    decoded.resize(static_cast<std::size_t>(sample_count_64));
+    try {
+        decoded.resize(static_cast<std::size_t>(sample_count_64));
+    } catch (const std::bad_alloc&) {
+        return fail(error, "Not enough memory to decode WAV audio data.");
+    } catch (const std::length_error&) {
+        return fail(error, "WAV sample count exceeds the vector's maximum size.");
+    }
     in.clear();
     in.seekg(data_start);
     if (!in) return fail(error, "Could not seek to WAV audio data.");
