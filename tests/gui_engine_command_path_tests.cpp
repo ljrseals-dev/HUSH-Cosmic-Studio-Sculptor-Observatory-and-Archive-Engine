@@ -1,6 +1,7 @@
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
 #include "hush/realtime_track_mixer.hpp"
+#include "hush/track_mixer_command_bridge.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -11,30 +12,6 @@ constexpr float kTolerance = 1.0e-5F;
 
 void expect_near(float actual, float expected) {
     assert(std::abs(actual - expected) < kTolerance);
-}
-
-// Mirrors the GUI's track-id lookup and bounded command submission. The audio
-// thread observes these snapshots only when process() begins the next block.
-bool enqueue_track(const hush::Project& project, hush::RealtimeTrackMixer& engine,
-                   const std::string& track_id) {
-    for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-        const auto& track = project.tracks[i];
-        if (track.id == track_id) {
-            return engine.enqueue_control(i, track.gain, track.pan, track.mute, track.solo);
-        }
-    }
-    return false;
-}
-
-bool enqueue_preview(const hush::Project& project, hush::RealtimeTrackMixer& engine,
-                     const std::string& track_id, float gain, float pan) {
-    for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-        const auto& track = project.tracks[i];
-        if (track.id == track_id) {
-            return engine.enqueue_control(i, gain, pan, track.mute, track.solo);
-        }
-    }
-    return false;
 }
 } // namespace
 
@@ -69,7 +46,7 @@ int main() {
     // GUI drag preview is sent before the project edit is committed. It must
     // change the next block without creating an undo entry or mutating project.
     OperationLog history;
-    assert(enqueue_preview(project, engine, "track-left", 0.25F, -1.0F));
+    assert(TrackMixerCommandBridge::enqueue_preview(project, engine, "track-left", 0.25F, -1.0F));
     assert(project.tracks[0].gain == 1.0F);
     assert(history.size() == 0);
     assert(engine.process(inputs, 2, out_l, out_r, 2));
@@ -80,7 +57,7 @@ int main() {
     // snapshot to the same bounded queue used by the GUI.
     assert(history.apply_and_append(project,
         {"track-left", OperationKind::SetGain, 1.0F, 0.25F}));
-    assert(enqueue_track(project, engine, "track-left"));
+    assert(TrackMixerCommandBridge::enqueue_track(project, engine, "track-left"));
     assert(engine.process(inputs, 2, out_l, out_r, 2));
     expect_near(out_l[0], 0.25F);
     assert(history.size() == 1);
@@ -108,7 +85,7 @@ int main() {
 
     assert(history.apply_and_append(project,
         {"track-right", OperationKind::SetSolo, 0.0F, 1.0F}));
-    assert(enqueue_track(project, engine, "track-right"));
+    assert(TrackMixerCommandBridge::enqueue_track(project, engine, "track-right"));
     assert(engine.process(inputs, 2, out_l, out_r, 2));
     expect_near(out_l[0], 0.0F);
     expect_near(out_r[0], 1.0F);
