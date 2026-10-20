@@ -45,4 +45,4 @@ The source revision `38109986363bfdf96831db1095d998b51184d100` passed [CI run 39
 - No 1,024-track graph-swap stress test was added yet.
 - No 500-track performance qualification or 8-hour soak was run.
 - No physical audio hardware validation was performed.
-- No local configure/build/CTest run was performed in this workflow; CI evidence is recorded above. Headless Qt widget-interaction tests, CLI parity, full-ceiling graph-swap stress, RSS measurement, 500-track performance qualification, 8-hour soak, and physical-device validation remain open.
+- No local configure/build/CTest run was performed in this workflow; CI evidence is recorded above. The offscreen Qt widget-interaction test source was added after run 39453091416; fresh CI for that final target is pending. CLI parity, full-ceiling graph-swap stress, RSS measurement, 500-track performance qualification, 8-hour soak, and physical-device validation remain open.
