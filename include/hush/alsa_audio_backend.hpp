@@ -25,6 +25,8 @@ public:
  void stop() noexcept;
  [[nodiscard]] bool running() const noexcept { return running_.load(std::memory_order_acquire); }
  [[nodiscard]] std::uint64_t xrun_count() const noexcept { return xruns_.load(std::memory_order_relaxed); }
+ [[nodiscard]] std::uint64_t recovery_count() const noexcept { return recoveries_.load(std::memory_order_relaxed); }
+ [[nodiscard]] std::uint64_t short_transfer_count() const noexcept { return short_transfers_.load(std::memory_order_relaxed); }
  [[nodiscard]] std::uint64_t callback_count() const noexcept { return callbacks_.load(std::memory_order_relaxed); }
  [[nodiscard]] unsigned int actual_sample_rate() const noexcept { return actual_sample_rate_; }
  [[nodiscard]] std::size_t actual_period_frames() const noexcept { return actual_period_frames_; }
@@ -41,6 +43,8 @@ private:
  std::atomic<bool> stop_requested_{false};
  std::atomic<bool> running_{false};
  std::atomic<std::uint64_t> xruns_{0};
+ std::atomic<std::uint64_t> recoveries_{0};
+ std::atomic<std::uint64_t> short_transfers_{0};
  std::atomic<std::uint64_t> callbacks_{0};
  unsigned int actual_sample_rate_{0};
  std::size_t actual_period_frames_{0};

@@ -86,6 +86,8 @@ public:
 
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
+    [[nodiscard]] std::uint64_t recovery_count() const noexcept { return backend_.recovery_count(); }
+    [[nodiscard]] std::uint64_t short_transfer_count() const noexcept { return backend_.short_transfer_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
     [[nodiscard]] float peak_left() const noexcept { return mixer_ ? mixer_->peak_left() : 0.0F; }
     [[nodiscard]] float peak_right() const noexcept { return mixer_ ? mixer_->peak_right() : 0.0F; }
@@ -377,7 +379,9 @@ private:
         if (live_.running()) {
             flush_pending_live_sync();
             QString message = "Live ALSA · callbacks " + QString::number(live_.callback_count()) +
-                             " · xruns/recoveries " + QString::number(live_.xrun_count()) +
+                             " · xruns " + QString::number(live_.xrun_count()) +
+                             " · recoveries " + QString::number(live_.recovery_count()) +
+                             " · short transfers " + QString::number(live_.short_transfer_count()) +
                              " · peak L/R " + QString::number(live_.peak_left(), 'f', 3) + "/" +
                              QString::number(live_.peak_right(), 'f', 3) +
                              " · RMS L/R " + QString::number(live_.rms_left(), 'f', 3) + "/" +
@@ -392,11 +396,15 @@ private:
         if (live_button_->text() == "Stop Live ALSA") {
             const auto callbacks = live_.callback_count();
             const auto xruns = live_.xrun_count();
+            const auto recoveries = live_.recovery_count();
+            const auto short_transfers = live_.short_transfer_count();
             live_.stop();
             live_button_->setText("Start Live ALSA");
             refresh();
             status_->setText("ALSA stopped · callbacks " + QString::number(callbacks) +
-                             " · xruns/recoveries " + QString::number(xruns));
+                             " · xruns " + QString::number(xruns) +
+                             " · recoveries " + QString::number(recoveries) +
+                             " · short transfers " + QString::number(short_transfers));
         }
     }
 

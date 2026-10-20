@@ -59,7 +59,10 @@ bool AlsaAudioBackend::start(const Config& config, ProcessCallback callback, voi
  callback_ = callback; user_data_ = user_data;
  input_buffer_.assign(actual_period_frames_ * 2, 0.0F);
  output_buffer_.assign(actual_period_frames_ * 2, 0.0F);
- xruns_.store(0, std::memory_order_relaxed); callbacks_.store(0, std::memory_order_relaxed);
+ xruns_.store(0, std::memory_order_relaxed);
+ recoveries_.store(0, std::memory_order_relaxed);
+ short_transfers_.store(0, std::memory_order_relaxed);
+ callbacks_.store(0, std::memory_order_relaxed);
  stop_requested_.store(false, std::memory_order_release); running_.store(true, std::memory_order_release);
  try { worker_ = std::thread(&AlsaAudioBackend::run, this); }
  catch (...) {
@@ -86,8 +89,9 @@ void AlsaAudioBackend::run() noexcept {
  while (!stop_requested_.load(std::memory_order_acquire)) {
   snd_pcm_sframes_t got = snd_pcm_readi(capture_, input_buffer_.data(), static_cast<snd_pcm_uframes_t>(actual_period_frames_));
   if (got < 0) {
+   if (got == -EPIPE) xruns_.fetch_add(1, std::memory_order_relaxed);
+   recoveries_.fetch_add(1, std::memory_order_relaxed);
    const int recovered = snd_pcm_recover(capture_, static_cast<int>(got), 1);
-   xruns_.fetch_add(1, std::memory_order_relaxed);
    if (recovered < 0) break;
    std::fill(input_buffer_.begin(), input_buffer_.end(), 0.0F);
    continue;
@@ -95,7 +99,7 @@ void AlsaAudioBackend::run() noexcept {
   if (static_cast<std::size_t>(got) < actual_period_frames_) {
    const auto start = static_cast<std::size_t>(got) * 2;
    std::fill(input_buffer_.begin() + static_cast<std::ptrdiff_t>(start), input_buffer_.end(), 0.0F);
-   xruns_.fetch_add(1, std::memory_order_relaxed);
+   short_transfers_.fetch_add(1, std::memory_order_relaxed);
   }
   std::fill(output_buffer_.begin(), output_buffer_.end(), 0.0F);
   callback_(input_buffer_.data(), output_buffer_.data(), actual_period_frames_, user_data_);
@@ -107,12 +111,13 @@ void AlsaAudioBackend::run() noexcept {
    const snd_pcm_sframes_t put = snd_pcm_writei(playback_, output_buffer_.data() + static_cast<std::ptrdiff_t>(offset),
                                                 static_cast<snd_pcm_uframes_t>(remaining));
    if (put < 0) {
+    if (put == -EPIPE) xruns_.fetch_add(1, std::memory_order_relaxed);
+    recoveries_.fetch_add(1, std::memory_order_relaxed);
     const int recovered = snd_pcm_recover(playback_, static_cast<int>(put), 1);
-    xruns_.fetch_add(1, std::memory_order_relaxed);
     if (recovered < 0) { stop_requested_.store(true, std::memory_order_release); break; }
     continue;
    }
-   if (put == 0) { xruns_.fetch_add(1, std::memory_order_relaxed); break; }
+   if (put == 0) { short_transfers_.fetch_add(1, std::memory_order_relaxed); break; }
    written += static_cast<std::size_t>(put);
   }
  }
