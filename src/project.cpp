@@ -23,6 +23,58 @@ std::string escape_json(const std::string& s) {
     }
     return out;
 }
+
+bool unescape_json(const std::string& text, std::string& out) {
+    out.clear();
+    out.reserve(text.size());
+    bool escaped = false;
+    for (const char c : text) {
+        if (!escaped) {
+            if (c == '\\') {
+                escaped = true;
+            } else {
+                out += c;
+            }
+            continue;
+        }
+
+        switch (c) {
+            case '\\': out += '\\'; break;
+            case '"': out += '"'; break;
+            case 'n': out += '\n'; break;
+            case 'r': out += '\r'; break;
+            case 't': out += '\t'; break;
+            default: return false;
+        }
+        escaped = false;
+    }
+    return !escaped;
+}
+
+bool parse_double_token(const std::string& text, double& value) {
+    try {
+        std::size_t consumed = 0;
+        const double parsed = std::stod(text, &consumed);
+        if (consumed != text.size()) return false;
+        value = parsed;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool parse_float_token(const std::string& text, float& value) {
+    try {
+        std::size_t consumed = 0;
+        const float parsed = std::stof(text, &consumed);
+        if (consumed != text.size()) return false;
+        value = parsed;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 std::string law_name(PanLaw law) {
     return law == PanLaw::LegacyMinus4_5dB ? "legacy_minus_4_5_db" : "equal_power_minus_3_db";
 }
@@ -264,31 +316,36 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     begin=std::sregex_iterator(body.begin(),body.end(),tempo_re);
     double previous_tempo_beat=-1.0;
     for (auto it=begin;it!=end;++it) {
-        try {
-            const double beat=std::stod((*it)[1].str());
-            const double bpm=std::stod((*it)[2].str());
-            if (!std::isfinite(beat) || !std::isfinite(bpm) || beat<0.0 ||
-                beat<=previous_tempo_beat || bpm<1.0 || bpm>1000.0 ||
-                (p.tempo_map.empty() && beat!=0.0)) {
-                e={"tempo_point_invalid","","Tempo map points must start at beat zero, be strictly ordered, and use 1–1000 BPM","error"}; return false;
-            }
-            p.tempo_map.push_back({beat,bpm});
-            previous_tempo_beat=beat;
-        } catch (...) { e={"tempo_point_number_invalid","","Tempo point number is invalid","error"}; return false; }
+        double beat = 0.0;
+        double bpm = 0.0;
+        if (!parse_double_token((*it)[1].str(), beat) ||
+            !parse_double_token((*it)[2].str(), bpm)) {
+            e={"tempo_point_number_invalid","","Tempo point number is invalid","error"}; return false;
+        }
+        if (!std::isfinite(beat) || !std::isfinite(bpm) || beat<0.0 ||
+            beat<=previous_tempo_beat || bpm<1.0 || bpm>1000.0 ||
+            (p.tempo_map.empty() && beat!=0.0)) {
+            e={"tempo_point_invalid","","Tempo map points must start at beat zero, be strictly ordered, and use 1–1000 BPM","error"}; return false;
+        }
+        p.tempo_map.push_back({beat,bpm});
+        previous_tempo_beat=beat;
     }
     if (body.find('{')!=std::string::npos && p.tempo_map.empty()) {
         e={"tempo_map_parse_failed","","Tempo map point did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"automation_lanes",body,false,e)) return false;
-    const std::regex lane_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"target"\s*:\s*"([^"]*)"\s*,\s*"interpolation"\s*:\s*"(step|linear)"\s*,\s*"points"\s*:\s*\[([^]]*)\]\s*\})json");
+    const std::regex lane_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"target"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"interpolation"\s*:\s*"(step|linear)"\s*,\s*"points"\s*:\s*\[([^]]*)\]\s*\})json");
     const std::regex automation_point_re(R"json(\{\s*"beat"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"value"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),lane_re);
     std::unordered_set<std::string> lane_ids;
     for (auto it=begin;it!=end;++it) {
         const auto& x=*it;
         ProjectAutomationLane lane;
-        lane.id=x[1].str(); lane.target=x[2].str();
+        if (!unescape_json(x[1].str(), lane.id) ||
+            !unescape_json(x[2].str(), lane.target)) {
+            e={"automation_lane_string_invalid","","Automation lane strings contain an unsupported or incomplete escape","error"}; return false;
+        }
         lane.interpolation=x[3].str()=="step" ? ProjectAutomationInterpolation::Step
                                                : ProjectAutomationInterpolation::Linear;
         if (lane.id.empty() || lane.target.empty() || !lane_ids.insert(lane.id).second) {
@@ -298,15 +355,17 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         auto point_it=std::sregex_iterator(points_body.begin(),points_body.end(),automation_point_re);
         double previous_beat=-1.0;
         for (;point_it!=end;++point_it) {
-            try {
-                const double beat=std::stod((*point_it)[1].str());
-                const float value=std::stof((*point_it)[2].str());
-                if (!std::isfinite(beat) || !std::isfinite(value) || beat<0.0 || beat<=previous_beat) {
-                    e={"automation_point_invalid",lane.id,"Automation points must have finite values and strictly increasing non-negative beats","error"}; return false;
-                }
-                lane.points.push_back({beat,value});
-                previous_beat=beat;
-            } catch (...) { e={"automation_point_number_invalid",lane.id,"Automation point number is invalid","error"}; return false; }
+            double beat = 0.0;
+            float value = 0.0F;
+            if (!parse_double_token((*point_it)[1].str(), beat) ||
+                !parse_float_token((*point_it)[2].str(), value)) {
+                e={"automation_point_number_invalid",lane.id,"Automation point number is invalid","error"}; return false;
+            }
+            if (!std::isfinite(beat) || !std::isfinite(value) || beat<0.0 || beat<=previous_beat) {
+                e={"automation_point_invalid",lane.id,"Automation points must have finite values and strictly increasing non-negative beats","error"}; return false;
+            }
+            lane.points.push_back({beat,value});
+            previous_beat=beat;
         }
         if (lane.points.empty()) {
             e={"automation_points_missing",lane.id,"Automation lane requires at least one valid point","error"}; return false;
