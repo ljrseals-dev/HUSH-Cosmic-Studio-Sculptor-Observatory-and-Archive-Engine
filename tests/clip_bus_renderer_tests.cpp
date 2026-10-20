@@ -1,6 +1,7 @@
 #include "hush/clip_bus_renderer.hpp"
 #include "hush/bus_graph.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <vector>
