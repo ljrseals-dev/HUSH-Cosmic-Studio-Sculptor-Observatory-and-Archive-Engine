@@ -1,4 +1,5 @@
 #include "hush/project.hpp"
+#include "hush/track_limits.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -144,6 +145,11 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
+        }
+        if (p.tracks.size() >= kMaxTracks) {
+            e={"track_limit_exceeded",t.id,
+               "Project exceeds HUSH_MAX_TRACKS (" + std::to_string(kMaxTracks) + ")", "error"};
+            return false;
         }
         p.tracks.push_back(t);
     }
