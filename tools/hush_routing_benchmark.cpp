@@ -40,9 +40,10 @@ int main(int argc, char** argv) {
             owned[t][f] = 0.001F * std::sin(static_cast<float>((t + 1) * (f + 1)) * 0.013F);
     }
 
-    // Instrumentation allocations happen before/after each process call, not inside it.
+    // Collect one in every 100 blocks; all storage is reserved before timing starts.
+    constexpr std::size_t max_samples = 1000000U;
     std::vector<double> process_us;
-    process_us.reserve(std::min<std::size_t>(seconds * 200U, 1000000U));
+    process_us.reserve(std::min<std::size_t>(seconds * 200U, max_samples));
     const auto start = std::chrono::steady_clock::now();
     const auto end = start + std::chrono::seconds(seconds);
     std::uint64_t blocks = 0;
@@ -61,14 +62,15 @@ int main(int argc, char** argv) {
             return 1;
         }
         const double block_us = std::chrono::duration<double, std::micro>(block_stop - block_start).count();
-        if ((blocks % 100U) == 0U && process_us.size() < 1000000U) process_us.push_back(block_us);
         max_observed_us = std::max(max_observed_us, block_us);
+        if ((blocks % 100U) == 0U && process_us.size() < max_samples)
+            process_us.push_back(block_us);
         ++blocks;
     }
     const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const double mean_process_us = process_us.empty() ? 0.0 :
         std::accumulate(process_us.begin(), process_us.end(), 0.0) / static_cast<double>(process_us.size());
-    const double mean_process_us = process_us.empty() ? 0.0 :\n        std::accumulate(process_us.begin(), process_us.end(), 0.0) / static_cast<double>(process_us.size());\n    std::sort(process_us.begin(), process_us.end());
+    std::sort(process_us.begin(), process_us.end());
     const auto percentile = [&process_us](double p) {
         if (process_us.empty()) return 0.0;
         const auto index = static_cast<std::size_t>(p * static_cast<double>(process_us.size() - 1U));
@@ -87,7 +89,8 @@ int main(int argc, char** argv) {
               << "  \"elapsed_seconds\": " << elapsed << ",\n"
               << "  \"blocks\": " << blocks << ",\n"
               << "  \"blocks_per_second\": " << blocks_per_second << ",\n"
-              << "  \"mean_block_processing_us\": " << (blocks ? elapsed * 1.0e6 / static_cast<double>(blocks) : 0.0) << ",\n"
+              << "  \"mean_sampled_process_us\": " << mean_process_us << ",\n"
+              << "  \"timing_samples\": " << process_us.size() << ",\n"
               << "  \"p95_process_us\": " << percentile(0.95) << ",\n"
               << "  \"p99_process_us\": " << percentile(0.99) << ",\n"
               << "  \"max_process_us\": " << max_observed_us << ",\n"
