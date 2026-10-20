@@ -36,7 +36,7 @@
 
 ## Unreleased
 
-- Add configurable `HUSH_MAX_TRACKS` (default 1024), reject over-ceiling schema-v1 project loads and realtime mixer setup, and add a full-capacity process allocation guard. CI passed on PR #78 in run 39451685619. GUI widget-interaction tests, CLI parity, full-ceiling graph-swap stress, memory measurement, performance qualification, soak, and hardware validation remain open. The Qt mixer now exposes undoable Add Track / Remove Last Track controls and a count indicator.
+- Add configurable `HUSH_MAX_TRACKS` (default 1024), reject over-ceiling schema-v1 project loads and realtime mixer setup, and add a full-capacity process allocation guard. CI passed on PR #78 in run 39451685619. GUI widget-interaction tests, CLI parity, full-ceiling graph-swap stress, memory measurement, performance qualification, soak, and hardware validation remain open. The Qt mixer now exposes undoable Add Track / Remove Last Track controls and a count indicator. A full-ceiling offline render/preallocation smoke tool now emits wall time and estimated buffer bytes; CI records peak RSS, pending fresh execution.
 
 ## Unreleased — transport/automation conflict regression coverage
 
