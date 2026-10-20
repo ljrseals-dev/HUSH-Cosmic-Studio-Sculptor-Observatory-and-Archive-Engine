@@ -60,6 +60,8 @@ bool AlsaAudioBackend::start(const Config& config, ProcessCallback callback, voi
  input_buffer_.assign(actual_period_frames_ * 2, 0.0F);
  output_buffer_.assign(actual_period_frames_ * 2, 0.0F);
  xruns_.store(0, std::memory_order_relaxed); callbacks_.store(0, std::memory_order_relaxed);
+ worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::None), std::memory_order_relaxed);
+ worker_error_code_.store(0, std::memory_order_relaxed);
  stop_requested_.store(false, std::memory_order_release); running_.store(true, std::memory_order_release);
  try { worker_ = std::thread(&AlsaAudioBackend::run, this); }
  catch (...) {
@@ -88,7 +90,11 @@ void AlsaAudioBackend::run() noexcept {
   if (got < 0) {
    const int recovered = snd_pcm_recover(capture_, static_cast<int>(got), 1);
    xruns_.fetch_add(1, std::memory_order_relaxed);
-   if (recovered < 0) break;
+   if (recovered < 0) {
+    worker_error_code_.store(recovered, std::memory_order_relaxed);
+    worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::CaptureRecoveryFailed), std::memory_order_release);
+    break;
+   }
    std::fill(input_buffer_.begin(), input_buffer_.end(), 0.0F);
    continue;
   }
@@ -109,7 +115,12 @@ void AlsaAudioBackend::run() noexcept {
    if (put < 0) {
     const int recovered = snd_pcm_recover(playback_, static_cast<int>(put), 1);
     xruns_.fetch_add(1, std::memory_order_relaxed);
-    if (recovered < 0) { stop_requested_.store(true, std::memory_order_release); break; }
+    if (recovered < 0) {
+     worker_error_code_.store(recovered, std::memory_order_relaxed);
+     worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::PlaybackRecoveryFailed), std::memory_order_release);
+     stop_requested_.store(true, std::memory_order_release);
+     break;
+    }
     continue;
    }
    if (put == 0) { xruns_.fetch_add(1, std::memory_order_relaxed); break; }
