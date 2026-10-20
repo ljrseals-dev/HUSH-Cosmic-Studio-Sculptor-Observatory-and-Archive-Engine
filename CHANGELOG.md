@@ -1,3 +1,10 @@
+## Unreleased — ALSA host recovery failure reporting
+
+- Port the CLI project/recovery entry point onto current `main` without copying the stale Gate 7 branch wholesale.
+- Stop silently continuing when a recovery journal exists but cannot be read or has no valid snapshot; return exit code 2 with a stable diagnostic before ALSA startup.
+- Add CTest coverage for help, argument validation, and a corrupt recovery journal that must be reported before opening an audio device.
+- Project metadata loaded by this host is still not wired to live routing and the CLI has no project-edit surface. CI validation is pending.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.
