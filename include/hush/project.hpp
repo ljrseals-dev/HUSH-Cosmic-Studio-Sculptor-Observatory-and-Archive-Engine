@@ -1,5 +1,6 @@
 #pragma once
 #include "hush/bus_graph.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
