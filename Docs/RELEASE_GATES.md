@@ -21,6 +21,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | Loopback latency and underrun injection | No measurement report | Open |
 | 500-track performance budget | `tools/hush_routing_benchmark.cpp` and CMake target added; no qualifying report attached | Partial; 500-track run required |
 | 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` emits JSON counters/RSS where available; no 8-hour report or pass threshold attached | Partial; run and threshold required |
+| HUSH 0.4a recording foundation | Preallocated SPSC capture ring, worker-side streaming WAV writer, and recording-session contract test added; CI for this revision pending. Not wired into the ALSA callback and not a multitrack take system | Implementation slice present; CI and live capture integration open |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
 | Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |

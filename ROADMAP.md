@@ -38,3 +38,12 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 ## Out of scope for the 0.2 foundation
 
 Recording, MIDI, plugin hosting, Windows/macOS parity, arrangement view, interchange, and HUSH voice/AOC Magic remain later milestones. See [Docs/Prompt](Docs/Prompt) for the full prompt sequence.
+
+
+## HUSH 0.4a recording foundation
+
+- [x] Add bounded preallocated SPSC capture ring and worker-thread WAV streaming/finalization API.
+- [x] Add contract test for chunked capture, final WAV header, sample order, and overflow accounting.
+- [ ] Integrate capture with the live ALSA input callback and an owned writer worker lifecycle.
+- [ ] Add persisted take/playlist/active-take model, punch/pre-roll/post-roll, comping, crossfades, and latency compensation.
+- [ ] Run 8-track × 10-minute record/playback and sample-accurate punch/loopback gates on a named target machine.

@@ -17,6 +17,8 @@
 - [x] `RealtimeGraphPublisher` now fails closed on overlapping reader guards and defers retired snapshot destruction to the control thread. Added `RealtimeBusEngineHost`, which builds/validates a replacement `RealtimeBusEngine` off the callback, publishes the immutable runtime snapshot, holds a reader guard through processing/output copy, and preserves the active graph on invalid replacement. Added an engine-integrated concurrent graph-swap test; all seven jobs passed in [CI run 39274233768](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39274233768), including ASan and TSan.
 - [x] Repository hygiene files: .gitignore, CHANGELOG.md, ROADMAP.md, and RELEASE_GATES.md.
 
+- [x] HUSH 0.4a recording foundation API: bounded preallocated SPSC ring, worker-side streaming WAV writer, callback-safe capture entry point, finalization, and overflow counter; contract test registered. This is not yet wired into ALSA callback ownership and does not implement take/playlist/comp/punch semantics.
+
 ## Open gates — do not claim complete
 - [ ] Automated Qt widget-interaction test proving fader/pan/mute/solo and undo/redo signals submit commands to the next callback block. The new headless command-path test is registered but must pass CI; click-level/loopback evidence and GUI/CLI parity remain open.
 - [ ] The ALSA host now uses `RealtimeBusEngineHost` through `RealtimeBusEngineHostAudioAdapter`, with a concurrent same-topology graph-replacement adapter test registered in CMake. Fresh CI for this branch is pending; real-device lifecycle validation remains separate.
