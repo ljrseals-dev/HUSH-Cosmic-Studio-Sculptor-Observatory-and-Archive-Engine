@@ -2,6 +2,7 @@
 
 #include "hush/spsc_parameter_queue.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -32,6 +33,12 @@ public:
                                std::size_t frames) noexcept;
     [[nodiscard]] std::size_t track_count() const noexcept { return gains_.size(); }
     [[nodiscard]] std::size_t max_frames() const noexcept { return max_frames_; }
+    // Block peak and RMS telemetry, published as lock-free float bit patterns.
+    // Values are linear amplitudes and are read from the non-audio thread.
+    [[nodiscard]] float peak_left() const noexcept;
+    [[nodiscard]] float peak_right() const noexcept;
+    [[nodiscard]] float rms_left() const noexcept;
+    [[nodiscard]] float rms_right() const noexcept;
 
 private:
     std::vector<float> gains_;
@@ -40,6 +47,12 @@ private:
     SpscParameterQueue<TrackControlCommand, kQueueCapacity> commands_;
     std::size_t max_frames_{0};
     bool configured_{false};
+    static_assert(std::atomic<std::uint32_t>::is_always_lock_free,
+                  "RealtimeTrackMixer meters require lock-free 32-bit atomics");
+    std::atomic<std::uint32_t> peak_left_bits_{0U};
+    std::atomic<std::uint32_t> peak_right_bits_{0U};
+    std::atomic<std::uint32_t> rms_left_bits_{0U};
+    std::atomic<std::uint32_t> rms_right_bits_{0U};
 };
 
 } // namespace hush
