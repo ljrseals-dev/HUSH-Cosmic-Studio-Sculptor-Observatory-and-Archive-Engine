@@ -2,13 +2,13 @@
 
 HUSH is an offline-first C++20 audio-engine foundation with an optional Qt 6 mixer shell and optional Linux ALSA host. **It is not yet a finished DAW or a release-qualified live-audio system.** The current source tree includes project persistence, bus-graph validation, an offline reference renderer, preallocated bus processing, a bounded SPSC parameter queue, stereo audio adapters, recovery/operation-log primitives, and optional host/UI components.
 
-Recording, MIDI, plugin hosting, voice control, and complete production-grade multitrack routing are not delivered features. The optional live GUI path is a limited mixer/input-monitor integration, not a complete DAW signal path.
+Recording, MIDI, plugin hosting, voice control, GUI track creation/removal, and complete production-grade multitrack routing are not delivered features. The 1024-track ceiling test is correctness coverage, not proof that 1024 tracks meet the performance budget. The optional live GUI path is a limited mixer/input-monitor integration, not a complete DAW signal path.
 
 ## Current scope at a glance
 
 | Area | Current documented scope | Remaining qualification |
 |---|---|---|
-| Project model | Schema-v1 model and JSON reader/writer | Schema-v2, migration, and broader session features are not claimed |
+| Project model | Schema-v1 model and JSON reader/writer; configurable `HUSH_MAX_TRACKS` ceiling (default 1024) enforced when reading projects | GUI Add/Remove Track, CLI parity, and full-capacity graph-swap qualification remain open |
 | Engine/core | Bus-graph validation, cycle detection, offline reference rendering, preallocated bus processing, bounded SPSC parameter queue | Full production mixer signal path is incomplete |
 | Audio adapters | Interleaved-stereo adapters; host adapter uses preallocated planar scratch and a callback guard | Hardware timing, xrun behavior, and stress qualification remain outstanding |
 | ALSA | Optional Linux ALSA host, explicitly started | Physical-device startup/shutdown, latency, and long-duration tests are not certified |
@@ -90,6 +90,7 @@ The benchmark emits JSON with synthetic track-mixer throughput and rejected para
 - **Bus-graph validation and cycle detection:** `include/hush/bus_graph.hpp`, `src/bus_graph.cpp`, `tests/bus_graph_tests.cpp`.
 - **Offline/reference bus-buffer renderer:** `include/hush/bus_renderer.hpp`, `src/bus_renderer.cpp`, `tests/bus_renderer_tests.cpp`.
 - **Preallocated bus processing:** `include/hush/preallocated_bus_processor.hpp`, `src/preallocated_bus_processor.cpp`, `tests/preallocated_bus_processor_tests.cpp`.
+- **Bounded track capacity:** `HUSH_MAX_TRACKS` is a CMake cache setting (default 1024), exposed as `hush::kMaxTracks` in `include/hush/project.hpp`; project loading rejects excess tracks, and `RealtimeTrackMixer::configure()` rejects over-capacity setup. Boundary and allocation-guard coverage is in `tests/contract_tests.cpp` and `tests/realtime_track_mixer_tests.cpp`. This is a documented ceiling, not literal unlimited capacity.
 - **Bounded SPSC parameter queue:** `include/hush/spsc_parameter_queue.hpp`, `tests/parameter_queue_tests.cpp`.
 - **Block-boundary fader updates:** `include/hush/realtime_bus_engine.hpp`, `src/realtime_bus_engine.cpp`, `tests/realtime_bus_engine_tests.cpp`.
 - **Interleaved stereo adapters:** `include/hush/realtime_bus_audio_adapter.hpp` for the configure-once engine and `include/hush/realtime_bus_engine_host_audio_adapter.hpp` for the published-graph host. The host adapter preallocates planar scratch, holds the graph host's callback guard through processing/output copy, and documents same-topology replacement while running. `tests/realtime_bus_engine_host_audio_adapter_tests.cpp` covers output mapping and concurrent graph replacement. The latest adapter change still needs fresh CI evidence before it is described as CI-verified.
