@@ -9,6 +9,9 @@
 - [x] Invertible operation-log primitives and undo/redo tests.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
+- [x] Bounded track capacity foundation: configurable `HUSH_MAX_TRACKS` (default 1024, maximum 4096), schema-v1 load rejection above the ceiling, realtime mixer configuration guard, full-capacity allocation guard, and CI configuration matrix for 1/8/64/1024.
+- [x] Qt mixer Add Track / Remove Last Track controls, N / HUSH_MAX_TRACKS indicator, undoable structural operation-log entries, and one bounded active-count command applied at a processing-block boundary. The live mixer preallocates to the configured ceiling before starting ALSA.
+- [ ] Headless Qt widget interaction coverage, CLI parity, 1024-track graph-swap stress, RSS measurement, and full-ceiling offline renderer timing remain open.
 - [x] Bounded track capacity foundation: configurable `HUSH_MAX_TRACKS` (default 1024), schema-v1 load rejection above the ceiling, realtime mixer configuration guard, ceiling/ceiling+1 tests, and an allocation guard around the full-capacity track-mixer process call. CI run [39451685619](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39451685619) passed default, ALSA, Qt, Qt+ALSA, ASan, TSan, and repository hygiene jobs. This does not complete GUI track creation/removal, CLI parity, graph-swap stress at the ceiling, or performance/soak qualification.
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
@@ -22,7 +25,8 @@
 - [ ] Automated Qt widget-interaction test proving fader/pan/mute/solo and undo/redo signals submit commands to the next callback block. The new headless command-path test is registered but must pass CI; click-level/loopback evidence and GUI/CLI parity remain open.
 - [ ] The ALSA host now uses `RealtimeBusEngineHost` through `RealtimeBusEngineHostAudioAdapter`, with a concurrent same-topology graph-replacement adapter test registered in CMake. Fresh CI for this branch is pending; real-device lifecycle validation remains separate.
 - [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
-- [ ] GUI Add/Remove Track controls, track-count indicator, and CLI parity for the 1024-track ceiling. The ceiling currently applies at schema-v1 load and realtime mixer configuration; the current live capture mapping still feeds tracks 1–2 only.
+- [ ] Headless Qt widget-interaction tests proving Add/Remove, undo/redo, and ceiling-disabled behavior. The live capture mapping still feeds tracks 1–2 only; later tracks have no independent source in the current monitor path.
+- [ ] CLI parity, full-ceiling graph-swap stress, RSS measurement, and renderer timing.
 - [ ] ASan/TSan passed for the latest source/test revision in [run 39273263409](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39273263409); production graph-swap integration and its race coverage remain open.
 - [ ] Real-device ALSA startup/shutdown, callback timing, lock-free atomics verification on target, and xrun reporting.
 - [ ] 60-minute zero-xrun run, loopback latency, and underrun injection on a named target device.
