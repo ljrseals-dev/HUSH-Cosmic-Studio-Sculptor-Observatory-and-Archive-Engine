@@ -195,6 +195,18 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_wav_reader_tests tests/wav_reader_tests.cpp)
   target_link_libraries(hush_wav_reader_tests PRIVATE hush_core)
   add_test(NAME hush_wav_reader_tests COMMAND hush_wav_reader_tests)
+
+  if(HUSH_ENABLE_ALSA)
+    add_test(NAME hush_alsa_host_help COMMAND hush_alsa_realtime_host --help)
+    add_test(NAME hush_alsa_host_journal_requires_project
+             COMMAND hush_alsa_realtime_host --journal unused-recovery.journal)
+    set_tests_properties(hush_alsa_host_journal_requires_project PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME hush_alsa_host_recovery_failure
+             COMMAND ${CMAKE_COMMAND}
+               -DHOST=$<TARGET_FILE:hush_alsa_realtime_host>
+               -DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/hush-alsa-host-recovery-contract
+               -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_alsa_host_recovery_failure.cmake)
+  endif()
   # Keep assert-based contract checks active even when users build Release.
   if(MSVC)
     target_compile_options(hush_contract_tests PRIVATE /UNDEBUG)
