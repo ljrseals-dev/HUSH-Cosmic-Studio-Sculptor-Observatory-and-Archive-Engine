@@ -1,3 +1,11 @@
+## Unreleased — Phase 3 runtime track-to-bus routing stage
+
+- Added `RealtimeTrackBusRouter` to aggregate configured mono track inputs into preallocated stereo bus-input buffers.
+- Track routing is configured off the audio thread; gain/pan/mute/solo changes use a bounded SPSC queue and apply at processing-block boundaries.
+- Defined and tested track-stage precedence: mute wins over solo; if any track is soloed, only soloed, non-muted tracks contribute.
+- Added deterministic coverage for multi-bus summing, invalid mappings and parameters, queue saturation, and block-boundary changes.
+- This is not yet project-persisted or wired into the GUI/ALSA host. Schema-v2 routing persistence, full graph integration, inserts, graph-wide meters, and physical-device validation remain open. CI has not yet run for this branch.
+
 ## Unreleased — GUI-to-engine mixer command-path contract
 
 - Added a deterministic synthetic-buffer test using the production `OperationLog` and `RealtimeTrackMixer` to cover slider preview, commit, undo/redo, pan, mute/solo, and next-block output changes.
