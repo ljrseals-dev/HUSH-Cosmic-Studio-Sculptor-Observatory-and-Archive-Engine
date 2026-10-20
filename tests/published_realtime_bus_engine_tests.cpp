@@ -24,6 +24,12 @@ void publish_and_process_contract() {
     float left[4]{1.0F, 0.5F, -0.25F, 0.0F};
     float right[4]{0.25F, 0.5F, 1.0F, -1.0F};
     const hush::BusAudioInputView inputs[]{{left, right}};
+    float output_left[4]{};
+    float output_right[4]{};
+    assert(engine.process_to_master(inputs, 1, 4, 0, output_left, output_right) ==
+           hush::RealtimeProcessStatus::Ok);
+    assert(output_left[0] == left[0] && output_left[1] == left[1]);
+    assert(output_right[0] == right[0] && output_right[1] == right[1]);
 
     assert(engine.process(inputs, 1, 4) == hush::RealtimeProcessStatus::Ok);
     assert(engine.enqueue_fader_change(0, 0.5F));
