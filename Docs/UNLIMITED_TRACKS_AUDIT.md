@@ -78,7 +78,7 @@ The required allocation guard must test the actual processing path at full confi
 5. [x] Add undoable Add Track / Remove Last Track actions, a track-count indicator, non-blocking ceiling feedback, and block-boundary active-count commands. [x] Add offscreen Qt interaction-test source; fresh CI for this final test target is pending.
 6. [ ] CLI parity remains open: the current ALSA CLI host is a bus-graph host, not the GUI's realtime track mixer, so adding flags alone would not create genuine engine parity.
 7. [ ] Extend graph-swap stress coverage at the chosen ceiling under ASan and TSan.
-8. [ ] Run the 1024-track offline renderer correctness test and measure startup/full-capacity memory. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
+8. [x] Add `tools/hush_track_capacity_check.cpp` and CI commands to render at the configured ceiling, mirror the 4096-frame live-monitor buffers, and record wall time plus peak RSS. [ ] Run the new harness on the latest branch head and record the actual JSON/RSS output. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
 9. [ ] Update README, implementation status, release gates, roadmap, and changelog to reflect verified progress.
 
 ## Stop condition
