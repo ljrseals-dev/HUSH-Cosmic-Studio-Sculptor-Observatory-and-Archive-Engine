@@ -28,3 +28,8 @@
 ## 0.3a mixer GUI foundation
 18. The first desktop UI is an optional Qt 6 Widgets target; Qt is supplied by the operating system and is never downloaded by CMake. This keeps the headless C++20 build unchanged for users who do not request the GUI.
 19. The GUI uses the canonical schema-v1 project reader/writer and records track control edits through OperationLog::apply_and_append. GUI edits currently change saved project state only; live audio graph binding is explicitly not claimed.
+
+## 0.2a source-research branch
+20. The legacy -4.5 dB pan law is a continuous piecewise-linear balance curve with hard-panned unity endpoints and a center amplitude of approximately 0.5946. The helper is pure and can be called from offline/control code; the real-time path must use already validated values and must not allocate.
+21. Non-finite pan input is interpreted as center and finite values are clamped to [-1, 1]. Float32 mix output is not clamped or dithered.
+22. 0.2a is not a release certification. Device xruns, measured latency, soak, performance, and full live track-to-bus routing remain open until evidence is committed.
