@@ -1,6 +1,7 @@
 #include "hush/mixer.hpp"
 #include "hush/realtime_track_mixer.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
