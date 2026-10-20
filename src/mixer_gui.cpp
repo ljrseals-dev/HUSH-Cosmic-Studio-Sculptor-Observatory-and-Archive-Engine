@@ -197,6 +197,11 @@ public:
         track_count_label_ = new QLabel;
         auto* undo = new QPushButton("Undo");
         auto* redo = new QPushButton("Redo");
+        undo->setObjectName("undoButton");
+        redo->setObjectName("redoButton");
+        add_track_button_->setObjectName("addTrackButton");
+        remove_track_button_->setObjectName("removeTrackButton");
+        track_count_label_->setObjectName("trackCountLabel");
 #ifdef HUSH_GUI_HAS_ALSA
         live_button_ = new QPushButton("Start Live ALSA");
 #else
@@ -303,6 +308,19 @@ public:
         live_.stop();
 #endif
     }
+
+#ifdef HUSH_GUI_TESTING
+    void set_track_count_for_test(std::size_t count) {
+        project_.tracks.clear();
+        project_.tracks.reserve(count);
+        for (std::size_t i = 0; i < count; ++i) {
+            const auto id = "test-track-" + std::to_string(i);
+            project_.tracks.push_back({id, id, 1.0F, 0.0F, false, false});
+        }
+        log_ = hush::OperationLog{};
+        refresh();
+    }
+#endif
 
 private:
     hush::Project project_;
@@ -666,9 +684,11 @@ protected:
     }
 };
 
+#ifndef HUSH_GUI_NO_MAIN
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
     MixerWindow window;
     window.show();
     return app.exec();
 }
+#endif
