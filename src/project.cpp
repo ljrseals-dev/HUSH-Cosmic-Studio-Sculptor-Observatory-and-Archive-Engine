@@ -207,7 +207,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"clips",body,false,e)) return false;
-    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?\s*\})json");
+    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(-?\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
     std::unordered_set<std::string> clip_ids;
     for (auto it=begin;it!=end;++it) {
