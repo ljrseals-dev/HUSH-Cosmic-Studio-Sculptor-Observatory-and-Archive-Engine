@@ -6,7 +6,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 
 - [x] Centralize configurable `HUSH_MAX_TRACKS` (default 1024) and reject over-ceiling schema-v1 project loads and realtime mixer configurations.
 - [x] Add ceiling/ceiling+1 tests and an allocation guard for the full-capacity `RealtimeTrackMixer::process()` call; CI run 39451685619 passed default, ALSA, Qt+ALSA, ASan, and TSan.
-- [ ] Add undoable GUI Add/Remove Track controls and count indicator; add host CLI parity after a live host track-mixer path exists.
+- [x] Add undoable GUI Add Track / Remove Last Track controls, count indicator, and a block-boundary active-count command.
+- [ ] Add headless Qt widget-interaction tests and host CLI parity after a live host track-mixer path exists.
 - [ ] Stress graph replacement at full capacity under ASan/TSan; measure RSS and run the 500-track performance gate and 8-hour soak separately.
 
 ## Current baseline — 0.2.0 / optional 0.3a GUI shell
