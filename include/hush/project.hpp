@@ -12,6 +12,9 @@
 #if HUSH_MAX_TRACKS < 1
 #error "HUSH_MAX_TRACKS must be at least 1"
 #endif
+#if HUSH_MAX_TRACKS > 4096
+#error "HUSH_MAX_TRACKS must not exceed 4096 (the preallocated live-monitor RAM budget)"
+#endif
 
 namespace hush {
 inline constexpr std::size_t kMaxTracks = static_cast<std::size_t>(HUSH_MAX_TRACKS);
