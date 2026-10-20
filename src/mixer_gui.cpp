@@ -182,13 +182,19 @@ public:
         auto* layout = new QVBoxLayout(root);
         auto* bar = new QHBoxLayout;
         auto* open = new QPushButton("Open Project…");
+        open->setObjectName("openProjectButton");
         auto* save = new QPushButton("Save Project");
+        save->setObjectName("saveProjectButton");
         auto* undo = new QPushButton("Undo");
+        undo->setObjectName("undoButton");
         auto* redo = new QPushButton("Redo");
+        redo->setObjectName("redoButton");
 #ifdef HUSH_GUI_HAS_ALSA
         live_button_ = new QPushButton("Start Live ALSA");
+        live_button_->setObjectName("liveAudioButton");
 #else
         live_button_ = new QPushButton("Live Audio (build with ALSA)");
+        live_button_->setObjectName("liveAudioButton");
         live_button_->setEnabled(false);
         live_button_->setToolTip("Configure with -DHUSH_ENABLE_ALSA=ON to enable the optional live monitor.");
 #endif
@@ -203,6 +209,7 @@ public:
         layout->addLayout(bar);
 
         table_ = new QTableWidget(0, 6, root);
+        table_->setObjectName("trackTable");
         table_->setHorizontalHeaderLabels({"Track", "Gain", "Pan", "Mute", "Solo", "Stable ID"});
         table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
         table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
@@ -256,6 +263,11 @@ public:
         refresh();
         status_->setText("Demo session · unsaved · offline");
     }
+
+#ifdef HUSH_GUI_TESTING
+    [[nodiscard]] const hush::Project& test_project() const noexcept { return project_; }
+    [[nodiscard]] std::size_t test_history_cursor() const noexcept { return log_.cursor(); }
+#endif
 
     ~MixerWindow() override {
 #ifdef HUSH_GUI_HAS_ALSA
@@ -480,19 +492,23 @@ private:
             name->setFlags(name->flags() & ~Qt::ItemIsEditable);
             table_->setItem(row, 0, name);
             auto* gain = new QSlider(Qt::Horizontal);
+            gain->setObjectName(QString("gain-%1").arg(QString::fromStdString(t.id)));
             gain->setRange(0, 200);
             gain->setValue(static_cast<int>(t.gain * 100.0F));
             gain->setToolTip("Gain 0.00–2.00");
             table_->setCellWidget(row, 1, gain);
             auto* pan = new QSlider(Qt::Horizontal);
+            pan->setObjectName(QString("pan-%1").arg(QString::fromStdString(t.id)));
             pan->setRange(-100, 100);
             pan->setValue(static_cast<int>(t.pan * 100.0F));
             pan->setToolTip("Pan −1.00 to +1.00");
             table_->setCellWidget(row, 2, pan);
             auto* mute = new QCheckBox("Mute");
+            mute->setObjectName(QString("mute-%1").arg(QString::fromStdString(t.id)));
             mute->setChecked(t.mute);
             table_->setCellWidget(row, 3, mute);
             auto* solo = new QCheckBox("Solo");
+            solo->setObjectName(QString("solo-%1").arg(QString::fromStdString(t.id)));
             solo->setChecked(t.solo);
             table_->setCellWidget(row, 4, solo);
             auto* id = new QTableWidgetItem(QString::fromStdString(t.id));
@@ -537,9 +553,11 @@ protected:
     }
 };
 
+#ifndef HUSH_GUI_TESTING
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
     MixerWindow window;
     window.show();
     return app.exec();
 }
+#endif
