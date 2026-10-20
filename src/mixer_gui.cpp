@@ -355,12 +355,6 @@ private:
         return allow;
     }
 
-protected:
-    void closeEvent(QCloseEvent* event) override {
-        if (confirmProjectReplacement()) event->accept();
-        else event->ignore();
-    }
-
     struct LiveControlValues {
         float gain{1.0F};
         float pan{0.0F};
@@ -535,6 +529,11 @@ protected:
             }
 #endif
         }
+    }
+protected:
+    void closeEvent(QCloseEvent* event) override {
+        if (confirmProjectReplacement()) event->accept();
+        else event->ignore();
     }
 };
 
