@@ -1,3 +1,10 @@
+## Unreleased — schema-v1 tempo and automation persistence
+
+- Added additive `tempo_map` and `automation_lanes` arrays to project JSON, preserving compatibility with older schema-v1 sessions that omit them.
+- Added validation for tempo-map origin/order/range, unique automation lane IDs, non-empty targets, interpolation modes, and ordered finite automation points.
+- Added project round-trip and malformed tempo/automation regression cases. Persistence only; live playback and parameter binding remain out of scope.
+- Build and CTest have not been run in this GitHub editing workflow; CI validation is required.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.
