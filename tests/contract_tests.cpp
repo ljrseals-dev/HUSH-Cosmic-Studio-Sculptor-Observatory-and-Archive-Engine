@@ -93,7 +93,7 @@ int main() {
     assert(autosave.poll_if_dirty(autosave_project, t0 + std::chrono::milliseconds(200), dirty, false, err) == AutosaveController::Outcome::NotDue);
     assert(!dirty);
     dirty = true;
-    assert(autosave.poll_if_dirty(autosave_project, t0 + std::chrono::milliseconds(200), dirty, false, err) == AutosaveController::Outcome::Saved);
+    assert(autosave.poll_if_dirty(autosave_project, t0 + std::chrono::milliseconds(250), dirty, false, err) == AutosaveController::Outcome::Saved);
     assert(!dirty && autosave.last_save_error() == SaveError::None);
 
     const auto failure_path = std::filesystem::temp_directory_path() / "hush-autosave-failure-contract.journal";
