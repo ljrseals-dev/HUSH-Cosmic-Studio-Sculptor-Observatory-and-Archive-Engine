@@ -32,6 +32,7 @@ add_library(hush_core
     src/autosave_controller.cpp
     src/wav_writer.cpp
     src/wav_reader.cpp
+    src/recording_ring_buffer.cpp
     src/project_wav_export.cpp
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -214,6 +215,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_wav_reader_tests PRIVATE hush_core)
   add_test(NAME hush_wav_reader_tests COMMAND hush_wav_reader_tests)
 
+  add_executable(hush_recording_ring_buffer_tests tests/recording_ring_buffer_tests.cpp)
+  target_link_libraries(hush_recording_ring_buffer_tests PRIVATE hush_core)
+  add_test(NAME hush_recording_ring_buffer_tests COMMAND hush_recording_ring_buffer_tests)
+
   if(HUSH_ENABLE_ALSA)
     add_test(NAME hush_alsa_host_help COMMAND hush_alsa_realtime_host --help)
     add_test(NAME hush_alsa_host_journal_requires_project
@@ -238,6 +243,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_project_wav_export_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_project_media_timeline_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_wav_reader_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_recording_ring_buffer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_clip_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE /UNDEBUG)
@@ -265,6 +271,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_project_wav_export_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_project_media_timeline_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_wav_reader_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_recording_ring_buffer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_clip_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE -UNDEBUG)
