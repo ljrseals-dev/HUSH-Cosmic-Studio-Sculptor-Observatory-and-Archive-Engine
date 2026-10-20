@@ -10,6 +10,10 @@ option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend 
 option(HUSH_BUILD_GUI "Build the optional Qt 6 mixer GUI" OFF)
 option(HUSH_BUILD_STRESS_TOOLS "Build offline benchmark and soak tools" ON)
 
+if(HUSH_BUILD_TESTS)
+  enable_testing()
+endif()
+
 add_library(hush_core
     src/project.cpp
     src/operation_log.cpp
@@ -106,8 +110,6 @@ if(HUSH_BUILD_STRESS_TOOLS)
 endif()
 
 if(HUSH_BUILD_TESTS)
-  enable_testing()
-
   add_test(
     NAME hush_privacy_source_audit
     COMMAND ${CMAKE_COMMAND}
