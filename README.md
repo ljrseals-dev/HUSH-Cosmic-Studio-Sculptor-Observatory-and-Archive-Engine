@@ -13,7 +13,7 @@ Recording, MIDI, plugin hosting, voice control, and complete production-grade mu
 | Audio adapters | Interleaved-stereo adapters; host adapter uses preallocated planar scratch and a callback guard | Hardware timing, xrun behavior, and stress qualification remain outstanding |
 | ALSA | Optional Linux ALSA host, explicitly started | Physical-device startup/shutdown, latency, and long-duration tests are not certified |
 | Qt mixer | Optional Qt 6 Widgets mixer shell; with GUI and ALSA enabled, Start Live ALSA connects supported controls to a bounded realtime track-mixer queue | Capture mapping is stereo input channels to tracks 1–2 only; complete track-to-bus/master routing, inserts, full mute/solo behavior, meters, and xrun counters are incomplete |
-| Recovery | Recovery journal, process-restart/truncated-tail tests, autosave controller integrated into the Qt mixer for named projects | Local journal recovery is software-tested; fresh CI is pending and power-loss durability is not claimed |
+| Recovery | Recovery journal, process-restart/truncated-tail tests, autosave controller integrated into the Qt mixer for named projects | Local journal recovery passed the offscreen Qt integration test in [CI run 39465121087](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39465121087); power-loss durability is not claimed |
 | Privacy | Privacy contract and source-level denylist regression check | Source scanning alone cannot prove zero runtime network activity |
 
 ## Privacy and offline operation
@@ -112,7 +112,7 @@ The following are **not complete or not verified**. A claim should be upgraded o
 - **ALSA hardware behavior:** real-device startup/shutdown, callback timing, lock-free suitability on target atomics, and xrun reporting remain unverified for a named Linux kernel/CPU/ALSA/device configuration.
 - **Long-duration audio qualification:** no committed 60-minute zero-xrun report, loopback-latency report, or underrun-injection report is claimed.
 - **Scale and soak qualification:** no committed 500-track performance budget or 8-hour soak/memory-drift report is claimed.
-- **Autosave lifecycle/failure surfacing:** the Qt mixer now writes project-adjacent recovery snapshots for named projects, prompts before restoring a newer snapshot, and displays journal-write failures. The new offscreen integration test still requires fresh CI; this is recovery journaling, not power-loss durability or a substitute for saving the project file.
+- **Autosave lifecycle/failure surfacing:** the Qt mixer now writes project-adjacent recovery snapshots for named projects, prompts before restoring a newer snapshot, and displays journal-write failures. The offscreen integration test passed in [CI run 39465121087](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39465121087); this is recovery journaling, not power-loss durability or a substitute for saving the project file.
 - **Power-loss durability:** explicitly not claimed. Current documented evidence covers completed journal records across process restart and truncated-tail handling only.
 - **MIDI/automation integration:** this branch adds a bounded MIDI CC-to-parameter mapping foundation. MIDI device I/O, GUI learn mode, engine parameter delivery, automation playback, and schema-v2 persistence remain unimplemented.
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
