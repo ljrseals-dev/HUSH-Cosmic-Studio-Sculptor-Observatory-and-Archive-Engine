@@ -11,6 +11,12 @@ The Linux-only HUSH_ENABLE_ALSA option builds `hush_alsa_backend` and the `hush_
 
 ALSA is optional and disabled by default. CMake does not install packages or access the network. The sample host uses 48 kHz and 128 frames per period and stops on Ctrl-C or SIGTERM.
 
+## Optional local project recovery
+
+The host accepts `--help`, `--project FILE`, and `--journal FILE`. When a project is supplied, it validates the local schema-v1 JSON before starting audio. The journal defaults to `FILE.hush-recovery.journal`. If the journal exists but cannot be opened or contains no complete valid snapshot, the host reports `HUSH_RECOVERY_FAILED` and exits with code 2 rather than silently continuing. When a newer recovery snapshot differs from the project file, the host writes the recovered project file and appends the canonical snapshot before starting ALSA.
+
+This is recovery/session metadata handling only: the current host still routes synthetic Capture-to-Master audio and does not apply the loaded project's buses/tracks to live routing. It has no project-edit command surface, so normal operation does not dirty the loaded project or perform a final save. The recovery error path is tested before device startup using a deliberately invalid journal; physical ALSA behavior still requires hardware validation.
+
 ## Connect ALSA to the realtime bus engine
 
 The host demonstrates the required control-thread setup sequence:
