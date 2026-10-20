@@ -48,7 +48,7 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 - The unsaved demo session does not silently choose a recovery path; save the project first to enable autosave. Normal Save still writes the project JSON and is not replaced by the recovery journal.
 - Opening a project with a newer journal snapshot offers an explicit restore choice. Declining removes that recovery journal; accepting restores the journal snapshot in memory and leaves the project marked unsaved.
 - Journal write failures remain visible in the recovery status label and the dirty recovery state is retained for retry. Journal writes run on the GUI/control thread, never in the audio callback.
-- This is process-level recovery support. It does not claim fsync-based power-loss durability.
+- The offscreen Qt test verifies a committed mixer edit is written to and recovered from the local journal; all seven CI jobs passed in [run 39465121087](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39465121087). This is process-level recovery support and does not claim fsync-based power-loss durability.
 
 ## Evidence and remaining gates
 
