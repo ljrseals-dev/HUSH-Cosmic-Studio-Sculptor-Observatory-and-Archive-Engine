@@ -54,6 +54,14 @@ jobs:
           ./build/hush_headless_soak 1 /tmp/hush-soak-smoke.journal | tee /tmp/hush-headless-soak.json
           python3 -c 'import json; [json.load(open(p)) for p in ("/tmp/hush-routing-benchmark.json", "/tmp/hush-headless-soak.json")]'
           rm -f /tmp/hush-soak-smoke.journal
+      - name: Render at the configured track ceiling and record RSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v ./build/hush_track_capacity_check > /tmp/hush-track-capacity.json 2> /tmp/hush-track-capacity-time.txt
+          cat /tmp/hush-track-capacity.json
+          grep -E 'Elapsed \(wall clock\) time|Maximum resident set size' /tmp/hush-track-capacity-time.txt
+          python3 -c 'import json; d=json.load(open("/tmp/hush-track-capacity.json")); assert d["status"] == "pass" and d["tracks"] == 1024 and d["hardware_audio_test"] is False'
 
   linux-alsa-enabled:
     runs-on: ubuntu-latest
