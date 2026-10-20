@@ -112,3 +112,11 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added a preallocated single-producer/single-consumer interleaved-float capture ring with allocation-free capture/drain operations and explicit dropped-frame accounting.
 - Added contract tests for capacity validation, whole-frame behavior, wraparound, overflow, and mono/stereo sample order.
 - This is a capture-buffer foundation only; disk-writer thread, WAV finalization, take/playlist model, punch, comping, crossfades, latency compensation, and device-to-file integration remain open.
+
+
+## Unreleased — Phase 5 performance/soak gate hardening
+
+- Added configurable p99 block-processing budget and sampled timing statistics to the 500-track mixer benchmark; JSON now reports pass/fail and exits non-zero when the budget is exceeded.
+- Added configurable positive RSS-drift threshold to the synthetic headless soak; JSON reports threshold and pass/fail and exits non-zero when exceeded.
+- Registered a short CTest smoke test for both harnesses and documented full-duration commands and evidence requirements.
+- Full 500-track qualification and the eight-hour soak remain unrun until machine-specific reports are produced; no hardware validation is claimed.
