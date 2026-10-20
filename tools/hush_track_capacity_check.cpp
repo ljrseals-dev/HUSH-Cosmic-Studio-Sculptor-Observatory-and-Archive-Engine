@@ -5,6 +5,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <string>
 #include <iomanip>
 #include <iostream>
 #include <vector>
