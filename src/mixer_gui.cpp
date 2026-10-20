@@ -282,6 +282,10 @@ public:
 #ifdef HUSH_GUI_TESTING
     [[nodiscard]] const hush::Project& test_project() const noexcept { return project_; }
     [[nodiscard]] std::size_t test_history_cursor() const noexcept { return log_.cursor(); }
+    void test_initialize_recovery(const std::filesystem::path& journal_path,
+                                  bool accept_recovery) {
+        initialize_recovery(journal_path, accept_recovery);
+    }
 #endif
 
     ~MixerWindow() override {
@@ -471,16 +475,27 @@ private:
         }
     }
 
-    void initialize_recovery() {
-        const QString data_dir =
-            QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-        if (data_dir.isEmpty() || !QDir().mkpath(data_dir)) {
-            status_->setText("Autosave unavailable: local application-data directory is not writable");
-            return;
+    void initialize_recovery(
+        const std::optional<std::filesystem::path>& journal_override = std::nullopt,
+        std::optional<bool> accept_recovery_override = std::nullopt) {
+        std::filesystem::path journal_path;
+        if (journal_override) {
+            journal_path = *journal_override;
+            const auto parent = journal_path.parent_path();
+            if (!parent.empty() && !QDir().mkpath(QString::fromStdString(parent.string()))) {
+                status_->setText("Autosave unavailable: recovery directory could not be created");
+                return;
+            }
+        } else {
+            const QString data_dir =
+                QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+            if (data_dir.isEmpty() || !QDir().mkpath(data_dir)) {
+                status_->setText("Autosave unavailable: local application-data directory is not writable");
+                return;
+            }
+            journal_path = std::filesystem::path(
+                (data_dir + "/session-recovery.journal").toStdString());
         }
-
-        const auto journal_path = std::filesystem::path(
-            (data_dir + "/session-recovery.journal").toStdString());
         recovery_ = std::make_unique<hush::AutosaveController>(
             hush::RecoveryJournal(journal_path), std::chrono::minutes(2));
 
@@ -493,12 +508,14 @@ private:
                              QString::fromStdString(path_error.message()));
         } else if (journal_exists &&
                    hush::RecoveryJournal(journal_path).recover_latest(recovered, error)) {
-            const auto choice = QMessageBox::question(
-                this, "Recover previous session",
-                "A local recovery snapshot was found for project '" +
-                    QString::fromStdString(recovered.id) +
-                    "'. Restore it? This does not replace a saved project file.",
-                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            const auto choice = accept_recovery_override
+                ? (*accept_recovery_override ? QMessageBox::Yes : QMessageBox::No)
+                : QMessageBox::question(
+                    this, "Recover previous session",
+                    "A local recovery snapshot was found for project '" +
+                        QString::fromStdString(recovered.id) +
+                        "'. Restore it? This does not replace a saved project file.",
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
             if (choice == QMessageBox::Yes) {
                 project_ = std::move(recovered);
                 log_ = hush::OperationLog{};
