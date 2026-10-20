@@ -43,6 +43,19 @@ int main() {
     std::uint64_t sample = 0;
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
     assert(std::abs(tempo.sample_to_beat(96000) - 4.0) < 1.0e-9);
+
+    // uint64_t positions above INT64_MAX are valid; do not route them through
+    // llround(), whose return type is only long long.
+    assert(tempo.beat_to_sample(1.0e19 / 24000.0, sample));
+    assert(sample > static_cast<std::uint64_t>(
+        std::numeric_limits<long long>::max()));
+    assert(sample < max_sample);
+
+    // Out-of-range conversion must fail without overwriting the caller's value.
+    sample = 12345;
+    assert(!tempo.beat_to_sample(1.0e20 / 24000.0, sample));
+    assert(sample == 12345);
+
     const TempoPoint points[] = {{0.0, 120.0}, {4.0, 60.0}};
     assert(tempo.set_points(points, 2));
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
