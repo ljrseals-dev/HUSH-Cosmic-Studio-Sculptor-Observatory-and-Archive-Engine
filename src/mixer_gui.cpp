@@ -176,9 +176,13 @@ public:
         auto* layout = new QVBoxLayout(root);
         auto* bar = new QHBoxLayout;
         auto* open = new QPushButton("Open Project…");
+        open->setObjectName("open-project");
         auto* save = new QPushButton("Save Project");
+        save->setObjectName("save-project");
         auto* undo = new QPushButton("Undo");
+        undo->setObjectName("undo");
         auto* redo = new QPushButton("Redo");
+        redo->setObjectName("redo");
 #ifdef HUSH_GUI_HAS_ALSA
         live_button_ = new QPushButton("Start Live ALSA");
 #else
@@ -187,6 +191,7 @@ public:
         live_button_->setToolTip("Configure with -DHUSH_ENABLE_ALSA=ON to enable the optional live monitor.");
 #endif
         status_ = new QLabel("Offline mixer · live audio stopped");
+        status_->setObjectName("hush-status");
         bar->addWidget(open);
         bar->addWidget(save);
         bar->addWidget(undo);
@@ -442,19 +447,23 @@ private:
             name->setFlags(name->flags() & ~Qt::ItemIsEditable);
             table_->setItem(row, 0, name);
             auto* gain = new QSlider(Qt::Horizontal);
+            gain->setObjectName(QString("gain-%1").arg(QString::fromStdString(t.id)));
             gain->setRange(0, 200);
             gain->setValue(static_cast<int>(t.gain * 100.0F));
             gain->setToolTip("Gain 0.00–2.00");
             table_->setCellWidget(row, 1, gain);
             auto* pan = new QSlider(Qt::Horizontal);
+            pan->setObjectName(QString("pan-%1").arg(QString::fromStdString(t.id)));
             pan->setRange(-100, 100);
             pan->setValue(static_cast<int>(t.pan * 100.0F));
             pan->setToolTip("Pan −1.00 to +1.00");
             table_->setCellWidget(row, 2, pan);
             auto* mute = new QCheckBox("Mute");
+            mute->setObjectName(QString("mute-%1").arg(QString::fromStdString(t.id)));
             mute->setChecked(t.mute);
             table_->setCellWidget(row, 3, mute);
             auto* solo = new QCheckBox("Solo");
+            solo->setObjectName(QString("solo-%1").arg(QString::fromStdString(t.id)));
             solo->setChecked(t.solo);
             table_->setCellWidget(row, 4, solo);
             auto* id = new QTableWidgetItem(QString::fromStdString(t.id));
@@ -496,9 +505,11 @@ private:
     }
 };
 
+#ifndef HUSH_MIXER_GUI_NO_MAIN
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
     MixerWindow window;
     window.show();
     return app.exec();
 }
+#endif
