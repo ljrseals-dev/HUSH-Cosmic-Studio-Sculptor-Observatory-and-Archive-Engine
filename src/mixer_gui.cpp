@@ -1,3 +1,4 @@
+#include "hush/autosave_controller.hpp"
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
 #include "hush/project_close_policy.hpp"
@@ -6,6 +7,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -16,11 +18,15 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSlider>
+#include <QStandardPaths>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <chrono>
+#include <filesystem>
+#include <system_error>
 #include <memory>
 #include <optional>
 #include <string>
@@ -231,6 +237,7 @@ public:
                 return;
             }
             if (log_.undo(project_)) {
+                recovery_dirty_ = true;
                 status_->setText("Undo applied");
                 refresh();
             }
@@ -246,6 +253,7 @@ public:
                 return;
             }
             if (log_.redo(project_)) {
+                recovery_dirty_ = true;
                 status_->setText("Redo applied");
                 refresh();
             }
@@ -260,13 +268,24 @@ public:
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
                            {"track-2", "Input R", 0.8F, 1.0F, false, false}};
         log_.mark_dirty(); // The demo project has not been written to disk yet.
+        recovery_dirty_ = true;
         refresh();
         status_->setText("Demo session · unsaved · offline");
+#ifndef HUSH_GUI_TESTING
+        initialize_recovery();
+        recovery_timer_.setInterval(15000);
+        connect(&recovery_timer_, &QTimer::timeout, this, [this] { poll_recovery(); });
+        recovery_timer_.start();
+#endif
     }
 
 #ifdef HUSH_GUI_TESTING
     [[nodiscard]] const hush::Project& test_project() const noexcept { return project_; }
     [[nodiscard]] std::size_t test_history_cursor() const noexcept { return log_.cursor(); }
+    void test_initialize_recovery(const std::filesystem::path& journal_path,
+                                  bool accept_recovery) {
+        initialize_recovery(journal_path, accept_recovery);
+    }
 #endif
 
     ~MixerWindow() override {
@@ -282,6 +301,9 @@ private:
     QTableWidget* table_{};
     QLabel* status_{};
     QPushButton* live_button_{};
+    std::unique_ptr<hush::AutosaveController> recovery_;
+    QTimer recovery_timer_;
+    bool recovery_dirty_{false};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -310,7 +332,9 @@ private:
         project_path_ = path;
         log_ = hush::OperationLog{};
         log_.mark_saved();
+        recovery_dirty_ = true;
         refresh();
+        persist_recovery_snapshot();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
     }
 
@@ -340,6 +364,14 @@ private:
 
         project_path_ = path;
         log_.mark_saved();
+        recovery_dirty_ = false;
+        hush::Error recovery_error;
+        if (recovery_ && recovery_->save_now(project_, recovery_error) !=
+                             hush::AutosaveController::Outcome::Saved) {
+            status_->setText("Project saved; recovery journal update failed: " +
+                             QString::fromStdString(recovery_error.message));
+            return true;
+        }
         status_->setText("Saved · " + QFileInfo(path).fileName());
         return true;
     }
@@ -438,7 +470,90 @@ private:
             return;
         }
         if (log_.apply_and_append(project_, std::move(operation))) {
+            recovery_dirty_ = true;
             status_->setText("Edited · undo history " + QString::number(log_.cursor()));
+        }
+    }
+
+    void initialize_recovery(
+        const std::optional<std::filesystem::path>& journal_override = std::nullopt,
+        std::optional<bool> accept_recovery_override = std::nullopt) {
+        std::filesystem::path journal_path;
+        if (journal_override) {
+            journal_path = *journal_override;
+            const auto parent = journal_path.parent_path();
+            if (!parent.empty() && !QDir().mkpath(QString::fromStdString(parent.string()))) {
+                status_->setText("Autosave unavailable: recovery directory could not be created");
+                return;
+            }
+        } else {
+            const QString data_dir =
+                QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+            if (data_dir.isEmpty() || !QDir().mkpath(data_dir)) {
+                status_->setText("Autosave unavailable: local application-data directory is not writable");
+                return;
+            }
+            journal_path = std::filesystem::path(
+                (data_dir + "/session-recovery.journal").toStdString());
+        }
+        recovery_ = std::make_unique<hush::AutosaveController>(
+            hush::RecoveryJournal(journal_path), std::chrono::minutes(2));
+
+        hush::Project recovered;
+        hush::Error error;
+        std::error_code path_error;
+        const bool journal_exists = std::filesystem::exists(journal_path, path_error);
+        if (path_error) {
+            status_->setText("Could not inspect recovery journal path: " +
+                             QString::fromStdString(path_error.message()));
+        } else if (journal_exists &&
+                   hush::RecoveryJournal(journal_path).recover_latest(recovered, error)) {
+            const auto choice = accept_recovery_override
+                ? (*accept_recovery_override ? QMessageBox::Yes : QMessageBox::No)
+                : QMessageBox::question(
+                    this, "Recover previous session",
+                    "A local recovery snapshot was found for project '" +
+                        QString::fromStdString(recovered.id) +
+                        "'. Restore it? This does not replace a saved project file.",
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (choice == QMessageBox::Yes) {
+                project_ = std::move(recovered);
+                log_ = hush::OperationLog{};
+                log_.mark_dirty();
+                recovery_dirty_ = true;
+                refresh();
+                status_->setText("Recovered local session · save the project file to keep it");
+                return;
+            }
+        } else if (journal_exists && !error.message.empty()) {
+            status_->setText("Recovery journal could not be read: " +
+                             QString::fromStdString(error.message));
+        }
+
+        // Record the current in-memory session after a declined/absent recovery so
+        // the journal never silently keeps presenting an older session as current.
+        persist_recovery_snapshot();
+    }
+
+    void persist_recovery_snapshot() {
+        if (!recovery_) return;
+        hush::Error error;
+        if (recovery_->save_now(project_, error) == hush::AutosaveController::Outcome::Saved) {
+            recovery_dirty_ = false;
+            return;
+        }
+        status_->setText("Recovery snapshot failed: " + QString::fromStdString(error.message));
+    }
+
+    void poll_recovery() {
+        if (!recovery_ || !recovery_dirty_) return;
+        hush::Error error;
+        const auto outcome = recovery_->poll_if_dirty(
+            project_, hush::AutosaveController::Clock::now(), recovery_dirty_, false, error);
+        if (outcome == hush::AutosaveController::Outcome::Saved) {
+            status_->setText("Local recovery snapshot saved");
+        } else if (outcome == hush::AutosaveController::Outcome::Failed) {
+            status_->setText("Autosave failed: " + QString::fromStdString(error.message));
         }
     }
 

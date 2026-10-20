@@ -1,3 +1,10 @@
+## Unreleased — Qt GUI autosave and local recovery
+
+- Integrated the existing autosave controller into the mixer window with a 15-second non-audio poll and a two-minute dirty-snapshot interval.
+- Store recovery records in the local application-data directory, prompt before restoring a valid prior session, and report journal failures in the GUI status line.
+- Successful manual saves append the current state to the recovery journal so an older snapshot is not mistaken for the latest state.
+- Startup recovery prompts are disabled for the offscreen Qt widget-test build. Dedicated startup/restart recovery tests and fresh CI remain required; power-loss durability is not claimed.
+
 ## Unreleased — GUI-to-engine mixer command-path contract
 
 - Added a deterministic synthetic-buffer test using the production `OperationLog` and `RealtimeTrackMixer` to cover slider preview, commit, undo/redo, pan, mute/solo, and next-block output changes.

@@ -4,9 +4,11 @@
 #include <QCheckBox>
 #include <QMetaObject>
 #include <QPushButton>
+#include <QTemporaryDir>
 #include <QSlider>
 #include <cassert>
 #include <cmath>
+#include <filesystem>
 
 namespace {
 bool near(float actual, float expected) {
@@ -73,5 +75,42 @@ int main(int argc, char** argv) {
     solo->click();
     assert(window.test_project().tracks[0].solo);
     assert(window.test_history_cursor() == 4U);
+
+    // A valid local recovery snapshot is restored through the same startup
+    // recovery path used by the application, without opening a modal dialog.
+    QTemporaryDir restore_dir;
+    assert(restore_dir.isValid());
+    const std::filesystem::path restore_journal =
+        (restore_dir.path() + QStringLiteral("/session-recovery.journal")).toStdString();
+    hush::Project previous;
+    previous.id = "previous-session";
+    previous.tracks.push_back({"restored-track", "Restored", 0.42F, 0.25F, true, false});
+    hush::Error recovery_error;
+    assert(hush::RecoveryJournal(restore_journal).append_snapshot(previous, recovery_error));
+    {
+        MixerWindow recovery_window;
+        recovery_window.test_initialize_recovery(restore_journal, true);
+        assert(recovery_window.test_project().id == "previous-session");
+        assert(recovery_window.test_project().tracks.size() == 1U);
+        assert(near(recovery_window.test_project().tracks[0].gain, 0.42F));
+        assert(recovery_window.test_project().tracks[0].mute);
+    }
+
+    // Declining recovery must append the current in-memory session, so the old
+    // session is not silently offered again on the next launch.
+    QTemporaryDir decline_dir;
+    assert(decline_dir.isValid());
+    const std::filesystem::path decline_journal =
+        (decline_dir.path() + QStringLiteral("/session-recovery.journal")).toStdString();
+    assert(hush::RecoveryJournal(decline_journal).append_snapshot(previous, recovery_error));
+    {
+        MixerWindow decline_window;
+        decline_window.test_initialize_recovery(decline_journal, false);
+        assert(decline_window.test_project().id == "hush-demo");
+    }
+    hush::Project latest;
+    assert(hush::RecoveryJournal(decline_journal).recover_latest(latest, recovery_error));
+    assert(latest.id == "hush-demo");
+    assert(latest.tracks.size() == 2U);
     return 0;
 }

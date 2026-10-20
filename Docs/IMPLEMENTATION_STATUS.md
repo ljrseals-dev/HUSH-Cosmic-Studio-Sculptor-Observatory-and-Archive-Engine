@@ -6,6 +6,7 @@
 - [x] Bus-routing validation at project-load boundary, including unknown endpoints, duplicate/empty IDs, self-routes, invalid gain, and cycles.
 - [x] Append-only recovery journal with length-framed full-project snapshots and truncated-tail recovery.
 - [x] Autosave scheduling policy; caller must poll from a non-audio thread.
+- [x] Qt mixer GUI integrates the autosave controller on a non-audio timer, writes dirty snapshots to the local application-data recovery journal, offers an explicit startup recovery choice, and surfaces journal failures. Successful manual saves append the current snapshot. The Qt interaction test now exercises both accepting a prior snapshot and declining it (which must append the current session); fresh CI is pending. This is process-crash recovery, not power-loss durability.
 - [x] Invertible operation-log primitives and undo/redo tests.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
@@ -27,7 +28,7 @@
 - [x] Performance harness now enforces a configurable p99 mixer-block processing budget and emits sampled p95/p99/max JSON; CTest smoke coverage added, fresh CI pending. The qualifying 500-track report is still open.
 - [x] Soak harness now enforces a configurable positive RSS-drift bound and emits threshold/result JSON; CTest smoke coverage added, fresh CI pending. The 8-hour report is still open.
 - [ ] Power-loss durability: explicitly not claimed. Current coverage is process-restart recovery of completed records and truncated-tail handling.
-- [ ] Autosave controller integrated into an application lifecycle with save-failure surfacing.
+- [x] Autosave controller is integrated into the Qt application lifecycle with save-failure surfacing; Qt tests now cover startup recovery accept/decline behavior. Fresh CI remains pending, and power-loss durability is not claimed.
 - [ ] Review the contents and intended disposition of the committed `hush-daw-codex-hush-processor-integration-starter (1).zip`; do not delete or relocate it before review.
 - [ ] Optional JACK/PipeWire backends and preservation of historical 0.1.0 tests are not present in this source archive.
 
