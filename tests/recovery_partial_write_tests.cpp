@@ -57,9 +57,9 @@ int main() {
     {
         const std::string malformed = R"({"schema_version":2})";
         std::ofstream file(malformed_path, std::ios::binary | std::ios::app);
-        file << "HUSHJ1 " << malformed.size() << '\\n';
+        file << "HUSHJ1 " << malformed.size() << '\n';
         file.write(malformed.data(), static_cast<std::streamsize>(malformed.size()));
-        file.put('\\n');
+        file.put('\n');
         file.flush();
         if (!file) return 8;
     }
