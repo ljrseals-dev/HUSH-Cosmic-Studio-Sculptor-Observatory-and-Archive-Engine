@@ -24,6 +24,7 @@ add_library(hush_core
     src/transport_engine.cpp
     src/automation_lane.cpp
     src/midi_learn.cpp
+    src/studio_03a.cpp
     src/realtime_bus_audio_adapter.cpp
     src/realtime_bus_engine_host_audio_adapter.cpp
     src/mixer_engine_bridge.cpp
@@ -160,6 +161,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_transport_automation_tests PRIVATE hush_core)
   add_test(NAME hush_transport_automation_tests COMMAND hush_transport_automation_tests)
 
+  add_executable(hush_studio_03a_tests tests/studio_03a_tests.cpp)
+  target_link_libraries(hush_studio_03a_tests PRIVATE hush_core)
+  add_test(NAME hush_studio_03a_tests COMMAND hush_studio_03a_tests)
+
   add_executable(hush_midi_learn_tests tests/midi_learn_tests.cpp)
   target_link_libraries(hush_midi_learn_tests PRIVATE hush_core)
   add_test(NAME hush_midi_learn_tests COMMAND hush_midi_learn_tests)
@@ -245,6 +250,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_gui_engine_command_path_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_transport_automation_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_studio_03a_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_midi_learn_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE /UNDEBUG)
   else()
@@ -271,6 +277,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_gui_engine_command_path_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_transport_automation_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_studio_03a_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_midi_learn_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE -UNDEBUG)
   endif()
