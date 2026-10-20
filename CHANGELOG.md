@@ -1,3 +1,10 @@
+## Unreleased — host final-save lifecycle contracts
+
+- Added a reusable non-audio shutdown helper that writes the canonical project file before appending the recovery snapshot, and reports partial failure when the journal write fails.
+- Converts project-writer exceptions into typed final-save errors so an injected or unexpected writer exception does not escape the shutdown helper.
+- Added contract tests for clean shutdown, missing/throwing writers, project-file failure, journal failure after project-file success, and complete success.
+- CI validation is pending; no local build/CTest result is claimed.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.

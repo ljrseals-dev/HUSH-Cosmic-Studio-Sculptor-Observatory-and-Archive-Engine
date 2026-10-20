@@ -28,6 +28,7 @@ add_library(hush_core
     src/mixer_engine_bridge.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
+    src/host_lifecycle.cpp
     src/wav_writer.cpp
     src/wav_reader.cpp
     src/project_wav_export.cpp
@@ -175,6 +176,11 @@ if(HUSH_BUILD_TESTS)
   target_compile_features(hush_autosave_lifecycle_tests PRIVATE cxx_std_20)
   add_test(NAME hush_autosave_lifecycle_tests COMMAND hush_autosave_lifecycle_tests)
 
+  add_executable(hush_host_final_save_tests tests/host_final_save_tests.cpp)
+  target_link_libraries(hush_host_final_save_tests PRIVATE hush_core)
+  target_compile_features(hush_host_final_save_tests PRIVATE cxx_std_20)
+  add_test(NAME hush_host_final_save_tests COMMAND hush_host_final_save_tests)
+
   add_executable(hush_project_close_policy_tests tests/project_close_policy_tests.cpp)
   target_include_directories(hush_project_close_policy_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_project_close_policy_tests PRIVATE cxx_std_20)
@@ -202,6 +208,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_recovery_restart_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_recovery_partial_write_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_autosave_lifecycle_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_host_final_save_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_project_close_policy_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_wav_writer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_project_wav_export_tests PRIVATE /UNDEBUG)
@@ -225,6 +232,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_recovery_restart_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_recovery_partial_write_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_autosave_lifecycle_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_host_final_save_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_project_close_policy_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_wav_writer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_project_wav_export_tests PRIVATE -UNDEBUG)
