@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 namespace hush {
-enum class OperationKind { SetGain, SetPan, SetMute, SetSolo };
-struct Operation { std::string entity_id; OperationKind kind{}; float before_value{}; float after_value{}; };
+enum class OperationKind { SetGain, SetPan, SetMute, SetSolo, AddTrack, RemoveTrack };
+struct Operation { std::string entity_id; OperationKind kind{}; float before_value{}; float after_value{}; std::size_t track_index{}; Track track_snapshot{}; };
 class OperationLog {
 public:
     bool apply_and_append(Project& project, Operation op);
