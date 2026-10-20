@@ -43,6 +43,9 @@ struct AudioClip {
     std::uint64_t source_start_frame{0};
     std::uint64_t frame_count{0};
     float gain{1.0F};
+    // Linear fades measured in clip-relative source frames. Zero disables a fade.
+    std::uint64_t fade_in_frames{0};
+    std::uint64_t fade_out_frames{0};
     bool operator==(const AudioClip&) const = default;
 };
 struct Project {
