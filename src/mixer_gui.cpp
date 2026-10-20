@@ -450,7 +450,11 @@ private:
     void poll_live_status() {
         if (live_.running()) {
             status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
-                             " · xruns/recoveries " + QString::number(live_.xrun_count()));
+                             " · xruns/recoveries " + QString::number(live_.xrun_count()) +
+                             " · peak L/R " + QString::number(live_.peak_left(), 'f', 3) + "/" +
+                             QString::number(live_.peak_right(), 'f', 3) +
+                             " · RMS L/R " + QString::number(live_.rms_left(), 'f', 3) + "/" +
+                             QString::number(live_.rms_right(), 'f', 3));
             return;
         }
         if (live_button_->text() == "Stop Live ALSA") {
