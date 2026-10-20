@@ -58,7 +58,7 @@ bool extract_array(const std::string& s, const std::string& key, std::string& bo
 }
 std::string to_json(const Project& p) {
     std::ostringstream o;
-    o << std::setprecision(9);
+    o << std::setprecision(std::numeric_limits<double>::max_digits10);
     o << "{\n  \"schema_version\": " << p.schema_version
       << ",\n  \"id\": \"" << escape_json(p.id) << "\""
       << ",\n  \"pan_law\": \"" << law_name(p.pan_law) << "\",\n  \"tracks\": [";
