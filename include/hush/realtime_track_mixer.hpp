@@ -2,6 +2,8 @@
 
 #include "hush/spsc_parameter_queue.hpp"
 
+#include <atomic>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -32,8 +34,19 @@ public:
                                std::size_t frames) noexcept;
     [[nodiscard]] std::size_t track_count() const noexcept { return gains_.size(); }
     [[nodiscard]] std::size_t max_frames() const noexcept { return max_frames_; }
+    // Most-recent processed block's stereo output meters. Safe for control/UI polling.
+    [[nodiscard]] float output_peak() const noexcept {
+        return std::bit_cast<float>(output_peak_bits_.load(std::memory_order_relaxed));
+    }
+    [[nodiscard]] float output_rms() const noexcept {
+        return std::bit_cast<float>(output_rms_bits_.load(std::memory_order_relaxed));
+    }
 
 private:
+    static_assert(std::atomic<std::uint32_t>::is_always_lock_free,
+                  "Realtime meter publication requires lock-free 32-bit atomics");
+    std::atomic<std::uint32_t> output_peak_bits_{0U};
+    std::atomic<std::uint32_t> output_rms_bits_{0U};
     std::vector<float> gains_;
     std::vector<float> pans_;
     std::vector<std::uint8_t> flags_;

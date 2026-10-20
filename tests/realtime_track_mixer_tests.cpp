@@ -19,6 +19,14 @@ int main() {
     // Equal-power center pan, unity gain, two tracks summed.
     assert(std::abs(left[0] - 1.4142135F) < 1.0e-5F);
     assert(std::abs(right[0] - 1.4142135F) < 1.0e-5F);
+    assert(std::abs(mixer.output_peak() - 1.4142135F) < 1.0e-5F);
+    assert(std::abs(mixer.output_rms() - 1.4142135F) < 1.0e-5F);
+
+    // Meter values describe the most recently processed block.
+    assert(mixer.process(inputs, 2, left, right, 0));
+    assert(mixer.output_peak() == 0.0F);
+    assert(mixer.output_rms() == 0.0F);
+    assert(mixer.process(inputs, 2, left, right, 2));
 
     // Commands are applied at the next process block boundary.
     assert(mixer.enqueue_control(0, 0.5F, -1.0F, false, false));

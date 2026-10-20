@@ -21,6 +21,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -89,6 +90,8 @@ public:
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
+    [[nodiscard]] float output_peak() const noexcept { return mixer_ ? mixer_->output_peak() : 0.0F; }
+    [[nodiscard]] float output_rms() const noexcept { return mixer_ ? mixer_->output_rms() : 0.0F; }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
@@ -445,7 +448,14 @@ private:
 #ifdef HUSH_GUI_HAS_ALSA
     void poll_live_status() {
         if (live_.running()) {
-            status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
+            const auto to_dbfs = [](float value) {
+                return value <= 1.0e-6F ? -120.0 : 20.0 * std::log10(static_cast<double>(value));
+            };
+            status_->setText("Live ALSA · peak " +
+                             QString::number(to_dbfs(live_.output_peak()), 'f', 1) +
+                             " dBFS · RMS " +
+                             QString::number(to_dbfs(live_.output_rms()), 'f', 1) +
+                             " dBFS · callbacks " + QString::number(live_.callback_count()) +
                              " · xruns/recoveries " + QString::number(live_.xrun_count()));
             return;
         }
