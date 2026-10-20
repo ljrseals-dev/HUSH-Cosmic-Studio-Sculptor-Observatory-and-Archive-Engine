@@ -1,5 +1,6 @@
 #pragma once
 
+#include "hush/project.hpp"
 #include "hush/spsc_parameter_queue.hpp"
 
 #include <cstddef>
