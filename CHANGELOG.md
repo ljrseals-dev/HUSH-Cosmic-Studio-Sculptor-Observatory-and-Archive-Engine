@@ -29,3 +29,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
+
+
+## Unreleased — guarded graph publication integration
+
+- Added a preallocated interleaved-stereo adapter for `PublishedRealtimeBusEngine`.
+- Integrated the published engine into the standalone ALSA host. Master output is copied while the audio read guard remains alive, preventing the control-thread reclamation path from invalidating the output view mid-copy.
+- Added a contract assertion for guarded master-output copying. Fresh CI for these changes is pending; GUI-driven bus-topology replacement and real-device validation remain open.
