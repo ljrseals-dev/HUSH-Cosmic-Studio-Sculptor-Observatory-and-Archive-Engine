@@ -107,6 +107,14 @@ endif()
 if(HUSH_BUILD_TESTS)
   enable_testing()
 
+  if(HUSH_BUILD_GUI)
+    add_executable(hush_mixer_gui_track_interaction_tests tests/mixer_gui_track_interaction_tests.cpp)
+    target_link_libraries(hush_mixer_gui_track_interaction_tests PRIVATE hush_core Qt6::Widgets)
+    target_compile_features(hush_mixer_gui_track_interaction_tests PRIVATE cxx_std_20)
+    target_compile_definitions(hush_mixer_gui_track_interaction_tests PRIVATE HUSH_GUI_TESTING=1)
+    add_test(NAME hush_mixer_gui_track_interaction_tests COMMAND hush_mixer_gui_track_interaction_tests)
+  endif()
+
   if(HUSH_BUILD_STRESS_TOOLS)
     add_test(NAME hush_performance_soak_smoke
       COMMAND ${CMAKE_COMMAND}
