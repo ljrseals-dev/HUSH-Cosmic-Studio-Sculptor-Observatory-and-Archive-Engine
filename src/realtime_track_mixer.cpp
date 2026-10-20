@@ -1,6 +1,7 @@
 #include "hush/realtime_track_mixer.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <limits>
 #include <new>
@@ -76,6 +77,27 @@ bool RealtimeTrackMixer::process(const float* const* mono_tracks,
             output_right[frame] += sample * right_gain;
         }
     }
+
+    // Meter the actual post-mix output. Ignore non-finite samples for meter
+    // arithmetic so a malformed input cannot publish NaN/Inf as the UI reading.
+    float peak = 0.0F;
+    double square_sum = 0.0;
+    std::size_t finite_samples = 0;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float channels[] = {output_left[frame], output_right[frame]};
+        for (const float sample : channels) {
+            if (!std::isfinite(sample)) continue;
+            const float magnitude = std::abs(sample);
+            if (magnitude > peak) peak = magnitude;
+            const double value = static_cast<double>(sample);
+            square_sum += value * value;
+            ++finite_samples;
+        }
+    }
+    const float rms = finite_samples == 0 ? 0.0F :
+        static_cast<float>(std::sqrt(square_sum / static_cast<double>(finite_samples)));
+    output_peak_bits_.store(std::bit_cast<std::uint32_t>(peak), std::memory_order_relaxed);
+    output_rms_bits_.store(std::bit_cast<std::uint32_t>(rms), std::memory_order_relaxed);
     return true;
 }
 
