@@ -27,11 +27,13 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 
 int main() {
     using namespace hush;
+    RealtimeTrackMixer over_capacity;
+    assert(!over_capacity.configure(kMaxTracks + 1U, 8));
+
+    if (kMaxTracks >= 2U) {
     RealtimeTrackMixer mixer;
     assert(mixer.configure(2, 8));
     assert(!mixer.configure(2, 8));
-    RealtimeTrackMixer over_capacity;
-    assert(!over_capacity.configure(kMaxTracks + 1U, 8));
 
     const float a[] = {1.0F, 0.5F};
     const float b[] = {1.0F, 1.0F};
@@ -78,19 +80,24 @@ int main() {
     assert(saturated.process(one_input, 1, left, right, 2));
     assert(saturated.enqueue_control(0, 0.5F, 0.0F, false, false));
 
+    } // kMaxTracks >= 2
+
     // Track-count changes are queued and take effect only at a process boundary.
-    RealtimeTrackMixer structural;
-    assert(structural.configure(4, 2));
-    const float one[] = {1.0F, 1.0F};
-    const float* four_inputs[] = {one, one, one, one};
-    assert(structural.enqueue_track_state_and_count(2, 0.5F, 0.0F, false, false, 3));
-    assert(structural.process(four_inputs, 4, left, right, 2));
-    assert(structural.active_track_count() == 3U);
-    assert(std::abs(left[0] - (2.5F * 0.7071067F)) < 1.0e-5F);
-    assert(structural.enqueue_active_track_count(0));
-    assert(structural.process(four_inputs, 4, left, right, 2));
-    assert(structural.active_track_count() == 0U);
-    assert(left[0] == 0.0F && right[0] == 0.0F);
+    if (kMaxTracks >= 4U) {
+        RealtimeTrackMixer structural;
+        assert(structural.configure(4, 2));
+        const float one[] = {1.0F, 1.0F};
+        const float* four_inputs[] = {one, one, one, one};
+        float structural_left[2]{}, structural_right[2]{};
+        assert(structural.enqueue_track_state_and_count(2, 0.5F, 0.0F, false, false, 3));
+        assert(structural.process(four_inputs, 4, structural_left, structural_right, 2));
+        assert(structural.active_track_count() == 3U);
+        assert(std::abs(structural_left[0] - (2.5F * 0.7071067F)) < 1.0e-5F);
+        assert(structural.enqueue_active_track_count(0));
+        assert(structural.process(four_inputs, 4, structural_left, structural_right, 2));
+        assert(structural.active_track_count() == 0U);
+        assert(structural_left[0] == 0.0F && structural_right[0] == 0.0F);
+    }
 
     // Configure full capacity and all caller-owned buffers before enabling the
     // allocation guard. The realtime process call must not invoke operator new.
