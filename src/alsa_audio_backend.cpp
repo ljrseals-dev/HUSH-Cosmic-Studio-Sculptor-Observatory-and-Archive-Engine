@@ -91,8 +91,10 @@ void AlsaAudioBackend::run() noexcept {
    const int recovered = snd_pcm_recover(capture_, static_cast<int>(got), 1);
    xruns_.fetch_add(1, std::memory_order_relaxed);
    if (recovered < 0) {
-    worker_error_code_.store(recovered, std::memory_order_relaxed);
-    worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::CaptureRecoveryFailed), std::memory_order_release);
+    if (!stop_requested_.load(std::memory_order_acquire)) {
+     worker_error_code_.store(recovered, std::memory_order_relaxed);
+     worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::CaptureRecoveryFailed), std::memory_order_release);
+    }
     break;
    }
    std::fill(input_buffer_.begin(), input_buffer_.end(), 0.0F);
@@ -116,8 +118,10 @@ void AlsaAudioBackend::run() noexcept {
     const int recovered = snd_pcm_recover(playback_, static_cast<int>(put), 1);
     xruns_.fetch_add(1, std::memory_order_relaxed);
     if (recovered < 0) {
-     worker_error_code_.store(recovered, std::memory_order_relaxed);
-     worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::PlaybackRecoveryFailed), std::memory_order_release);
+     if (!stop_requested_.load(std::memory_order_acquire)) {
+      worker_error_code_.store(recovered, std::memory_order_relaxed);
+      worker_failure_.store(static_cast<std::uint8_t>(WorkerFailure::PlaybackRecoveryFailed), std::memory_order_release);
+     }
      stop_requested_.store(true, std::memory_order_release);
      break;
     }
