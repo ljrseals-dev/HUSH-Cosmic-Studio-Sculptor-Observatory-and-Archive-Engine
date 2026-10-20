@@ -31,6 +31,22 @@ int main() {
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";
     assert(from_json(legacy,loaded,err)); assert(loaded.buses.empty() && loaded.routes.empty());
 
+    // Schema-v1 sessions remain valid through the configured ceiling; the next
+    // track is rejected with a stable, user-readable error code.
+    Project at_ceiling;
+    at_ceiling.id = "track-capacity-boundary";
+    at_ceiling.tracks.reserve(kMaxTracks);
+    for (std::size_t i = 0; i < kMaxTracks; ++i) {
+        at_ceiling.tracks.push_back({"track-" + std::to_string(i),
+                                     "Track " + std::to_string(i), 1.0F, 0.0F, false, false});
+    }
+    Project ceiling_loaded;
+    assert(from_json(to_json(at_ceiling), ceiling_loaded, err));
+    assert(ceiling_loaded.tracks.size() == kMaxTracks);
+    at_ceiling.tracks.push_back({"track-over", "Over ceiling", 1.0F, 0.0F, false, false});
+    assert(!from_json(to_json(at_ceiling), ceiling_loaded, err));
+    assert(err.code == "track_count_exceeded");
+
     const std::string cyclic=R"({"schema_version":1,"id":"cycle","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"a","name":"A"},{"id":"b","name":"B"}],"routes":[{"source_bus_id":"a","destination_bus_id":"b","tap":"post_fader","gain":1},{"source_bus_id":"b","destination_bus_id":"a","tap":"pre_fader","gain":1}]})";
     assert(!from_json(cyclic,loaded,err)); assert(err.code=="bus_route_cycle");
 
