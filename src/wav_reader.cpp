@@ -11,29 +11,36 @@
 
 namespace hush {
 namespace {
+
 bool fail(std::string* error, const char* message) {
     if (error) *error = message;
     return false;
 }
+
 bool read_exact(std::istream& in, char* data, std::streamsize size) {
     in.read(data, size);
     return in.gcount() == size;
 }
+
 std::uint16_t u16(const unsigned char* p) {
     return static_cast<std::uint16_t>(static_cast<std::uint16_t>(p[0]) |
            static_cast<std::uint16_t>(static_cast<std::uint16_t>(p[1]) << 8U));
 }
+
 std::uint32_t u32(const unsigned char* p) {
     return static_cast<std::uint32_t>(p[0]) |
            (static_cast<std::uint32_t>(p[1]) << 8U) |
            (static_cast<std::uint32_t>(p[2]) << 16U) |
            (static_cast<std::uint32_t>(p[3]) << 24U);
 }
+
 bool tag_is(const unsigned char* p, const char* tag) {
-    for (unsigned i = 0; i < 4U; ++i)
+    for (unsigned i = 0; i < 4U; ++i) {
         if (p[i] != static_cast<unsigned char>(tag[i])) return false;
+    }
     return true;
 }
+
 } // namespace
 
 bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
@@ -46,6 +53,15 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
 
     std::ifstream in(path, std::ios::binary);
     if (!in) return fail(error, "Could not open input WAV file.");
+
+    in.seekg(0, std::ios::end);
+    const auto file_end_pos = in.tellg();
+    if (file_end_pos < std::streampos(12))
+        return fail(error, "WAV file is shorter than the RIFF/WAVE header.");
+    const auto file_size = static_cast<std::uint64_t>(file_end_pos);
+    in.seekg(0, std::ios::beg);
+    if (!in) return fail(error, "Could not seek to the WAV header.");
+
     unsigned char header[12]{};
     if (!read_exact(in, reinterpret_cast<char*>(header), 12))
         return fail(error, "WAV header is truncated.");
@@ -53,24 +69,37 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
         return fail(error, "File is not a little-endian RIFF/WAVE file.");
 
     const std::uint64_t riff_end = static_cast<std::uint64_t>(u32(header + 4)) + 8ULL;
-    if (riff_end < 12ULL) return fail(error, "RIFF size is invalid.");
+    if (riff_end < 12ULL || riff_end > file_size)
+        return fail(error, "Declared RIFF boundary is outside the physical file.");
 
-    bool have_fmt = false, have_data = false;
-    std::uint16_t format = 0, channels = 0, bits = 0, block_align = 0;
-    std::uint32_t sample_rate = 0, data_size = 0;
+    bool have_fmt = false;
+    bool have_data = false;
+    std::uint16_t format = 0;
+    std::uint16_t channels = 0;
+    std::uint16_t bits = 0;
+    std::uint16_t block_align = 0;
+    std::uint32_t sample_rate = 0;
+    std::uint32_t byte_rate = 0;
+    std::uint32_t data_size = 0;
     std::streampos data_start{};
 
+    // Walk every chunk inside RIFF, even after locating the format and data
+    // chunks, so malformed trailing/ancillary chunks cannot be silently accepted.
     while (true) {
-        const auto header_pos = in.tellg();
-        if (header_pos < 0) break;
-        const auto header_offset = static_cast<std::uint64_t>(header_pos);
-        if (header_offset > riff_end || riff_end - header_offset < 8ULL) break;
+        const auto chunk_header_pos = in.tellg();
+        if (chunk_header_pos < 0)
+            return fail(error, "Could not determine the next WAV chunk position.");
+        const auto chunk_header_offset = static_cast<std::uint64_t>(chunk_header_pos);
+        if (chunk_header_offset == riff_end) break;
+        if (chunk_header_offset > riff_end || riff_end - chunk_header_offset < 8ULL)
+            return fail(error, "Trailing bytes do not form a complete WAV chunk header.");
+
         unsigned char chunk[8]{};
         if (!read_exact(in, reinterpret_cast<char*>(chunk), 8))
             return fail(error, "WAV chunk header is truncated.");
         const std::uint32_t chunk_size = u32(chunk + 4);
         const auto payload_start = in.tellg();
-        if (payload_start < 0) return fail(error, "Could not locate WAV chunk.");
+        if (payload_start < 0) return fail(error, "Could not locate WAV chunk payload.");
         const auto payload_pos = static_cast<std::uint64_t>(payload_start);
         const std::uint64_t padded_size =
             static_cast<std::uint64_t>(chunk_size) + (chunk_size & 1U);
@@ -78,6 +107,7 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
             return fail(error, "WAV chunk exceeds the declared RIFF boundary.");
 
         if (tag_is(chunk, "fmt ")) {
+            if (have_fmt) return fail(error, "WAV contains multiple format chunks.");
             if (chunk_size < 16U) return fail(error, "WAV format chunk is too short.");
             unsigned char fmt[16]{};
             if (!read_exact(in, reinterpret_cast<char*>(fmt), 16))
@@ -85,6 +115,7 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
             format = u16(fmt);
             channels = u16(fmt + 2);
             sample_rate = u32(fmt + 4);
+            byte_rate = u32(fmt + 8);
             block_align = u16(fmt + 12);
             bits = u16(fmt + 14);
             have_fmt = true;
@@ -93,10 +124,10 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
             data_size = chunk_size;
             have_data = true;
         }
+
         in.clear();
         in.seekg(static_cast<std::streamoff>(payload_pos + padded_size), std::ios::beg);
         if (!in) return fail(error, "Could not seek to the next WAV chunk.");
-        if (have_fmt && have_data) break;
     }
 
     if (!have_fmt) return fail(error, "WAV format chunk is missing.");
@@ -112,6 +143,11 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
         static_cast<std::uint32_t>(channels) * bytes_per_sample;
     if (block_align != expected_align)
         return fail(error, "WAV block alignment does not match its channel format.");
+    const std::uint64_t expected_byte_rate =
+        static_cast<std::uint64_t>(sample_rate) * expected_align;
+    if (expected_byte_rate > std::numeric_limits<std::uint32_t>::max() ||
+        byte_rate != expected_byte_rate)
+        return fail(error, "WAV byte rate does not match its sample format.");
     if (data_size % block_align != 0U)
         return fail(error, "WAV data size is not aligned to complete audio frames.");
     if (data_size > options.max_data_bytes)
@@ -120,6 +156,7 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
     const std::uint64_t sample_count = data_size / bytes_per_sample;
     if (sample_count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         return fail(error, "WAV sample count exceeds this platform's addressable memory.");
+
     std::vector<float> decoded;
     try {
         decoded.resize(static_cast<std::size_t>(sample_count));
@@ -144,12 +181,15 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
             sample = static_cast<float>(signed_value) / 32768.0F;
         } else {
             sample = std::bit_cast<float>(u32(bytes));
+            // Do not let NaN/Inf values propagate into the audio engine.
             if (!std::isfinite(sample)) sample = 0.0F;
         }
     }
+
     out.sample_rate = sample_rate;
     out.channels = channels;
     out.interleaved_samples = std::move(decoded);
     return true;
 }
+
 } // namespace hush
