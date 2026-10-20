@@ -2,7 +2,7 @@
 
 - Integrated `AutosaveController` with the Qt event loop for projects with a known local file path.
 - Added explicit recovery prompting when a newer project-adjacent journal snapshot is found, plus visible write-failure status and retry-preserving dirty state.
-- Added an offscreen Qt integration test that edits a track, runs the autosave lifecycle hook, and verifies the saved recovery snapshot. Fresh CI is pending; power-loss durability is not claimed.
+- Added an offscreen Qt integration test that edits a track, runs the autosave lifecycle hook, and verifies the saved recovery snapshot. The Qt interaction and autosave lifecycle tests passed in [CI run 39465121087](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39465121087); power-loss durability is not claimed.
 
 ## Unreleased — GUI-to-engine mixer command-path contract
 
