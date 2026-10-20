@@ -105,3 +105,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 
 - Added an isolated arrangement/clip model, validated plugin-editor parameter model, MIDI 1.0 byte parser, bounded realtime recording-capture queue, deterministic voice-command text parser, and contract tests.
 - These are integration foundations, not claims of a completed third-party plugin host, hardware MIDI backend, recording-to-file lifecycle, Qt arrangement UI, or speech-recognition engine.
+
+
+## Unreleased — HUSH 0.4a recording foundation
+
+- Added a preallocated single-producer/single-consumer interleaved-float capture ring with allocation-free capture/drain operations and explicit dropped-frame accounting.
+- Added contract tests for capacity validation, whole-frame behavior, wraparound, overflow, and mono/stereo sample order.
+- This is a capture-buffer foundation only; disk-writer thread, WAV finalization, take/playlist model, punch, comping, crossfades, latency compensation, and device-to-file integration remain open.
