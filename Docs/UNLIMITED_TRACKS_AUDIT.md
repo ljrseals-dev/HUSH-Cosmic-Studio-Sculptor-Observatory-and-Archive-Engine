@@ -18,7 +18,7 @@ Why A: the realtime track mixer already configures per-track state before proces
 
 - `include/hush/project.hpp` stores tracks in `std::vector<Track> tracks`; the `Track` model has ID/name/gain/pan/mute/solo. It exposes `hush::kMaxTracks`, controlled by CMake `HUSH_MAX_TRACKS` (default 1024, maximum 4096), and schema-v1 loading rejects excess tracks.
 - The project model declares schema version 1. This task must not add a persisted field or change serialization semantics casually. Schema-v1 reading and round-trip compatibility must remain intact.
-- The Qt mixer now exposes Add Track and Remove Last Track controls plus an N / HUSH_MAX_TRACKS indicator. Structural add/remove operations use the operation log and enqueue a single bounded realtime command that changes active track count at a block boundary; the track mixer is configured to the ceiling before ALSA starts. Core operation-log and block-boundary tests exist. Actual Qt widget-click/headless interaction tests are still open. Only the last track can be removed in this slice; arbitrary selected-track deletion and full track-source routing are not claimed.
+- The Qt mixer now exposes Add Track and Remove Last Track controls plus an N / HUSH_MAX_TRACKS indicator. Structural add/remove operations use the operation log and enqueue a single bounded realtime command that changes active track count at a block boundary; the track mixer is configured to the ceiling before ALSA starts. Core operation-log and block-boundary tests exist. `tests/mixer_gui_track_interaction_tests.cpp` now adds offscreen Qt coverage for add/remove, undo/redo, count display, and the ceiling-disabled action; fresh CI for this last test addition is pending. Only the last track can be removed in this slice; arbitrary selected-track deletion and full track-source routing are not claimed.
 
 ### Realtime track mixer
 
@@ -75,7 +75,7 @@ The required allocation guard must test the actual processing path at full confi
 2. [x] Reject over-ceiling schema-v1 project loads with `track_count_exceeded`; existing schema-v1 format is unchanged.
 3. [x] Add boundary coverage at exactly the ceiling and ceiling+1. The test uses the configured default ceiling; separate runtime tests for 1, 8, and 64 are still required.
 4. [x] Add an `operator new` allocation guard around `RealtimeTrackMixer::process()` at the full configured ceiling. This does not prove every audio path is allocation-free.
-5. [x] Add undoable Add Track / Remove Last Track actions, a track-count indicator, non-blocking ceiling feedback, and block-boundary active-count commands. [ ] Add headless Qt widget-interaction tests; current tests exercise the core operation log and mixer command path.
+5. [x] Add undoable Add Track / Remove Last Track actions, a track-count indicator, non-blocking ceiling feedback, and block-boundary active-count commands. [x] Add offscreen Qt interaction-test source; fresh CI for this final test target is pending.
 6. [ ] CLI parity remains open: the current ALSA CLI host is a bus-graph host, not the GUI's realtime track mixer, so adding flags alone would not create genuine engine parity.
 7. [ ] Extend graph-swap stress coverage at the chosen ceiling under ASan and TSan.
 8. [ ] Run the 1024-track offline renderer correctness test and measure startup/full-capacity memory. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
@@ -83,4 +83,4 @@ The required allocation guard must test the actual processing path at full confi
 
 ## Stop condition
 
-The baseline stop condition has been satisfied by CI. Do not claim the full track-capacity prompt complete: headless Qt interaction tests, CLI parity, full-ceiling graph-swap stress, measured memory, 500-track performance qualification, 8-hour soak, and hardware validation remain open.
+The baseline stop condition has been satisfied by CI. Do not claim the full track-capacity prompt complete: fresh CI for the new Qt interaction target, CLI parity, full-ceiling graph-swap stress, measured memory, 500-track performance qualification, 8-hour soak, and hardware validation remain open.
