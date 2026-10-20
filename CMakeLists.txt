@@ -99,6 +99,15 @@ endif()
 if(HUSH_BUILD_TESTS)
   enable_testing()
 
+  if(HUSH_BUILD_STRESS_TOOLS)
+    add_test(NAME hush_performance_soak_smoke
+      COMMAND ${CMAKE_COMMAND}
+        -DBENCHMARK=$<TARGET_FILE:hush_routing_benchmark>
+        -DSOAK=$<TARGET_FILE:hush_headless_soak>
+        -DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/hush-performance-soak-smoke
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/performance_soak_smoke.cmake)
+  endif()
+
   add_test(
     NAME hush_privacy_source_audit
     COMMAND ${CMAKE_COMMAND}

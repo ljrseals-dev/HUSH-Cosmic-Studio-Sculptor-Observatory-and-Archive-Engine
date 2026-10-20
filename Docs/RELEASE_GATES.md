@@ -19,8 +19,8 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
 | 60-minute zero-xrun run | No target-device artifact attached | Open |
 | Loopback latency and underrun injection | No measurement report | Open |
-| 500-track performance budget | `tools/hush_routing_benchmark.cpp` and CMake target added; no qualifying report attached | Partial; 500-track run required |
-| 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` emits JSON counters/RSS where available; no 8-hour report or pass threshold attached | Partial; run and threshold required |
+| 500-track performance budget | `tools/hush_routing_benchmark.cpp` now samples mixer process timing, reports p95/p99/max and fails when p99 exceeds the configurable budget (default 2666.667 µs); a 500-track CTest smoke test is registered | Harness gate implemented; fresh CI and qualifying full-duration report still required |
+| 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` now enforces a configurable positive RSS-drift threshold (default 64 MiB); CTest smoke test checks JSON status and journal write | Threshold enforcement implemented; fresh CI and 28,800-second report still required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
 | Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |
@@ -42,3 +42,8 @@ See [PHASE_1_TO_7_EXECUTION.md](PHASE_1_TO_7_EXECUTION.md) for the seven-phase c
 | Track arming, take IDs/playlists, punch, comping, crossfades | Not implemented in this slice | Open |
 | 8 tracks × 10 minutes, sample-accurate lengths, no dropped frames | No qualifying run | Open |
 | Punch accuracy ±1 sample, latency compensation/loopback | No device measurement | Open |
+
+
+## Phase 5 harness contract
+
+See [PERFORMANCE_SOAK_GATE.md](PERFORMANCE_SOAK_GATE.md) for commands, JSON fields, thresholds, exit codes, and the distinction between smoke coverage and qualifying long-duration evidence. Both tools explicitly report `hardware_audio_test: false`.
