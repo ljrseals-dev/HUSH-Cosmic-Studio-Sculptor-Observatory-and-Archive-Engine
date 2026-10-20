@@ -1,6 +1,7 @@
 #include "hush/realtime_track_mixer.hpp"
 #include "hush/recovery_journal.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -23,16 +24,30 @@ std::uint64_t resident_bytes() {
         return pages_resident * 4096ULL;
     }
 #endif
-    return 0; // unavailable on this platform; reported explicitly as zero/unavailable.
+    return 0; // unavailable on this platform; reported with rss_available=false.
+}
+std::string json_escape(const std::string& value) {
+    std::string out;
+    for (const unsigned char c : value) {
+        if (c == '\\' || c == '"') { out.push_back('\\'); out.push_back(static_cast<char>(c)); }
+        else if (c == '\n') out += "\\n";
+        else if (c == '\r') out += "\\r";
+        else if (c == '\t') out += "\\t";
+        else if (c < 0x20U) out += '?';
+        else out.push_back(static_cast<char>(c));
+    }
+    return out;
 }
 }
 int main(int argc, char** argv) {
     std::uint64_t seconds = 8ULL * 60ULL * 60ULL;
     std::filesystem::path journal = "hush-soak.journal";
+    std::uint64_t max_rss_drift_mb = 64;
     if (argc > 1) seconds = std::strtoull(argv[1], nullptr, 10);
     if (argc > 2) journal = argv[2];
-    if (seconds == 0 || seconds > 7ULL * 24ULL * 60ULL * 60ULL) {
-        std::cerr << "usage: hush_headless_soak [seconds:1..604800] [journal-path]\n";
+    if (argc > 3) max_rss_drift_mb = std::strtoull(argv[3], nullptr, 10);
+    if (seconds == 0 || seconds > 7ULL * 24ULL * 60ULL * 60ULL || max_rss_drift_mb > 1048576ULL) {
+        std::cerr << "usage: hush_headless_soak [seconds:1..604800] [journal-path] [max-positive-rss-drift-mb:0..1048576]\n";
         return 2;
     }
 
@@ -75,20 +90,25 @@ int main(int argc, char** argv) {
     const auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const auto rss_end = resident_bytes();
     const auto drift = rss_end >= rss_start ? rss_end - rss_start : 0;
+    const bool rss_available = rss_start != 0U && rss_end != 0U;
+    const std::uint64_t max_drift_bytes = max_rss_drift_mb * 1024ULL * 1024ULL;
+    const bool passed = !rss_available || drift <= max_drift_bytes;
     std::cout << "{\n"
-              << "  \"status\": \"completed\",\n"
+              << "  \"status\": \"" << (passed ? "pass" : "fail") << "\",\n"
               << "  \"requested_seconds\": " << seconds << ",\n"
               << "  \"elapsed_seconds\": " << elapsed << ",\n"
               << "  \"track_count\": " << tracks << ",\n"
               << "  \"blocks_processed\": " << blocks << ",\n"
               << "  \"journal_snapshots\": " << journal_writes << ",\n"
               << "  \"rejected_parameter_updates\": " << rejected << ",\n"
-              << "  \"rss_start_bytes_linux_or_zero_if_unavailable\": " << rss_start << ",\n"
-              << "  \"rss_end_bytes_linux_or_zero_if_unavailable\": " << rss_end << ",\n"
+              << "  \"rss_available\": " << (rss_available ? "true" : "false") << ",\n"
+              << "  \"rss_start_bytes\": " << rss_start << ",\n"
+              << "  \"rss_end_bytes\": " << rss_end << ",\n"
               << "  \"rss_positive_drift_bytes\": " << drift << ",\n"
-              << "  \"journal_path\": \"" << journal.string() << "\",\n"
+              << "  \"max_positive_rss_drift_mb\": " << max_rss_drift_mb << ",\n"
+              << "  \"journal_path\": \"" << json_escape(journal.string()) << "\",\n"
               << "  \"hardware_audio_test\": false,\n"
-              << "  \"pass_threshold_configured\": false\n"
+              << "  \"pass_threshold_configured\": true\n"
               << "}\n";
-    return 0;
+    return passed ? 0 : 3;
 }
