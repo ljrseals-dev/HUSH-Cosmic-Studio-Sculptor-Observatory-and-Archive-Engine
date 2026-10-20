@@ -140,6 +140,8 @@ int main() {
     assert(step.evaluate(1.0) == 0.25F);
     assert(!step.set_points({{0.0, std::numeric_limits<float>::quiet_NaN()}},
                             AutomationInterpolation::Linear));
+    assert(!step.set_points({{0.0, 0.5F}},
+                            static_cast<AutomationInterpolation>(255)));
     assert(step.point_count() == 2);
     assert(step.evaluate(std::numeric_limits<double>::quiet_NaN()) == 0.0F);
     return 0;
