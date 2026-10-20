@@ -20,7 +20,7 @@
 ## Open gates — do not claim complete
 - [x] Added `hush_qt_mixer_interaction_tests`, which runs the actual Qt mixer window offscreen and drives gain/pan slider-release signals, mute/solo clicks, and Undo/Redo; it asserts canonical project state and history cursor changes. Fresh Qt CI is pending. This proves widget-to-model/history behavior, not actual ALSA command delivery or loopback; GUI/CLI parity remains open.
 - [ ] The ALSA host now uses `RealtimeBusEngineHost` through `RealtimeBusEngineHostAudioAdapter`, with a concurrent same-topology graph-replacement adapter test registered in CMake. Fresh CI for this branch is pending; real-device lifecycle validation remains separate.
-- [ ] Track-to-bus/master routing, insert placement, end-to-end mute/solo behavior, peak/RMS meters, and complete xrun reporting.
+- [ ] Track-to-bus/master routing and insert placement remain open. Per-track post-fader mono peak/RMS meter snapshots are now exposed by the track mixer and displayed by the Qt GUI; bus/master metering, Qt meter assertions, and target-device validation remain open.
 - [ ] ASan/TSan passed for the latest source/test revision in [run 39273263409](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39273263409); production graph-swap integration and its race coverage remain open.
 - [ ] Real-device ALSA startup/shutdown, callback timing, lock-free atomics verification on target, and xrun reporting.
 - [ ] 60-minute zero-xrun run, loopback latency, and underrun injection on a named target device.

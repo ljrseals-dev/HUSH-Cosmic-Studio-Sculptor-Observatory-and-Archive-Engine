@@ -8,6 +8,9 @@
 
 namespace hush {
 
+static_assert(std::atomic<float>::is_always_lock_free,
+              "RealtimeTrackMixer meters require lock-free float atomics");
+
 bool RealtimeTrackMixer::configure(std::size_t track_count, std::size_t max_frames) noexcept {
     if (configured_ || track_count == 0 ||
         track_count > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
@@ -16,6 +19,14 @@ bool RealtimeTrackMixer::configure(std::size_t track_count, std::size_t max_fram
         gains_.assign(track_count, 1.0F);
         pans_.assign(track_count, 0.0F);
         flags_.assign(track_count, 0U);
+        auto peak = std::make_unique<std::atomic<float>[]>(track_count);
+        auto rms = std::make_unique<std::atomic<float>[]>(track_count);
+        for (std::size_t i = 0; i < track_count; ++i) {
+            peak[i].store(0.0F, std::memory_order_relaxed);
+            rms[i].store(0.0F, std::memory_order_relaxed);
+        }
+        meter_peak_ = std::move(peak);
+        meter_rms_ = std::move(rms);
     } catch (const std::bad_alloc&) {
         gains_.clear(); pans_.clear(); flags_.clear();
         return false;
@@ -66,16 +77,38 @@ bool RealtimeTrackMixer::process(const float* const* mono_tracks,
     constexpr float kQuarterPi = 0.78539816339744830962F;
     for (std::size_t track = 0; track < track_count; ++track) {
         const auto flags = flags_[track];
-        if ((flags & 1U) != 0U || (any_solo && (flags & 2U) == 0U)) continue;
+        if ((flags & 1U) != 0U || (any_solo && (flags & 2U) == 0U)) {
+            meter_peak_[track].store(0.0F, std::memory_order_relaxed);
+            meter_rms_[track].store(0.0F, std::memory_order_relaxed);
+            continue;
+        }
         const float angle = (pans_[track] + 1.0F) * kQuarterPi;
         const float left_gain = gains_[track] * std::cos(angle);
         const float right_gain = gains_[track] * std::sin(angle);
+        float peak = 0.0F;
+        double square_sum = 0.0;
         for (std::size_t frame = 0; frame < frames; ++frame) {
             const float sample = mono_tracks[track][frame];
+            const float post_gain = sample * gains_[track];
+            if (std::isfinite(post_gain)) {
+                peak = std::max(peak, std::abs(post_gain));
+                square_sum += static_cast<double>(post_gain) * static_cast<double>(post_gain);
+            }
             output_left[frame] += sample * left_gain;
             output_right[frame] += sample * right_gain;
         }
+        const float rms = frames == 0 ? 0.0F :
+            static_cast<float>(std::sqrt(square_sum / static_cast<double>(frames)));
+        meter_peak_[track].store(peak, std::memory_order_relaxed);
+        meter_rms_[track].store(rms, std::memory_order_relaxed);
     }
+    return true;
+}
+
+bool RealtimeTrackMixer::meter(std::size_t track_index, float& peak, float& rms) const noexcept {
+    if (!configured_ || track_index >= gains_.size() || !meter_peak_ || !meter_rms_) return false;
+    peak = meter_peak_[track_index].load(std::memory_order_relaxed);
+    rms = meter_rms_[track_index].load(std::memory_order_relaxed);
     return true;
 }
 

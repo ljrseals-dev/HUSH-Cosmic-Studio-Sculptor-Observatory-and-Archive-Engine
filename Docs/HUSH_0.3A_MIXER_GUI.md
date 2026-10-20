@@ -51,7 +51,8 @@ The separate `hush_qt_mixer_interaction_tests` target runs the real `MixerWindow
 Still required before claiming a production live mixer:
 - Fresh CI for the offscreen Qt widget interaction test; a test that drives the actual widgets and verifies their project/history effects is now registered, while proving live-device command delivery still requires integration/loopback coverage;
 - a dedicated two-channel loopback integration test;
+- bus/master metering and target-device verification of meter behavior;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
-- target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
+- target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The GUI now displays per-track post-fader mono peak and RMS in dBFS, polled on the UI timer from lock-free atomic meter snapshots. Meter values include gain and mute/solo state, but are measured before pan and are not bus/master meters. The status counters remain diagnostics, not proof of zero xruns.
 
 Do not claim recording, MIDI, automation, plugin hosting, multitrack live source routing, or zero-xrun hardware behavior as delivered by this change.

@@ -21,6 +21,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -89,6 +90,9 @@ public:
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
+    [[nodiscard]] bool meter(std::size_t track_index, float& peak, float& rms) const noexcept {
+        return mixer_ && mixer_->meter(track_index, peak, rms);
+    }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
@@ -208,11 +212,12 @@ public:
         bar->addWidget(status_);
         layout->addLayout(bar);
 
-        table_ = new QTableWidget(0, 6, root);
+        table_ = new QTableWidget(0, 7, root);
         table_->setObjectName("trackTable");
-        table_->setHorizontalHeaderLabels({"Track", "Gain", "Pan", "Mute", "Solo", "Stable ID"});
+        table_->setHorizontalHeaderLabels({"Track", "Gain", "Pan", "Mute", "Solo", "Peak / RMS", "Stable ID"});
         table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-        table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+        table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+        table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
         table_->verticalHeader()->hide();
         table_->setAlternatingRowColors(true);
         layout->addWidget(table_);
@@ -282,6 +287,7 @@ private:
     QTableWidget* table_{};
     QLabel* status_{};
     QPushButton* live_button_{};
+    std::vector<QLabel*> meter_labels_;
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -443,7 +449,16 @@ private:
     }
 
 #ifdef HUSH_GUI_HAS_ALSA
+    static QString meter_text(float peak, float rms) {
+        const auto db = [](float value) {
+            return value <= 1.0e-6F ? -120.0F : 20.0F * std::log10(value);
+        };
+        return QString("P %1 dBFS · R %2 dBFS")
+            .arg(db(peak), 0, 'f', 1).arg(db(rms), 0, 'f', 1);
+    }
+
     void poll_live_status() {
+        update_track_meters();
         if (live_.running()) {
             status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
                              " · xruns/recoveries " + QString::number(live_.xrun_count()));
@@ -457,6 +472,18 @@ private:
             refresh();
             status_->setText("ALSA stopped · callbacks " + QString::number(callbacks) +
                              " · xruns/recoveries " + QString::number(xruns));
+        }
+    }
+
+    void update_track_meters() {
+        for (std::size_t i = 0; i < meter_labels_.size(); ++i) {
+            if (!meter_labels_[i]) continue;
+            float peak = 0.0F;
+            float rms = 0.0F;
+            if (live_.running() && live_.meter(i, peak, rms))
+                meter_labels_[i]->setText(meter_text(peak, rms));
+            else
+                meter_labels_[i]->setText("—");
         }
     }
 
@@ -484,6 +511,8 @@ private:
 #endif
 
     void refresh() {
+        meter_labels_.clear();
+        table_->setColumnCount(7);
         table_->setRowCount(static_cast<int>(project_.tracks.size()));
         for (std::size_t i = 0; i < project_.tracks.size(); ++i) {
             const auto& t = project_.tracks[i];
@@ -511,9 +540,14 @@ private:
             solo->setObjectName(QString("solo-%1").arg(QString::fromStdString(t.id)));
             solo->setChecked(t.solo);
             table_->setCellWidget(row, 4, solo);
+            auto* meter = new QLabel("—");
+            meter->setObjectName(QString("meter-%1").arg(QString::fromStdString(t.id)));
+            meter->setMinimumWidth(150);
+            table_->setCellWidget(row, 5, meter);
+            meter_labels_.push_back(meter);
             auto* id = new QTableWidgetItem(QString::fromStdString(t.id));
             id->setFlags(id->flags() & ~Qt::ItemIsEditable);
-            table_->setItem(row, 5, id);
+            table_->setItem(row, 6, id);
             const auto track_id = t.id;
             // Live audio follows the slider during a drag. The release handlers below
             // commit only the final value to the project and undo history.

@@ -2,8 +2,10 @@
 
 #include "hush/spsc_parameter_queue.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace hush {
@@ -30,6 +32,10 @@ public:
                                std::size_t track_count,
                                float* output_left, float* output_right,
                                std::size_t frames) noexcept;
+    // Post-fader mono peak/RMS (linear amplitude), published atomically for UI polling.
+    // Values reflect mute/solo and gain, but precede the pan law.
+    [[nodiscard]] bool meter(std::size_t track_index, float& peak, float& rms) const noexcept;
+
     [[nodiscard]] std::size_t track_count() const noexcept { return gains_.size(); }
     [[nodiscard]] std::size_t max_frames() const noexcept { return max_frames_; }
 
@@ -37,6 +43,8 @@ private:
     std::vector<float> gains_;
     std::vector<float> pans_;
     std::vector<std::uint8_t> flags_;
+    std::unique_ptr<std::atomic<float>[]> meter_peak_;
+    std::unique_ptr<std::atomic<float>[]> meter_rms_;
     SpscParameterQueue<TrackControlCommand, kQueueCapacity> commands_;
     std::size_t max_frames_{0};
     bool configured_{false};
