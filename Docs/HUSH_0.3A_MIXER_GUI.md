@@ -44,10 +44,12 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 
 ## Evidence and remaining gates
 
-The repository's CI should compile the combined Qt + ALSA target and run the registered core contract tests. That verifies build compatibility and existing mixer queue contracts, not a physical audio-device session.
+The registered `hush_gui_engine_command_path_tests` is a deterministic headless synthetic-buffer contract test for project/history → bounded track-command queue → next processing block behavior. It covers gain preview without project mutation or an undo entry, commit, undo/redo, pan, mute, solo, stable-ID lookup, and transactional queue-full rejection using the production `OperationLog` and `RealtimeTrackMixer` APIs. It requires no Qt display, ALSA device, network, or physical audio hardware.
+
+This is core command-path coverage, not a Qt widget-click test. It mirrors the GUI's stable-track-ID lookup and command submission; it does not establish physical loopback, audible device behavior, latency, or zero-xrun performance.
 
 Still required before claiming a production live mixer:
-- automated Qt interaction test proving drag-preview, fader/pan/mute/solo and undo/redo are reflected in the next audio block; current core regression tests prove command application and deterministic queue-full/invalid-value rejection, but do not synthesize Qt clicks;
+- Qt interaction test that drives the actual widgets and verifies that widget signals submit the expected commands;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
