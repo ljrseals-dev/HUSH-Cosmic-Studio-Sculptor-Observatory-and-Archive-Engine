@@ -53,6 +53,9 @@ int main() {
     assert(tempo.beat_to_sample(4.0, sample));
     assert(sample == 96000);
     assert(std::abs(tempo.sample_to_beat(96000) - 4.0) < 1.0e-9);
+    // uint64_t sample positions above INT64_MAX are valid when still in range.
+    assert(tempo.beat_to_sample(1.0e19 / 24000.0, sample));
+    assert(sample > static_cast<std::uint64_t>(std::numeric_limits<long long>::max()));
     const TempoPoint points[] = {{0.0, 120.0}, {4.0, 60.0}};
     assert(tempo.set_points(points, 2));
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
