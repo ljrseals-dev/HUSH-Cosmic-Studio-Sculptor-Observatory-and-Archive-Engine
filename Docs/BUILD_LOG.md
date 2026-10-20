@@ -2,9 +2,9 @@
 
 ## Unlimited / voiceable-track-capacity task — baseline gate
 
-**Status: BLOCKED — baseline commands have not been run.**
+**Status: CI BASELINE GREEN; local command sequence not run.**
 
-The connected repository workflow can inspect and edit GitHub files, but it does not provide a shell in a checked-out local clone. Therefore the commands below were not executed here. No build, CTest, sanitizer, memory measurement, or hardware result is claimed. Per the track-capacity prompt's stop condition, implementation work that depends on a green baseline must not proceed until these commands are run on a machine with the repository and its declared dependencies installed.
+The exact shell sequence was not run in a local checkout in this workflow. However, GitHub Actions run [39449869574](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39449869574) passed on the same starting commit SHA `d4a9ea3e443937a84b2d882c0629468f996874f1`. Its jobs ran the default Release configure/build/CTest, ALSA configure/build/CTest, Qt GUI configure/build/CTest, combined Qt+ALSA configure/build/CTest, ASan contracts, TSan contracts, and repository artifact hygiene. This satisfies the baseline-green decision for proceeding with the feature branch, but it is not a claim that the exact combined local command sequence was run. No 1024-track allocation-guard, memory, performance, soak, or hardware result is claimed.
 
 ### Required baseline commands (verbatim)
 
@@ -21,13 +21,13 @@ cmake --build build-gui --parallel 2 && ctest --test-dir build-gui --output-on-f
 
 | Configuration | Result | Evidence |
 |---|---|---|
-| Default Release + tests | NOT RUN | No local shell/clone available in this workflow |
-| ALSA + tests | NOT RUN | No local shell/clone available in this workflow |
-| GUI + ALSA + tests | NOT RUN | No local shell/clone available in this workflow |
-| `hush_privacy_source_audit` | NOT RUN for this task baseline | Must be included in the above CTest runs |
+| Default Release + tests | PASS in CI | [run 39449869574](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39449869574), job `linux-cxx20`, SHA `d4a9ea3e443937a84b2d882c0629468f996874f1` |
+| ALSA + tests | PASS in CI | Same run, job `linux-alsa-enabled`, same SHA |
+| GUI + ALSA + tests | PASS in CI | Same run, job `linux-qt6-alsa-live-mixer`, same SHA; GUI-only also passed in `linux-qt6-mixer-gui` |
+| `hush_privacy_source_audit` | PASS in CI baseline | Included in the baseline CTest jobs above; rerun after feature changes |
 | ASan / TSan at the proposed track ceiling | NOT RUN | Must not be inferred from older CI runs |
 | Physical audio hardware | NOT RUN | Not authorized to claim from source inspection or CI |
 
 ### Stop condition
 
-Do not implement or claim the proposed track-capacity change until all three baseline build-and-CTest configurations are green on the same starting revision. Record exact output, environment, and commit SHA below when actually run. If a command fails, preserve the real diagnostic and fix only baseline blockers before proceeding.
+Baseline CI is green on one starting revision, so feature work may proceed on a separate branch. Re-run all configurations on the feature head and record their real results before declaring completion. If a command fails, preserve the real diagnostic and fix only baseline blockers before proceeding.
