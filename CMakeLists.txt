@@ -171,6 +171,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
 
+  add_executable(hush_track_capacity_tests tests/track_capacity_tests.cpp)
+  target_link_libraries(hush_track_capacity_tests PRIVATE hush_core)
+  add_test(NAME hush_track_capacity_tests COMMAND hush_track_capacity_tests)
+
   add_executable(hush_gui_engine_command_path_tests tests/gui_engine_command_path_tests.cpp)
   target_link_libraries(hush_gui_engine_command_path_tests PRIVATE hush_core)
   add_test(NAME hush_gui_engine_command_path_tests COMMAND hush_gui_engine_command_path_tests)
