@@ -2,13 +2,13 @@
 
 ## Status
 
-**Audit started; implementation is blocked on the required baseline.** See [BUILD_LOG.md](BUILD_LOG.md). The connected GitHub workflow can inspect and commit repository files but does not provide a shell in a checked-out clone, so the three requested configure/build/CTest sequences have not been run here. Do not interpret source inspection or older CI runs as satisfying this task's same-revision baseline gate.
+**Audit started; baseline CI is green and implementation may proceed on this branch.** See [BUILD_LOG.md](BUILD_LOG.md). The exact local command sequence was not run in this workflow, but GitHub Actions run [39449869574](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39449869574) passed all seven jobs on the inspected starting commit `d4a9ea3e443937a84b2d882c0629468f996874f1`, including default C++20, ALSA, GUI, GUI+ALSA, ASan, TSan, and artifact hygiene. This is baseline CI evidence, not a local build or full-capacity validation.
 
 **No existing tracks, project data, source files, archives, or user assets are to be deleted or rewritten as part of this task.** Existing archive disposition remains a separate review gate.
 
 ## Strategy decision
 
-Choose **Strategy A: a documented hard ceiling**, provisionally `HUSH_MAX_TRACKS=1024`, after the required baseline is green. This is not mathematically unlimited. It is a predictable maximum, with rejection and a visible non-blocking error at the limit. Do not implement a different strategy without an explicit owner decision.
+Choose **Strategy A: a documented hard ceiling**, `HUSH_MAX_TRACKS=1024` by default. The baseline CI is green on the starting revision. This is not mathematically unlimited. It is a predictable maximum, with rejection and a visible non-blocking error at the limit. Do not implement a different strategy without an explicit owner decision.
 
 Why A: the realtime track mixer already configures per-track state before processing and processes with preallocated vectors. A hard ceiling is the least invasive fit for the no-allocation callback rule. It avoids growing track state while audio is running. It does not establish that 1024 tracks meet any performance budget.
 
