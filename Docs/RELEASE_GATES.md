@@ -28,7 +28,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 
 | Bounded track ceiling and process allocation guard | PR #78; CI run [39453091416](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39453091416); schema-v1 accepts the configured ceiling, rejects ceiling+1, and the full-capacity `RealtimeTrackMixer::process()` allocation guard passes under ASan/TSan | Pass for this test path; full-ceiling graph-swap stress, RSS, performance, soak, and hardware remain open |
 | Track ceiling configuration matrix | CI run [39453091416](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39453091416), jobs `track-capacity-1`, `track-capacity-8`, `track-capacity-64`, `track-capacity-1024` | Pass for mixer configuration/process contracts at each compile-time ceiling |
-| GUI Add Track / Remove Last Track | Qt source adds undoable structural operations and queues active-count changes at block boundaries; core operation-log/mixer tests pass in run 39453091416 | Source/core contracts implemented; Qt widget-click interaction tests and CLI parity remain open |
+| GUI Add Track / Remove Last Track | Qt source adds undoable structural operations and queues active-count changes at block boundaries; core operation-log/mixer tests pass in run 39453091416 | Source/core contracts implemented; offscreen Qt interaction test source added after the cited run and awaits fresh CI; CLI parity remains open |
 
 ## Report requirements
 
