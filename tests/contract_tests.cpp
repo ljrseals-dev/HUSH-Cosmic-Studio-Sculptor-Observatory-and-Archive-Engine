@@ -24,7 +24,7 @@ int main() {
     Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
     p.buses={{"bus-master","Master"},{"bus-music","Music"}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
-    p.tempo_map={{0.0,120.0},{16.0,90.0}};
+    p.tempo_map={{0.0,120.0},{16.125,89.123456789123}};
     p.automation_lanes={{"automation-gain","track-1.gain",ProjectAutomationInterpolation::Linear,
                          {{0.0,0.5F},{8.0,0.8F},{16.0,0.25F}}},
                         {"automation-mute","track-2.mute",ProjectAutomationInterpolation::Step,
