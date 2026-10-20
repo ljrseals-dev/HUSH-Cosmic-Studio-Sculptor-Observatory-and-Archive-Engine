@@ -64,6 +64,28 @@ int main() {
 
     TempoMap tempo(48000.0);
     std::uint64_t sample = 0;
+
+    // Sample-rate validation accepts the documented inclusive endpoints and
+    // rejects out-of-range values without changing the previous configuration.
+    assert(!tempo.set_sample_rate(7999.0));
+    assert(tempo.sample_rate() == 48000.0);
+    assert(!tempo.set_sample_rate(768001.0));
+    assert(tempo.sample_rate() == 48000.0);
+    assert(tempo.set_sample_rate(8000.0));
+    assert(tempo.sample_rate() == 8000.0);
+    assert(tempo.set_sample_rate(768000.0));
+    assert(tempo.sample_rate() == 768000.0);
+    assert(tempo.set_sample_rate(48000.0));
+
+    // A tempo map is bounded, requires at least one point, and rejects null
+    // input. Invalid replacements must not disturb the accepted default map.
+    assert(!tempo.set_points(nullptr, 1));
+    assert(!tempo.set_points(nullptr, 0));
+    TempoPoint too_many_points[TempoMap::kMaxPoints + 1]{};
+    for (std::size_t i = 0; i < TempoMap::kMaxPoints + 1; ++i)
+        too_many_points[i] = {static_cast<double>(i), 120.0};
+    assert(!tempo.set_points(too_many_points, TempoMap::kMaxPoints + 1));
+    assert(tempo.point_count() == 1);
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
     assert(std::abs(tempo.sample_to_beat(96000) - 4.0) < 1.0e-9);
 
