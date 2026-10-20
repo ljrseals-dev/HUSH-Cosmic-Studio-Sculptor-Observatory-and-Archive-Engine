@@ -191,7 +191,7 @@ std::string to_json(const Project& p) {
 bool from_json(const std::string& s, Project& out, Error& e) {
     std::smatch m;
     const std::regex version_re(R"("schema_version"\s*:\s*(\d+))");
-    const std::regex id_re(R"REGEX("id"\s*:\s*"([^"]*)")REGEX");
+    const std::regex id_re(R"REGEX("id"\s*:\s*"((?:\\.|[^"\\])*)")REGEX");
     const std::regex law_re(R"REGEX("pan_law"\s*:\s*"([^"]+)")REGEX");
     if (!std::regex_search(s,m,version_re) || m[1].str()!="1") {
         e={"schema_version_unsupported","","Expected schema_version 1","error"}; return false;
@@ -199,7 +199,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     Project p;
     p.schema_version=1;
     if (!std::regex_search(s,m,id_re)) { e={"project_id_missing","","Project id is missing","error"}; return false; }
-    p.id=m[1].str();
+    if (!unescape_json(m[1].str(), p.id)) { e={"project_id_escape_invalid","","Project ID contains an unsupported or incomplete escape","error"}; return false; }
     if (!std::regex_search(s,m,law_re)) { e={"pan_law_missing","","Pan law is missing","error"}; return false; }
     if (m[1].str()=="legacy_minus_4_5_db") p.pan_law=PanLaw::LegacyMinus4_5dB;
     else if (m[1].str()=="equal_power_minus_3_db") p.pan_law=PanLaw::EqualPowerMinus3dB;
@@ -207,13 +207,16 @@ bool from_json(const std::string& s, Project& out, Error& e) {
 
     std::string body;
     if (!extract_array(s,"tracks",body,true,e)) return false;
-    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
+    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"name"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
         Track t; const auto& x=*it;
-        t.id=x[1].str(); t.name=x[2].str();
-        try { t.gain=std::stof(x[3].str()); t.pan=std::stof(x[4].str()); }
-        catch (...) { e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false; }
+        if (!unescape_json(x[1].str(), t.id) || !unescape_json(x[2].str(), t.name)) {
+            e={"track_string_escape_invalid","","Track ID or name contains an unsupported or incomplete escape","error"}; return false;
+        }
+        if (!parse_float_token(x[3].str(), t.gain) || !parse_float_token(x[4].str(), t.pan)) {
+            e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false;
+        }
         t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
@@ -225,10 +228,13 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"buses",body,false,e)) return false;
-    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*\})json");
+    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"name"\s*:\s*"((?:\\.|[^"\\])*)"\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),bus_re);
     for (auto it=begin;it!=end;++it) {
-        Bus b{(*it)[1].str(),(*it)[2].str()};
+        Bus b;
+        if (!unescape_json((*it)[1].str(), b.id) || !unescape_json((*it)[2].str(), b.name)) {
+            e={"bus_string_escape_invalid","","Bus ID or name contains an unsupported or incomplete escape","error"}; return false;
+        }
         if (b.id.empty()) { e={"bus_id_empty","","Bus ID must not be empty","error"}; return false; }
         p.buses.push_back(std::move(b));
     }
@@ -237,13 +243,23 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"routes",body,false,e)) return false;
-    const std::regex route_re(R"json(\{\s*"source_bus_id"\s*:\s*"([^"]*)"\s*,\s*"destination_bus_id"\s*:\s*"([^"]*)"\s*,\s*"tap"\s*:\s*"(pre_fader|post_fader)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    const std::regex route_re(R"json(\{\s*"source_bus_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"destination_bus_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"tap"\s*:\s*"(pre_fader|post_fader)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),route_re);
     for (auto it=begin;it!=end;++it) {
         try {
             const auto& x=*it;
-            const float gain=std::stof(x[4].str());
-            p.routes.push_back({x[1].str(),x[2].str(),x[3].str()=="pre_fader"?SendTap::PreFader:SendTap::PostFader,gain});
+            float gain = 0.0F;
+            std::string source_id;
+            std::string destination_id;
+            if (!unescape_json(x[1].str(), source_id) ||
+                !unescape_json(x[2].str(), destination_id)) {
+                e={"route_string_escape_invalid","","Route bus IDs contain an unsupported or incomplete escape","error"}; return false;
+            }
+            if (!parse_float_token(x[4].str(), gain)) {
+                e={"route_gain_invalid","","Route gain is invalid","error"}; return false;
+            }
+            p.routes.push_back({std::move(source_id),std::move(destination_id),
+                x[3].str()=="pre_fader"?SendTap::PreFader:SendTap::PostFader,gain});
         } catch (...) { e={"route_gain_invalid","","Route gain is invalid","error"}; return false; }
     }
     if (body.find('{')!=std::string::npos && p.routes.empty()) {
@@ -257,7 +273,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"media_sources",body,false,e)) return false;
-    const std::regex source_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"relative_path"\s*:\s*"([^"]*)"\s*,\s*"sample_rate"\s*:\s*(\d+)\s*,\s*"channels"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*\})json");
+    const std::regex source_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"relative_path"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"sample_rate"\s*:\s*(\d+)\s*,\s*"channels"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),source_re);
     std::unordered_set<std::string> source_ids;
     for (auto it=begin;it!=end;++it) {
@@ -266,12 +282,18 @@ bool from_json(const std::string& s, Project& out, Error& e) {
             const auto rate=std::stoull(x[3].str());
             const auto channels=std::stoull(x[4].str());
             const auto frames=std::stoull(x[5].str());
+            std::string source_id;
+            std::string relative_path;
+            if (!unescape_json(x[1].str(), source_id) ||
+                !unescape_json(x[2].str(), relative_path)) {
+                e={"media_source_string_escape_invalid","","Media source ID or path contains an unsupported or incomplete escape","error"}; return false;
+            }
             if (rate==0U || rate>std::numeric_limits<std::uint32_t>::max() ||
                 channels==0U || channels>8U || frames==0U ||
-                x[1].str().empty() || x[2].str().empty() || !source_ids.insert(x[1].str()).second) {
-                e={"media_source_invalid",x[1].str(),"Media source metadata or ID is invalid/duplicated","error"}; return false;
+                source_id.empty() || relative_path.empty() || !source_ids.insert(source_id).second) {
+                e={"media_source_invalid",source_id,"Media source metadata or ID is invalid/duplicated","error"}; return false;
             }
-            p.media_sources.push_back({x[1].str(),x[2].str(),static_cast<std::uint32_t>(rate),
+            p.media_sources.push_back({std::move(source_id),std::move(relative_path),static_cast<std::uint32_t>(rate),
                 static_cast<std::uint16_t>(channels),static_cast<std::uint64_t>(frames)});
         } catch (...) { e={"media_source_number_invalid",x[1].str(),"Media source numeric metadata is invalid","error"}; return false; }
     }
@@ -280,18 +302,24 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"clips",body,false,e)) return false;
-    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"track_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"source_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"timeline_start_frame"\s*:\s*(\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
     std::unordered_set<std::string> clip_ids;
     for (auto it=begin;it!=end;++it) {
         const auto& x=*it;
         try {
             AudioClip clip;
-            clip.id=x[1].str(); clip.track_id=x[2].str(); clip.source_id=x[3].str();
+            if (!unescape_json(x[1].str(), clip.id) ||
+                !unescape_json(x[2].str(), clip.track_id) ||
+                !unescape_json(x[3].str(), clip.source_id)) {
+                e={"audio_clip_string_escape_invalid","","Clip IDs contain an unsupported or incomplete escape","error"}; return false;
+            }
             clip.timeline_start_frame=std::stoull(x[4].str());
             clip.source_start_frame=std::stoull(x[5].str());
             clip.frame_count=std::stoull(x[6].str());
-            clip.gain=std::stof(x[7].str());
+            if (!parse_float_token(x[7].str(), clip.gain)) {
+                e={"audio_clip_number_invalid",clip.id,"Clip gain is invalid","error"}; return false;
+            }
             const auto track=std::find_if(p.tracks.begin(),p.tracks.end(),
                 [&](const Track& t){ return t.id==clip.track_id; });
             const auto source=std::find_if(p.media_sources.begin(),p.media_sources.end(),
