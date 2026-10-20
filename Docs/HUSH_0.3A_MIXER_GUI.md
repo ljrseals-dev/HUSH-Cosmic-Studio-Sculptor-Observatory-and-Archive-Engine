@@ -42,6 +42,14 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 - The backend callback thread is stopped and joined before live mixer state is destroyed or replaced.
 - The queue's atomic lock-free properties and actual callback timing must still be checked on target hardware.
 
+## Local autosave and recovery
+
+- Once a project has a known file path (opened or saved), the GUI polls `AutosaveController` from the Qt event loop and appends recovery snapshots to `<project-path>.hush-recovery.journal` when the project has edits and the autosave interval is due.
+- The unsaved demo session does not silently choose a recovery path; save the project first to enable autosave. Normal Save still writes the project JSON and is not replaced by the recovery journal.
+- Opening a project with a newer journal snapshot offers an explicit restore choice. Declining removes that recovery journal; accepting restores the journal snapshot in memory and leaves the project marked unsaved.
+- Journal write failures remain visible in the recovery status label and the dirty recovery state is retained for retry. Journal writes run on the GUI/control thread, never in the audio callback.
+- This is process-level recovery support. It does not claim fsync-based power-loss durability.
+
 ## Evidence and remaining gates
 
 The registered `hush_gui_engine_command_path_tests` is a deterministic headless synthetic-buffer contract test for project/history → bounded track-command queue → next processing block behavior. It covers gain preview without project mutation or an undo entry, commit, undo/redo, pan, mute, solo, stable-ID lookup, and transactional queue-full rejection using the production `OperationLog` and `RealtimeTrackMixer` APIs. It requires no Qt display, ALSA device, network, or physical audio hardware.
