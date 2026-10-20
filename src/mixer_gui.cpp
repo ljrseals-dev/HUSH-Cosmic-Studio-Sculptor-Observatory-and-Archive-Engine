@@ -233,6 +233,18 @@ public:
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
+            if (operation->kind == hush::OperationKind::AddTrack ||
+                operation->kind == hush::OperationKind::RemoveTrack) {
+                if (!enqueue_structural_operation(*operation, false)) {
+                    status_->setText("Undo not applied: live command queue full; retry after audio drains");
+                    return;
+                }
+                if (log_.undo(project_)) {
+                    status_->setText("Structural track edit undone");
+                    refresh();
+                }
+                return;
+            }
             auto values = live_control_values(operation->entity_id);
             if (!values) return;
             apply_value_to_controls(*operation, operation->before_value, *values);
@@ -248,6 +260,18 @@ public:
         connect(redo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.operation_at(log_.cursor());
             if (!operation) return;
+            if (operation->kind == hush::OperationKind::AddTrack ||
+                operation->kind == hush::OperationKind::RemoveTrack) {
+                if (!enqueue_structural_operation(*operation, true)) {
+                    status_->setText("Redo not applied: live command queue full; retry after audio drains");
+                    return;
+                }
+                if (log_.redo(project_)) {
+                    status_->setText("Structural track edit redone");
+                    refresh();
+                }
+                return;
+            }
             auto values = live_control_values(operation->entity_id);
             if (!values) return;
             apply_value_to_controls(*operation, operation->after_value, *values);
