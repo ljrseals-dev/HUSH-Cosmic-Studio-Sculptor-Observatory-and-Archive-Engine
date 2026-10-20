@@ -1,3 +1,10 @@
+## Unreleased — recovery journal scan after malformed complete records
+
+- Continue scanning after a complete record has valid length framing and terminator but its project payload fails schema parsing.
+- Keep stopping on broken headers, invalid lengths, truncated payloads, and bad terminators, where the next record boundary cannot be trusted.
+- Add regression coverage for a valid snapshot, an invalid but fully framed record, and a later valid snapshot; recovery must return the later valid state.
+- CI validation is pending; this is not a power-loss durability claim.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.
