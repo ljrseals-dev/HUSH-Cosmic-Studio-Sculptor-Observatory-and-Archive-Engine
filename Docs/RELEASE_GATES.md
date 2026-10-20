@@ -31,3 +31,14 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 Target-machine reports should be JSON and include at least: commit SHA, OS/kernel, CPU, audio interface and driver, sample rate, period size, duration, xrun count, latency method/results, memory measurements, test command, and pass/fail. Missing hardware metadata or an unrun gate must be marked `not_run`, never inferred as passing.
 
 See [PHASE_1_TO_7_EXECUTION.md](PHASE_1_TO_7_EXECUTION.md) for the seven-phase completion ledger.
+
+
+## HUSH 0.4a recording gates
+
+| Gate | Evidence | Status |
+|---|---|---|
+| Preallocated capture ring | PR #75 adds SPSC interleaved-float ring and boundary/wrap/overflow tests; CI run [39408852666](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39408852666) | Pending while CI runs |
+| Off-thread streaming WAV writer and finalized file header | Not implemented in this slice | Open |
+| Track arming, take IDs/playlists, punch, comping, crossfades | Not implemented in this slice | Open |
+| 8 tracks × 10 minutes, sample-accurate lengths, no dropped frames | No qualifying run | Open |
+| Punch accuracy ±1 sample, latency compensation/loopback | No device measurement | Open |
