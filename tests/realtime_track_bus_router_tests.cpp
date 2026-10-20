@@ -29,6 +29,7 @@ int main() {
     // Updates are consumed only when the next block is processed.
     assert(router.enqueue_track_control(0U, 0.5F, -1.0F, false, false));
     assert(router.enqueue_track_control(1U, 1.0F, 0.0F, true, false));
+    assert(router.enqueue_track_control(2U, 1.0F, 0.0F, true, false));
     assert(router.process(tracks, 3U, 2U));
     buses = router.bus_inputs();
     assert(near(buses[0].left[0], 0.5F));
