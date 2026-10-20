@@ -213,5 +213,18 @@ int main(int argc, char** argv) {
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
               << backend.xrun_count() << '\n';
-    return 0;
+    switch (backend.worker_failure()) {
+    case AlsaAudioBackend::WorkerFailure::None:
+        return 0;
+    case AlsaAudioBackend::WorkerFailure::CaptureRecoveryFailed:
+        std::cerr << "HUSH_ALSA_WORKER_FAILED side=capture recover_error="
+                  << backend.worker_error_code() << '\n';
+        return 3;
+    case AlsaAudioBackend::WorkerFailure::PlaybackRecoveryFailed:
+        std::cerr << "HUSH_ALSA_WORKER_FAILED side=playback recover_error="
+                  << backend.worker_error_code() << '\n';
+        return 3;
+    }
+    std::cerr << "HUSH_ALSA_WORKER_FAILED side=unknown\n";
+    return 3;
 }
