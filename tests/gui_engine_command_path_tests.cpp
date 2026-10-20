@@ -63,6 +63,21 @@ int main() {
     expect_near(out_l[0], 0.25F);
     expect_near(out_r[0], 1.0F);
 
+    // Pan drag preview follows the same path: the next block changes, but the
+    // project model and undo history remain untouched until slider release.
+    assert(TrackMixerCommandBridge::enqueue_preview(project, engine, "track-left", 0.25F, 0.0F));
+    assert(project.tracks[0].pan == -1.0F);
+    assert(history.size() == 0);
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F * 0.70710678F);
+    expect_near(out_r[0], 1.0F + 0.25F * 0.70710678F);
+
+    // Restore the uncommitted pan preview before testing the commit path.
+    assert(TrackMixerCommandBridge::enqueue_preview(project, engine, "track-left", 0.25F, -1.0F));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F);
+    expect_near(out_r[0], 1.0F);
+
     // Slider release commits one undoable operation and syncs the committed
     // snapshot to the same bounded queue used by the GUI.
     assert(history.apply_and_append(project,
