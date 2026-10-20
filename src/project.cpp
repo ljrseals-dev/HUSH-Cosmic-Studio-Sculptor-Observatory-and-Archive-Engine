@@ -67,7 +67,9 @@ std::string to_json(const Project& p) {
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(t.id)
           << "\", \"name\": \"" << escape_json(t.name) << "\", \"gain\": " << t.gain
           << ", \"pan\": " << t.pan << ", \"mute\": " << (t.mute?"true":"false")
-          << ", \"solo\": " << (t.solo?"true":"false") << ", \"bus_id\": \"" << escape_json(t.bus_id) << "\"}";
+          << ", \"solo\": " << (t.solo?"true":"false");
+        if (p.schema_version >= 2U) o << ", \"bus_id\": \"" << escape_json(t.bus_id) << "\"";
+        o << "}";
     }
     if (!p.tracks.empty()) o << "\n  ";
     o << "],\n  \"buses\": [";
@@ -113,18 +115,19 @@ std::string to_json(const Project& p) {
     return o.str();
 }
 
-// Strict reader for the schema-v1 model subset emitted by to_json. Bus and route arrays
-// are optional for compatibility with earlier schema-v1 project files.
+// Strict reader for schema v1/v2. Track-to-bus membership is a schema-v2 field;
+// older schema-v1 projects remain readable and use the documented default routing.
 bool from_json(const std::string& s, Project& out, Error& e) {
     std::smatch m;
     const std::regex version_re(R"("schema_version"\s*:\s*(\d+))");
     const std::regex id_re(R"REGEX("id"\s*:\s*"([^"]*)")REGEX");
     const std::regex law_re(R"REGEX("pan_law"\s*:\s*"([^"]+)")REGEX");
-    if (!std::regex_search(s,m,version_re) || m[1].str()!="1") {
-        e={"schema_version_unsupported","","Expected schema_version 1","error"}; return false;
+    if (!std::regex_search(s,m,version_re) || (m[1].str()!="1" && m[1].str()!="2")) {
+        e={"schema_version_unsupported","","Expected schema_version 1 or 2","error"}; return false;
     }
+    const std::uint32_t schema_version = static_cast<std::uint32_t>(std::stoul(m[1].str()));
     Project p;
-    p.schema_version=1;
+    p.schema_version=schema_version;
     if (!std::regex_search(s,m,id_re)) { e={"project_id_missing","","Project id is missing","error"}; return false; }
     p.id=m[1].str();
     if (!std::regex_search(s,m,law_re)) { e={"pan_law_missing","","Pan law is missing","error"}; return false; }
@@ -141,7 +144,12 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         t.id=x[1].str(); t.name=x[2].str();
         try { t.gain=std::stof(x[3].str()); t.pan=std::stof(x[4].str()); }
         catch (...) { e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false; }
-        t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true"; t.bus_id=x[7].matched ? x[7].str() : "";
+        t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
+        if (schema_version == 1U && x[7].matched) {
+            e={"track_bus_requires_schema_v2",t.id,"Track bus membership requires schema_version 2","error"};
+            return false;
+        }
+        t.bus_id=(schema_version >= 2U && x[7].matched) ? x[7].str() : "";
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
         }
