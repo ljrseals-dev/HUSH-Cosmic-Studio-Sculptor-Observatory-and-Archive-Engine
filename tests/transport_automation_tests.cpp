@@ -39,6 +39,29 @@ int main() {
     assert(transport.sample_position() == max_sample);
     assert(transport.state() == TransportState::Playing);
 
+    // Queue commands are applied in FIFO order, including seek/stop/seek/play.
+    TransportEngine ordered;
+    assert(ordered.enqueue_seek(100));
+    assert(ordered.enqueue_stop());
+    assert(ordered.enqueue_seek(25));
+    assert(ordered.enqueue_play());
+    assert(ordered.process_block(4) == 25);
+    assert(ordered.state() == TransportState::Playing);
+    assert(ordered.sample_position() == 29);
+
+    // A full queue rejects a new command without blocking or overwriting older
+    // commands. Draining it restores capacity for subsequent producer commands.
+    TransportEngine bounded;
+    for (std::size_t i = 0; i < TransportEngine::kCommandCapacity; ++i)
+        assert(bounded.enqueue_play());
+    assert(!bounded.enqueue_stop());
+    assert(bounded.commands_pending_approx());
+    (void)bounded.process_block(0);
+    assert(!bounded.commands_pending_approx());
+    assert(bounded.enqueue_stop());
+    (void)bounded.process_block(0);
+    assert(bounded.state() == TransportState::Stopped);
+
     TempoMap tempo(48000.0);
     std::uint64_t sample = 0;
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
