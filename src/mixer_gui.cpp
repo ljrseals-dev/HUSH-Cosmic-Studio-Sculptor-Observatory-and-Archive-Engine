@@ -89,6 +89,10 @@ public:
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
+    [[nodiscard]] float peak_left() const noexcept { return mixer_ ? mixer_->peak_left() : 0.0F; }
+    [[nodiscard]] float peak_right() const noexcept { return mixer_ ? mixer_->peak_right() : 0.0F; }
+    [[nodiscard]] float rms_left() const noexcept { return mixer_ ? mixer_->rms_left() : 0.0F; }
+    [[nodiscard]] float rms_right() const noexcept { return mixer_ ? mixer_->rms_right() : 0.0F; }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
