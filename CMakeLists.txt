@@ -37,6 +37,30 @@ if(HUSH_BUILD_GUI)
   add_executable(hush_mixer_gui src/mixer_gui.cpp)
   target_link_libraries(hush_mixer_gui PRIVATE hush_core Qt6::Widgets)
   target_compile_features(hush_mixer_gui PRIVATE cxx_std_20)
+  if(HUSH_BUILD_TESTS)
+    find_package(Qt6 COMPONENTS Test QUIET)
+    if(TARGET Qt6::Test)
+      add_executable(hush_mixer_widget_interaction_tests
+        tests/mixer_widget_interaction_tests.cpp
+      )
+      set_target_properties(hush_mixer_widget_interaction_tests PROPERTIES AUTOMOC ON)
+      target_compile_definitions(hush_mixer_widget_interaction_tests PRIVATE
+        HUSH_MIXER_GUI_NO_MAIN=1
+      )
+      target_link_libraries(hush_mixer_widget_interaction_tests PRIVATE
+        hush_core Qt6::Widgets Qt6::Test
+      )
+      target_compile_features(hush_mixer_widget_interaction_tests PRIVATE cxx_std_20)
+      add_test(NAME hush_mixer_widget_interaction_tests
+        COMMAND hush_mixer_widget_interaction_tests
+      )
+      set_tests_properties(hush_mixer_widget_interaction_tests PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+      )
+    else()
+      message(STATUS "Qt6::Test unavailable; skipping optional GUI interaction tests")
+    endif()
+  endif()
   if(HUSH_ENABLE_ALSA)
     target_compile_definitions(hush_mixer_gui PRIVATE HUSH_GUI_HAS_ALSA=1)
   endif()
