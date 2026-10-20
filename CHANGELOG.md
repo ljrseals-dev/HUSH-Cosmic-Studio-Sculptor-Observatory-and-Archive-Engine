@@ -1,3 +1,9 @@
+## Unreleased — tempo/automation JSON parser hardening
+
+- Decode escaped quotes, backslashes, and control escapes in automation lane IDs/targets so values emitted by the serializer round-trip correctly.
+- Require numeric tokens for tempo points and automation points to be consumed in full; malformed values such as `120.5.6` and `0.5.7` are rejected instead of being partially accepted by `std::stod`/`std::stof`.
+- Added regression cases for escaped lane strings and malformed numeric tokens. CI validation is pending; no local build/CTest result is claimed.
+
 ## Unreleased — schema-v1 tempo and automation persistence
 
 - Added additive `tempo_map` and `automation_lanes` arrays to project JSON, preserving compatibility with older schema-v1 sessions that omit them.
