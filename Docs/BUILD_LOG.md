@@ -2,11 +2,9 @@
 
 ## Unlimited / voiceable-track-capacity task — baseline gate
 
-**Status: BLOCKED — baseline commands have not been run.**
+**Baseline CI: PASS on starting revision `d4a9ea3e443937a84b2d882c0629468f996874f1`.** GitHub Actions run [39449869574](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39449869574) completed successfully on 2026-10-20. This is CI evidence, not a local shell run. No output has been fabricated; the workflow summary records successful configure/build/CTest steps.
 
-The connected repository workflow can inspect and edit GitHub files, but it does not provide a shell in a checked-out local clone. Therefore the commands below were not executed here. No build, CTest, sanitizer, memory measurement, or hardware result is claimed. Per the track-capacity prompt's stop condition, implementation work that depends on a green baseline must not proceed until these commands are run on a machine with the repository and its declared dependencies installed.
-
-### Required baseline commands (verbatim)
+### Required commands (verbatim from the task prompt)
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON
@@ -17,17 +15,22 @@ cmake -S . -B build-gui -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON -DHUSH_ENABLE_
 cmake --build build-gui --parallel 2 && ctest --test-dir build-gui --output-on-failure
 ```
 
-### Results
+### Baseline configuration results
 
 | Configuration | Result | Evidence |
 |---|---|---|
-| Default Release + tests | NOT RUN | No local shell/clone available in this workflow |
-| ALSA + tests | NOT RUN | No local shell/clone available in this workflow |
-| GUI + ALSA + tests | NOT RUN | No local shell/clone available in this workflow |
-| `hush_privacy_source_audit` | NOT RUN for this task baseline | Must be included in the above CTest runs |
-| ASan / TSan at the proposed track ceiling | NOT RUN | Must not be inferred from older CI runs |
-| Physical audio hardware | NOT RUN | Not authorized to claim from source inspection or CI |
+| Default Release + tests | PASS | CI job `linux-cxx20`, run 39449869574 |
+| ALSA + tests | PASS | CI job `linux-alsa-enabled`, run 39449869574 |
+| GUI + ALSA + tests | PASS | CI job `linux-qt6-alsa-live-mixer`, run 39449869574 |
+| Qt GUI-only tests | PASS | CI job `linux-qt6-mixer-gui`, run 39449869574 |
+| AddressSanitizer baseline | PASS | CI job `linux-asan`, run 39449869574 |
+| ThreadSanitizer baseline | PASS | CI job `linux-tsan`, run 39449869574 |
+| `hush_privacy_source_audit` | PASS as part of CTest | Included in the successful CTest jobs above |
+| ASan / TSan with 1,024 tracks and allocation guard | NOT RUN | Capacity implementation and full-capacity guard do not yet exist |
+| Physical audio hardware | NOT RUN | CI is not hardware validation |
 
-### Stop condition
+The sanitizer jobs validate the current baseline tests only. They do **not** establish full-capacity track correctness, a no-allocation guarantee under an allocation guard, long-duration stability, or hardware behavior.
 
-Do not implement or claim the proposed track-capacity change until all three baseline build-and-CTest configurations are green on the same starting revision. Record exact output, environment, and commit SHA below when actually run. If a command fails, preserve the real diagnostic and fix only baseline blockers before proceeding.
+### Next gate
+
+The baseline prerequisite is satisfied by the same starting revision in CI. Proceed with the capacity implementation in separate logical commits. After the code changes, rerun all configurations and sanitizers on the new PR head; do not use this baseline run as evidence for code that did not exist at this SHA.
