@@ -52,6 +52,6 @@ Still required before claiming a production live mixer:
 - Fresh CI for the offscreen Qt widget interaction test; a test that drives the actual widgets and verifies their project/history effects is now registered, while proving live-device command delivery still requires integration/loopback coverage;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
-- target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
+- target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The live status line now displays post-mix stereo peak and RMS in dBFS, calculated once per processed block and published through lock-free 32-bit atomics for UI polling. These readings ignore non-finite samples for meter arithmetic; they do not sanitize the audio stream. The callback/recovery counters remain diagnostics, not proof of zero xruns.
 
 Do not claim recording, MIDI, automation, plugin hosting, multitrack live source routing, or zero-xrun hardware behavior as delivered by this change.
