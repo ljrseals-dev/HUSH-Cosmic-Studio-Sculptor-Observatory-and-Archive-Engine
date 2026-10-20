@@ -36,7 +36,7 @@ int main() {
                          {{0.0,0.0F},{4.0,1.0F}}}};
     const auto json=to_json(p); Project loaded; Error err;
     if (!from_json(json,loaded,err)) {
-        std::cerr << "Project round-trip failed: " << err.code << ": " << err.message << '\\n';
+        std::cerr << "Project round-trip failed: " << err.code << ": " << err.message << '\n';
         return 1;
     }
     assert(loaded==p);
