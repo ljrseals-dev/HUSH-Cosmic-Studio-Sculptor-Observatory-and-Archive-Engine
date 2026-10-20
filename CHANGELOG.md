@@ -1,3 +1,9 @@
+## Unreleased — transport/automation conflict regression coverage
+
+- Kept the current `main` transport and beat-based automation APIs as the canonical implementation; avoided reintroducing overlapping alternate headers from closed PRs.
+- Expanded `hush_transport_automation_tests` to cover sample-clock saturation at `UINT64_MAX`, transactional rejection of invalid tempo-map edits, and preservation of an accepted automation lane after invalid replacement.
+- These are source-level regression additions only. Build and CTest evidence must come from CI; no local test pass is claimed.
+
 # Changelog
 
 ## Unreleased — voice processor audit baseline
