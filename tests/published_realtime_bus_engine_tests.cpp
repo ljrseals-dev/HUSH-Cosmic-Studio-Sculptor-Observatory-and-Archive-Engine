@@ -46,20 +46,32 @@ void concurrent_engine_replacement_contract() {
     auto graph = make_graph();
     assert(engine.publish_graph(graph, 16, error));
 
-    float left[8]{};
-    float right[8]{};
+    float left[8]{0.125F, 0.25F, 0.375F, 0.5F, 0.625F, 0.75F, 0.875F, 1.0F};
+    float right[8]{-0.125F, -0.25F, -0.375F, -0.5F, -0.625F, -0.75F, -0.875F, -1.0F};
     const hush::BusAudioInputView inputs[]{{left, right}};
     std::atomic<bool> stop{false};
     std::atomic<unsigned int> successful_blocks{0U};
+    std::atomic<unsigned int> copy_failures{0U};
 
+    // Exercise the real device-output path during publication, not just process().
+    // The returned master view must be copied before its graph lifetime guard ends.
     std::thread audio([&] {
+        float output_left[8]{};
+        float output_right[8]{};
         while (!stop.load(std::memory_order_acquire)) {
-            const auto status = engine.process(inputs, 1, 8);
-            if (status == hush::RealtimeProcessStatus::Ok) {
-                successful_blocks.fetch_add(1U, std::memory_order_relaxed);
-            } else {
-                assert(false && "single-bus replacement must preserve callback contract");
+            const auto status = engine.process_to_master(
+                inputs, 1, 8, 0, output_left, output_right);
+            if (status != hush::RealtimeProcessStatus::Ok) {
+                copy_failures.fetch_add(1U, std::memory_order_relaxed);
+                continue;
             }
+            for (std::size_t i = 0; i < 8U; ++i) {
+                if (output_left[i] != left[i] || output_right[i] != right[i]) {
+                    copy_failures.fetch_add(1U, std::memory_order_relaxed);
+                    break;
+                }
+            }
+            successful_blocks.fetch_add(1U, std::memory_order_relaxed);
         }
     });
 
@@ -72,6 +84,7 @@ void concurrent_engine_replacement_contract() {
     engine.reclaim_retired();
 
     assert(successful_blocks.load(std::memory_order_relaxed) > 0U);
+    assert(copy_failures.load(std::memory_order_relaxed) == 0U);
     assert(engine.retired_count_for_control() == 0U);
 }
 
