@@ -1,3 +1,10 @@
+## Unreleased — transport command queue boundary tests
+
+- Added regression coverage for FIFO ordering across seek/stop/seek/play commands.
+- Added queue-capacity coverage proving a full fixed-capacity queue rejects new commands without overwriting queued work, and that draining restores capacity.
+- These checks exercise the existing transport core only; GUI/live-audio transport wiring, automation application, and persistence remain separate integration work.
+- Build and CTest have not been run in this GitHub editing workflow; CI validation is required.
+
 ## Unreleased — full-range tempo conversion fix
 
 - Replaced the `TempoMap::beat_to_sample` `llround()` conversion with extended-precision accumulation and checked rounding, allowing valid sample positions above `INT64_MAX` while rejecting values at or beyond the exclusive `2^64` bound without modifying the output argument.
