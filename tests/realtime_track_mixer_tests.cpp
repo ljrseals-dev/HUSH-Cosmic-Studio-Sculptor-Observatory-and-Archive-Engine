@@ -19,6 +19,10 @@ int main() {
     // Equal-power center pan, unity gain, two tracks summed.
     assert(std::abs(left[0] - 1.4142135F) < 1.0e-5F);
     assert(std::abs(right[0] - 1.4142135F) < 1.0e-5F);
+    assert(std::abs(mixer.peak_left() - 1.4142135F) < 1.0e-5F);
+    assert(std::abs(mixer.peak_right() - 1.4142135F) < 1.0e-5F);
+    assert(std::abs(mixer.rms_left() - 1.25F) < 1.0e-5F);
+    assert(std::abs(mixer.rms_right() - 1.25F) < 1.0e-5F);
 
     // Commands are applied at the next process block boundary.
     assert(mixer.enqueue_control(0, 0.5F, -1.0F, false, false));
@@ -26,6 +30,8 @@ int main() {
     assert(mixer.process(inputs, 2, left, right, 2));
     assert(std::abs(left[0] - 0.5F) < 1.0e-5F);
     assert(std::abs(right[0]) < 1.0e-5F);
+    assert(std::abs(mixer.peak_left() - 0.5F) < 1.0e-5F);
+    assert(mixer.peak_right() == 0.0F);
 
     assert(mixer.enqueue_control(0, 1.0F, 0.0F, false, false));
     assert(mixer.enqueue_control(1, 1.0F, 0.0F, false, true));
