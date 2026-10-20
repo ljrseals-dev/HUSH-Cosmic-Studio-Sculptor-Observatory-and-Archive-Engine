@@ -21,6 +21,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -211,7 +212,7 @@ public:
         bar->addWidget(status_);
         layout->addLayout(bar);
 
-        table_ = new QTableWidget(0, 6, root);
+        table_ = new QTableWidget(0, 7, root);
         table_->setObjectName("trackTable");
         table_->setHorizontalHeaderLabels({"Track", "Gain", "Pan", "Mute", "Solo", "Peak / RMS", "Stable ID"});
         table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
