@@ -13,6 +13,14 @@ namespace hush {
 // snapshots on the control thread. Never call reclaim_retired() from the audio thread.
 template <class Graph>
 class RealtimeGraphPublisher {
+    // This protocol runs in the audio callback; reject targets where either
+    // atomic may hide a lock. This is a build-time prerequisite, not proof of
+    // end-to-end realtime performance on the target machine.
+    static_assert(std::atomic<Graph*>::is_always_lock_free,
+                  "RealtimeGraphPublisher requires lock-free pointer atomics");
+    static_assert(std::atomic<bool>::is_always_lock_free,
+                  "RealtimeGraphPublisher requires lock-free bool atomics");
+
 public:
     class AudioReadGuard {
     public:
