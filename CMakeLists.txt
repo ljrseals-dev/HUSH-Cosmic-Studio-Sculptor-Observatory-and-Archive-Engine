@@ -13,6 +13,9 @@ set(HUSH_MAX_TRACKS "1024" CACHE STRING "Maximum number of tracks accepted by HU
 if(NOT HUSH_MAX_TRACKS MATCHES "^[1-9][0-9]*$")
   message(FATAL_ERROR "HUSH_MAX_TRACKS must be a positive integer")
 endif()
+if(HUSH_MAX_TRACKS GREATER 65535)
+  message(FATAL_ERROR "HUSH_MAX_TRACKS must not exceed 65535")
+endif()
 
 add_library(hush_core
     src/project.cpp
