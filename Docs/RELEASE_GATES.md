@@ -15,7 +15,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | GUI fader command applies at audio block boundary | Existing `RealtimeTrackMixer` applies queued controls at process block boundaries; no Qt interaction/loopback test | Partial; UI-level evidence open |
 | Safe graph swap and deferred reclamation | `RealtimeGraphPublisher` primitive supports guarded readers and control-thread reclamation; test includes held-reader lifetime assertion and concurrent publication stress; compile-time assertions now reject non-lock-free pointer/bool atomics | Engine wrapper is integrated into the standalone ALSA host; guarded master-output copy and concurrent replacement tests added; fresh CI pending; GUI topology publication and target hardware evidence remain open |
 | Full track/bus/master routing, insert and solo/mute behavior | Offline bus primitives exist; full track-to-live-graph semantics are incomplete | Open |
-| GUI meter and xrun polling | GUI polls callback/recovery counters from the ALSA backend; peak/RMS meters are not implemented | Partial; target-device verification open |
+| GUI meter and xrun polling | GUI polls callback/recovery counters and displays lock-free stereo block peak/RMS values from the track mixer | Source/test implementation added; fresh CI and target-device verification open; meters are linear sample peak/RMS, not true-peak/loudness |
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
 | 60-minute zero-xrun run | No target-device artifact attached | Open |
 | Loopback latency and underrun injection | No measurement report | Open |
