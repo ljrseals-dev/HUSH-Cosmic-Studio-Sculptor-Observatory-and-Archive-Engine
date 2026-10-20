@@ -253,6 +253,7 @@ private:
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
+    std::vector<std::string> pending_live_sync_;
 #endif
 
     void openProject() {
@@ -317,7 +318,18 @@ private:
 
     bool sync_live_controls(const std::string& track_id) {
 #ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() && !live_.enqueue_track_control(project_, track_id)) return false;
+        if (live_.running() && !live_.enqueue_track_control(project_, track_id)) {
+            // Preserve the latest committed model state for retry when the bounded
+            // SPSC queue is temporarily full. Only the GUI thread touches this list.
+            if (std::find(pending_live_sync_.begin(), pending_live_sync_.end(), track_id) ==
+                pending_live_sync_.end()) {
+                pending_live_sync_.push_back(track_id);
+            }
+            return false;
+        }
+        pending_live_sync_.erase(
+            std::remove(pending_live_sync_.begin(), pending_live_sync_.end(), track_id),
+            pending_live_sync_.end());
 #else
         (void)track_id;
 #endif
@@ -340,10 +352,33 @@ private:
     }
 
 #ifdef HUSH_GUI_HAS_ALSA
+    void flush_pending_live_sync() {
+        if (!live_.running()) {
+            pending_live_sync_.clear();
+            return;
+        }
+        auto it = pending_live_sync_.begin();
+        while (it != pending_live_sync_.end()) {
+            if (live_.enqueue_track_control(project_, *it)) {
+                it = pending_live_sync_.erase(it);
+            } else {
+                // The SPSC queue remains full. Stop here and retry on the next
+                // timer tick rather than spinning or blocking the GUI thread.
+                break;
+            }
+        }
+    }
+
     void poll_live_status() {
         if (live_.running()) {
-            status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
-                             " · xruns/recoveries " + QString::number(live_.xrun_count()));
+            flush_pending_live_sync();
+            QString message = "Live ALSA · callbacks " + QString::number(live_.callback_count()) +
+                             " · xruns/recoveries " + QString::number(live_.xrun_count());
+            if (!pending_live_sync_.empty()) {
+                message += " · controls awaiting delivery " +
+                           QString::number(static_cast<qulonglong>(pending_live_sync_.size()));
+            }
+            status_->setText(message);
             return;
         }
         if (live_button_->text() == "Stop Live ALSA") {
@@ -360,6 +395,7 @@ private:
     void toggle_live() {
         if (live_.running()) {
             live_.stop();
+            pending_live_sync_.clear();
             live_button_->setText("Start Live ALSA");
             status_->setText("Live audio stopped");
             refresh();
@@ -374,6 +410,7 @@ private:
             status_->setText("ALSA start failed: " + QString::fromStdString(error));
             return;
         }
+        pending_live_sync_.clear();
         live_button_->setText("Stop Live ALSA");
         status_->setText("Live ALSA · capture L/R → tracks 1–2; later tracks have no live source");
         refresh();
