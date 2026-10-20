@@ -6,6 +6,8 @@ Recording, MIDI, plugin hosting, voice control, and complete production-grade mu
 
 ## Current scope at a glance
 
+Project schema-v1 persistence supports optional `tempo_map` and `automation_lanes` arrays. These preserve tempo points and automation curve data only; they do not imply live automation playback or engine-parameter binding.
+
 | Area | Current documented scope | Remaining qualification |
 |---|---|---|
 | Project model | Schema-v1 model and JSON reader/writer | Schema-v2, migration, and broader session features are not claimed |
@@ -114,7 +116,7 @@ The following are **not complete or not verified**. A claim should be upgraded o
 - **Scale and soak qualification:** no committed 500-track performance budget or 8-hour soak/memory-drift report is claimed.
 - **Autosave lifecycle/failure surfacing:** policy code exists, but host-application lifecycle integration is incomplete.
 - **Power-loss durability:** explicitly not claimed. Current documented evidence covers completed journal records across process restart and truncated-tail handling only.
-- **MIDI/automation integration:** this branch adds a bounded MIDI CC-to-parameter mapping foundation. MIDI device I/O, GUI learn mode, engine parameter delivery, automation playback, and schema-v2 persistence remain unimplemented.
+- **MIDI/automation integration:** this branch adds a bounded MIDI CC-to-parameter mapping foundation. MIDI device I/O, GUI learn mode, live engine parameter delivery, and sample-accurate automation playback remain unimplemented.
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
 
 ## CI and evidence policy

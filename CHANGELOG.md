@@ -1,3 +1,22 @@
+## Unreleased — project string round-trip and numeric validation
+
+- Extend escaped-string parsing to project IDs, track IDs/names, bus IDs/names, route references, media-source IDs/paths, and clip references—not just automation lanes.
+- Require full numeric-token consumption for track and route gains/pan and clip gain; add round-trip coverage for quotes/backslashes across project, track, bus, source, and clip fields.
+- Add malformed track-number regression coverage. CI validation is pending; no local build/CTest result is claimed.
+
+## Unreleased — tempo/automation JSON parser hardening
+
+- Decode escaped quotes, backslashes, and control escapes in automation lane IDs/targets so values emitted by the serializer round-trip correctly.
+- Require numeric tokens for tempo points and automation points to be consumed in full; malformed values such as `120.5.6` and `0.5.7` are rejected instead of being partially accepted by `std::stod`/`std::stof`.
+- Added regression cases for escaped lane strings and malformed numeric tokens. CI validation is pending; no local build/CTest result is claimed.
+
+## Unreleased — schema-v1 tempo and automation persistence
+
+- Added additive `tempo_map` and `automation_lanes` arrays to project JSON, preserving compatibility with older schema-v1 sessions that omit them.
+- Added validation for tempo-map origin/order/range, unique automation lane IDs, non-empty targets, interpolation modes, and ordered finite automation points.
+- Added project round-trip and malformed tempo/automation regression cases. Persistence only; live playback and parameter binding remain out of scope.
+- Build and CTest have not been run in this GitHub editing workflow; CI validation is required.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.

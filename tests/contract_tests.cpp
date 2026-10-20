@@ -6,6 +6,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 namespace {
@@ -21,11 +22,37 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 
 int main() {
     using namespace hush;
-    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
-    p.buses={{"bus-master","Master"},{"bus-music","Music"}};
-    p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
+    Project p; p.id="session-\"A\"\\folder";
+    p.tracks={{"track-1","Lead \"main\"\\take",0.75F,0.0F,false,false},
+              {"track-2","Pad",0.5F,-0.5F,false,false}};
+    p.buses={{"bus-\"master\"\\out","Master \"bus\""},{"bus-music","Music"}};
+    p.routes={{"bus-music","bus-\"master\"\\out",SendTap::PostFader,0.8F}};
+    p.media_sources={{"source-1","audio\\take\"one\".wav",48000U,2U,1000U}};
+    p.clips={{"clip-\"one\"\\v1","track-1","source-1",0U,0U,128U,1.0F}};
+    p.tempo_map={{0.0,120.0},{16.125,89.123456789123}};
+    p.automation_lanes={{"automation-\\\"gain\\\"\\\\lane","track-1.gain\\\"quoted\\\\target",ProjectAutomationInterpolation::Linear,
+                         {{0.0,0.5F},{8.0,0.8F},{16.0,0.25F}}},
+                        {"automation-mute","track-2.mute",ProjectAutomationInterpolation::Step,
+                         {{0.0,0.0F},{4.0,1.0F}}}};
     const auto json=to_json(p); Project loaded; Error err;
-    assert(from_json(json,loaded,err)); assert(loaded==p);
+    if (!from_json(json,loaded,err)) {
+        std::cerr << "Project round-trip failed: " << err.code << ": " << err.message << '\n';
+        return 1;
+    }
+    assert(loaded==p);
+    const std::string malformed_track_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":0.5.7,"pan":0,"mute":false,"solo":false}]})";
+    assert(!from_json(malformed_track_number,loaded,err));
+    assert(err.code=="track_number_invalid");
+        const std::string invalid_tempo=R"({"schema_version":1,"id":"bad-tempo","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":1,"bpm":120}]})";
+    assert(!from_json(invalid_tempo,loaded,err)); assert(err.code=="tempo_point_invalid");
+    const std::string malformed_tempo_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":0,"bpm":120.5.6}]})";
+    assert(!from_json(malformed_tempo_number,loaded,err));
+    assert(err.code=="tempo_point_number_invalid");
+    const std::string invalid_lane=R"({"schema_version":1,"id":"bad-lane","pan_law":"equal_power_minus_3_db","tracks":[],"automation_lanes":[{"id":"x","target":"track.gain","interpolation":"linear","points":[{"beat":0,"value":0.5},{"beat":0,"value":0.7}]}]})";
+    assert(!from_json(invalid_lane,loaded,err)); assert(err.code=="automation_point_invalid");
+    const std::string malformed_automation_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[],"automation_lanes":[{"id":"x","target":"track.gain","interpolation":"linear","points":[{"beat":0,"value":0.5.7}]}]})";
+    assert(!from_json(malformed_automation_number,loaded,err));
+    assert(err.code=="automation_point_number_invalid");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";

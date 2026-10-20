@@ -45,6 +45,26 @@ struct AudioClip {
     float gain{1.0F};
     bool operator==(const AudioClip&) const = default;
 };
+struct ProjectTempoPoint {
+    double beat{0.0};
+    double bpm{120.0};
+    bool operator==(const ProjectTempoPoint&) const = default;
+};
+
+enum class ProjectAutomationInterpolation { Step, Linear };
+struct ProjectAutomationPoint {
+    double beat{0.0};
+    float value{0.0F};
+    bool operator==(const ProjectAutomationPoint&) const = default;
+};
+struct ProjectAutomationLane {
+    std::string id;
+    std::string target;
+    ProjectAutomationInterpolation interpolation{ProjectAutomationInterpolation::Linear};
+    std::vector<ProjectAutomationPoint> points;
+    bool operator==(const ProjectAutomationLane&) const = default;
+};
+
 struct Project {
     std::uint32_t schema_version{1};
     std::string id{"project-1"};
@@ -56,6 +76,9 @@ struct Project {
     // Optional additive schema-v1 arrays. Older projects without them remain valid.
     std::vector<MediaSource> media_sources;
     std::vector<AudioClip> clips;
+    // Additive schema-v1 fields. Empty tempo_map means the default 120 BPM at beat zero.
+    std::vector<ProjectTempoPoint> tempo_map;
+    std::vector<ProjectAutomationLane> automation_lanes;
     bool operator==(const Project&) const = default;
 };
 std::string to_json(const Project& project);
