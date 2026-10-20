@@ -83,7 +83,11 @@ bool RecoveryJournal::recover_latest(Project& out, Error& error) const {
         if (!file.get(terminator) || terminator!='\n') break;
         Project candidate;
         Error parse_error;
-        if (!from_json(payload,candidate,parse_error)) break;
+        // The record boundary is still trustworthy because its declared payload
+        // length and newline terminator were validated. Skip an invalid complete
+        // snapshot and continue looking for a later valid record; only framing
+        // failures above make the remainder of the journal unsafe to scan.
+        if (!from_json(payload,candidate,parse_error)) continue;
         latest=std::move(candidate);
         found=true;
     }
