@@ -1,6 +1,7 @@
 #pragma once
 #include "hush/recording_ring_buffer.hpp"
 #include "hush/wav_stream_writer.hpp"
+#include <atomic>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -14,10 +15,10 @@ public:
  [[nodiscard]] bool capture(std::span<const float>)noexcept;
  [[nodiscard]] bool drain(std::string* error=nullptr);
  [[nodiscard]] bool stop(std::string* error=nullptr);
- [[nodiscard]] bool is_recording()const noexcept{return recording_;}
+ [[nodiscard]] bool is_recording()const noexcept{return recording_.load(std::memory_order_acquire);}
  [[nodiscard]] std::uint64_t dropped_frames()const noexcept{return ring_.dropped_frames();}
  [[nodiscard]] std::uint64_t frames_written()const noexcept{return writer_.frames_written();}
  [[nodiscard]] std::uint16_t channels()const noexcept{return ring_.channels();}
-private: RecordingRingBuffer ring_;std::vector<float> worker_buffer_;WavStreamWriter writer_;bool recording_{false};
+private: RecordingRingBuffer ring_;std::vector<float> worker_buffer_;WavStreamWriter writer_;std::atomic<bool> recording_{false};
 };
 } // namespace hush
