@@ -1,9 +1,11 @@
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
+#include "hush/project_close_policy.hpp"
 #include "hush/realtime_track_mixer.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -250,6 +252,7 @@ public:
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
                            {"track-2", "Input R", 0.8F, 1.0F, false, false}};
+        log_.mark_dirty(); // The demo project has not been written to disk yet.
         refresh();
         status_->setText("Demo session · unsaved · offline");
     }
@@ -263,6 +266,7 @@ public:
 private:
     hush::Project project_;
     hush::OperationLog log_;
+    QString project_path_;
     QTableWidget* table_{};
     QLabel* status_{};
     QPushButton* live_button_{};
@@ -272,12 +276,9 @@ private:
 #endif
 
     void openProject() {
+        if (!confirmProjectReplacement()) return;
         const auto path = QFileDialog::getOpenFileName(this, "Open HUSH Project", {}, "HUSH Project (*.json)");
         if (path.isEmpty()) return;
-#ifdef HUSH_GUI_HAS_ALSA
-        live_.stop();
-        live_button_->setText("Start Live ALSA");
-#endif
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly)) {
             QMessageBox::warning(this, "Open failed", file.errorString());
@@ -289,26 +290,75 @@ private:
             QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
             return;
         }
+#ifdef HUSH_GUI_HAS_ALSA
+        live_.stop();
+        live_button_->setText("Start Live ALSA");
+#endif
         project_ = std::move(candidate);
+        project_path_ = path;
         log_ = hush::OperationLog{};
+        log_.mark_saved();
         refresh();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
     }
 
-    void saveProject() {
-        const auto path = QFileDialog::getSaveFileName(this, "Save HUSH Project", "session.json", "HUSH Project (*.json)");
-        if (path.isEmpty()) return;
+    bool saveProject() {
+        QString path = project_path_;
+        if (path.isEmpty()) {
+            path = QFileDialog::getSaveFileName(
+                this, "Save HUSH Project", "session.json", "HUSH Project (*.json)");
+        }
+        if (path.isEmpty()) return false;
+
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             QMessageBox::warning(this, "Save failed", file.errorString());
-            return;
+            return false;
         }
         const auto json = hush::to_json(project_);
-        if (file.write(json.data(), static_cast<qint64>(json.size())) != static_cast<qint64>(json.size())) {
+        if (file.write(json.data(), static_cast<qint64>(json.size())) !=
+            static_cast<qint64>(json.size())) {
             QMessageBox::warning(this, "Save failed", file.errorString());
-            return;
+            return false;
         }
+        if (!file.flush()) {
+            QMessageBox::warning(this, "Save failed", file.errorString());
+            return false;
+        }
+
+        project_path_ = path;
+        log_.mark_saved();
         status_->setText("Saved · " + QFileInfo(path).fileName());
+        return true;
+    }
+
+    bool confirmProjectReplacement() {
+        if (!log_.dirty()) return true;
+
+        QMessageBox prompt(QMessageBox::Warning, "Unsaved project changes",
+                           "Save changes to the current project before continuing?",
+                           QMessageBox::NoButton, this);
+        auto* save = prompt.addButton("Save", QMessageBox::AcceptRole);
+        auto* discard = prompt.addButton("Discard", QMessageBox::DestructiveRole);
+        prompt.addButton(QMessageBox::Cancel);
+        prompt.setDefaultButton(save);
+        prompt.exec();
+
+        hush::ProjectCloseChoice choice = hush::ProjectCloseChoice::Cancel;
+        if (prompt.clickedButton() == save) choice = hush::ProjectCloseChoice::Save;
+        else if (prompt.clickedButton() == discard) choice = hush::ProjectCloseChoice::Discard;
+
+        const bool saved = choice == hush::ProjectCloseChoice::Save && saveProject();
+        const bool allow = hush::should_close_project(log_.dirty(), choice, saved);
+        if (!allow && choice == hush::ProjectCloseChoice::Save)
+            status_->setText("Project remains open: save did not complete");
+        return allow;
+    }
+
+protected:
+    void closeEvent(QCloseEvent* event) override {
+        if (confirmProjectReplacement()) event->accept();
+        else event->ignore();
     }
 
     struct LiveControlValues {
