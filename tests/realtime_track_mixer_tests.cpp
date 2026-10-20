@@ -78,6 +78,20 @@ int main() {
     assert(saturated.process(one_input, 1, left, right, 2));
     assert(saturated.enqueue_control(0, 0.5F, 0.0F, false, false));
 
+    // Track-count changes are queued and take effect only at a process boundary.
+    RealtimeTrackMixer structural;
+    assert(structural.configure(4, 2));
+    const float one[] = {1.0F, 1.0F};
+    const float* four_inputs[] = {one, one, one, one};
+    assert(structural.enqueue_track_state_and_count(2, 0.5F, 0.0F, false, false, 3));
+    assert(structural.process(four_inputs, 4, left, right, 2));
+    assert(structural.active_track_count() == 3U);
+    assert(std::abs(left[0] - (2.5F * 0.7071067F)) < 1.0e-5F);
+    assert(structural.enqueue_active_track_count(0));
+    assert(structural.process(four_inputs, 4, left, right, 2));
+    assert(structural.active_track_count() == 0U);
+    assert(left[0] == 0.0F && right[0] == 0.0F);
+
     // Configure full capacity and all caller-owned buffers before enabling the
     // allocation guard. The realtime process call must not invoke operator new.
     RealtimeTrackMixer maximum;
