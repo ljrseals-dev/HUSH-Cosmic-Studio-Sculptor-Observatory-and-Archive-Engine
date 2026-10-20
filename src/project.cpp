@@ -104,7 +104,9 @@ std::string to_json(const Project& p) {
           << "\", \"timeline_start_frame\": " << clip.timeline_start_frame
           << ", \"source_start_frame\": " << clip.source_start_frame
           << ", \"frame_count\": " << clip.frame_count
-          << ", \"gain\": " << clip.gain << "}";
+          << ", \"gain\": " << clip.gain
+          << ", \"fade_in_frames\": " << clip.fade_in_frames
+          << ", \"fade_out_frames\": " << clip.fade_out_frames << "}";
     }
     if (!p.clips.empty()) o << "\n  ";
     o << "]\n}\n";
@@ -205,7 +207,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"clips",body,false,e)) return false;
-    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"track_id"\s*:\s*"([^"]*)"\s*,\s*"source_id"\s*:\s*"([^"]*)"\s*,\s*"timeline_start_frame"\s*:\s*(-?\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
     std::unordered_set<std::string> clip_ids;
     for (auto it=begin;it!=end;++it) {
@@ -213,10 +215,12 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         try {
             AudioClip clip;
             clip.id=x[1].str(); clip.track_id=x[2].str(); clip.source_id=x[3].str();
-            clip.timeline_start_frame=std::stoull(x[4].str());
+            clip.timeline_start_frame=std::stoll(x[4].str());
             clip.source_start_frame=std::stoull(x[5].str());
             clip.frame_count=std::stoull(x[6].str());
             clip.gain=std::stof(x[7].str());
+            clip.fade_in_frames = x[8].matched ? std::stoull(x[8].str()) : 0U;
+            clip.fade_out_frames = x[9].matched ? std::stoull(x[9].str()) : 0U;
             const auto track=std::find_if(p.tracks.begin(),p.tracks.end(),
                 [&](const Track& t){ return t.id==clip.track_id; });
             const auto source=std::find_if(p.media_sources.begin(),p.media_sources.end(),
@@ -225,9 +229,11 @@ bool from_json(const std::string& s, Project& out, Error& e) {
                 !clip_ids.insert(clip.id).second || track==p.tracks.end() ||
                 source==p.media_sources.end() || clip.frame_count==0U ||
                 !std::isfinite(clip.gain) || clip.gain<0.0F ||
+                clip.fade_in_frames > clip.frame_count || clip.fade_out_frames > clip.frame_count ||
                 clip.source_start_frame>source->frame_count ||
                 clip.frame_count>source->frame_count-clip.source_start_frame ||
-                clip.timeline_start_frame>std::numeric_limits<std::uint64_t>::max()-clip.frame_count) {
+                clip.frame_count > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ||
+                clip.timeline_start_frame > std::numeric_limits<std::int64_t>::max() - static_cast<std::int64_t>(clip.frame_count)) {
                 e={"audio_clip_invalid",clip.id,"Clip IDs, references, gain, or frame bounds are invalid","error"}; return false;
             }
             p.clips.push_back(std::move(clip));

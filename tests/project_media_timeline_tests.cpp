@@ -10,7 +10,7 @@ int main() {
     project.tracks.push_back({"track-vox", "Vocals", 0.8F, 0.0F, false, false});
     project.media_sources.push_back({"source-take-1", "Media/take-1.wav", 48000U, 2U, 96000U});
     project.clips.push_back({"clip-vox-1", "track-vox", "source-take-1",
-                             24000U, 1200U, 48000U, 0.75F});
+                             24000, 1200U, 48000U, 0.75F, 120U, 240U});
 
     const auto json = to_json(project);
     Project restored;
@@ -21,6 +21,14 @@ int main() {
     assert(restored.clips[0].timeline_start_frame == 24000U);
     assert(restored.clips[0].source_start_frame == 1200U);
     assert(restored.clips[0].frame_count == 48000U);
+    assert(restored.clips[0].fade_in_frames == 120U);
+    assert(restored.clips[0].fade_out_frames == 240U);
+
+    // Signed pre-roll positions and optional fades round-trip without schema bump.
+    Project preroll = project;
+    preroll.clips[0].timeline_start_frame = -1200;
+    assert(from_json(to_json(preroll), restored, error));
+    assert(restored.clips[0].timeline_start_frame == -1200);
 
     // Older schema-v1 projects with no media_sources/clips arrays remain readable.
     const std::string legacy =
