@@ -269,13 +269,13 @@ public:
         log_.mark_dirty(); // The demo project has not been written to disk yet.
         recovery_dirty_ = true;
         refresh();
+        status_->setText("Demo session · unsaved · offline");
 #ifndef HUSH_GUI_TESTING
         initialize_recovery();
         recovery_timer_.setInterval(15000);
         connect(&recovery_timer_, &QTimer::timeout, this, [this] { poll_recovery(); });
         recovery_timer_.start();
 #endif
-        status_->setText("Demo session · unsaved · offline");
     }
 
 #ifdef HUSH_GUI_TESTING
