@@ -215,7 +215,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         try {
             AudioClip clip;
             clip.id=x[1].str(); clip.track_id=x[2].str(); clip.source_id=x[3].str();
-            clip.timeline_start_frame=std::stoull(x[4].str());
+            clip.timeline_start_frame=std::stoll(x[4].str());
             clip.source_start_frame=std::stoull(x[5].str());
             clip.frame_count=std::stoull(x[6].str());
             clip.gain=std::stof(x[7].str());
@@ -232,7 +232,8 @@ bool from_json(const std::string& s, Project& out, Error& e) {
                 clip.fade_in_frames > clip.frame_count || clip.fade_out_frames > clip.frame_count ||
                 clip.source_start_frame>source->frame_count ||
                 clip.frame_count>source->frame_count-clip.source_start_frame ||
-                clip.timeline_start_frame>std::numeric_limits<std::uint64_t>::max()-clip.frame_count) {
+                clip.frame_count > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ||
+                clip.timeline_start_frame > std::numeric_limits<std::int64_t>::max() - static_cast<std::int64_t>(clip.frame_count)) {
                 e={"audio_clip_invalid",clip.id,"Clip IDs, references, gain, or frame bounds are invalid","error"}; return false;
             }
             p.clips.push_back(std::move(clip));
