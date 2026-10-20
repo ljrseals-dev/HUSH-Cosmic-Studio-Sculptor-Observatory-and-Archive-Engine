@@ -1,5 +1,6 @@
 #include "hush/operation_log.hpp"
 #include <algorithm>
+#include <cstddef>
 namespace hush {
 void OperationLog::append(Operation op) {
     if (cursor_ < operations_.size())
@@ -9,8 +10,40 @@ void OperationLog::append(Operation op) {
     dirty_ = true;
 }
 bool OperationLog::apply_value(Project& p, const Operation& op, bool forward) {
-    auto it = std::find_if(p.tracks.begin(), p.tracks.end(),
-                           [&](const Track& t) { return t.id == op.entity_id; });
+    const auto find_track = [&]() {
+        return std::find_if(p.tracks.begin(), p.tracks.end(),
+                            [&](const Track& t) { return t.id == op.entity_id; });
+    };
+
+    if (op.kind == OperationKind::AddTrack) {
+        if (forward) {
+            if (p.tracks.size() >= kMaxTracks || op.track_index > p.tracks.size() ||
+                find_track() != p.tracks.end() || op.track_snapshot.id != op.entity_id) return false;
+            p.tracks.insert(p.tracks.begin() + static_cast<std::ptrdiff_t>(op.track_index),
+                            op.track_snapshot);
+            return true;
+        }
+        const auto it = find_track();
+        if (it == p.tracks.end()) return false;
+        p.tracks.erase(it);
+        return true;
+    }
+
+    if (op.kind == OperationKind::RemoveTrack) {
+        if (forward) {
+            const auto it = find_track();
+            if (it == p.tracks.end()) return false;
+            p.tracks.erase(it);
+            return true;
+        }
+        if (p.tracks.size() >= kMaxTracks || op.track_index > p.tracks.size() ||
+            find_track() != p.tracks.end() || op.track_snapshot.id != op.entity_id) return false;
+        p.tracks.insert(p.tracks.begin() + static_cast<std::ptrdiff_t>(op.track_index),
+                        op.track_snapshot);
+        return true;
+    }
+
+    const auto it = find_track();
     if (it == p.tracks.end()) return false;
     const float v = forward ? op.after_value : op.before_value;
     switch (op.kind) {
@@ -18,6 +51,8 @@ bool OperationLog::apply_value(Project& p, const Operation& op, bool forward) {
       case OperationKind::SetPan: it->pan = v; break;
       case OperationKind::SetMute: it->mute = (v != 0.0F); break;
       case OperationKind::SetSolo: it->solo = (v != 0.0F); break;
+      case OperationKind::AddTrack:
+      case OperationKind::RemoveTrack: return false;
     }
     return true;
 }
