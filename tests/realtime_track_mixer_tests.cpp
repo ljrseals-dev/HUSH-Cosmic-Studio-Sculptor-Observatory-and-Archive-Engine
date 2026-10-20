@@ -2,13 +2,36 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
+#include <new>
+#include <vector>
+
+namespace {
+bool allocation_guard_enabled = false;
+std::size_t guarded_allocations = 0;
+}
+
+void* operator new(std::size_t size) {
+    if (allocation_guard_enabled) ++guarded_allocations;
+    if (void* memory = std::malloc(size == 0U ? 1U : size)) return memory;
+    throw std::bad_alloc();
+}
+void* operator new[](std::size_t size) {
+    return ::operator new(size);
+}
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete[](void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }
 
 int main() {
     using namespace hush;
     RealtimeTrackMixer mixer;
     assert(mixer.configure(2, 8));
     assert(!mixer.configure(2, 8));
+    RealtimeTrackMixer over_capacity;
+    assert(!over_capacity.configure(kMaxTracks + 1U, 8));
 
     const float a[] = {1.0F, 0.5F};
     const float b[] = {1.0F, 1.0F};
@@ -54,5 +77,24 @@ int main() {
     const float* one_input[] = {a};
     assert(saturated.process(one_input, 1, left, right, 2));
     assert(saturated.enqueue_control(0, 0.5F, 0.0F, false, false));
+
+    // Configure full capacity and all caller-owned buffers before enabling the
+    // allocation guard. The realtime process call must not invoke operator new.
+    RealtimeTrackMixer maximum;
+    constexpr std::size_t frames = 128;
+    assert(maximum.configure(kMaxTracks, frames));
+    std::vector<std::vector<float>> full_buffers(
+        kMaxTracks, std::vector<float>(frames, 0.125F));
+    std::vector<const float*> full_inputs(kMaxTracks);
+    for (std::size_t i = 0; i < kMaxTracks; ++i)
+        full_inputs[i] = full_buffers[i].data();
+    std::vector<float> full_left(frames, 0.0F), full_right(frames, 0.0F);
+    const auto allocations_before = guarded_allocations;
+    allocation_guard_enabled = true;
+    const bool processed = maximum.process(full_inputs.data(), kMaxTracks,
+                                           full_left.data(), full_right.data(), frames);
+    allocation_guard_enabled = false;
+    assert(processed);
+    assert(guarded_allocations == allocations_before);
     return 0;
 }
