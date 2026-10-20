@@ -19,8 +19,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
 - [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
 - [ ] Commit 60-minute zero-xrun, loopback-latency, and underrun-injection evidence.
-- [ ] Run `hush_routing_benchmark 500 <seconds>` and commit its JSON output with a documented real-time budget threshold.
-- [ ] Run `hush_headless_soak 28800` and commit its JSON output; define and enforce a memory-drift threshold.
+- [x] Add configurable p99 block-time budget, sampled timing statistics, explicit pass/fail JSON, and a 500-track benchmark smoke test (full-duration qualification remains open).
+- [x] Add configurable positive RSS-drift threshold and a bounded-memory soak smoke test (8-hour run/report remains open).
 - [ ] Integrate autosave with application lifecycle and surface save failures.
 - [x] Add partial-header and truncated-payload recovery fault tests (test execution still needs CI evidence).
 - [ ] Establish durability claims with power-loss tests before making them; until then, only process-restart recovery is claimed.
