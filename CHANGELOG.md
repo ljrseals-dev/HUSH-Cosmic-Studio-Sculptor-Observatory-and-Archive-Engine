@@ -1,3 +1,9 @@
+## Unreleased — project string round-trip and numeric validation
+
+- Extend escaped-string parsing to project IDs, track IDs/names, bus IDs/names, route references, media-source IDs/paths, and clip references—not just automation lanes.
+- Require full numeric-token consumption for track and route gains/pan and clip gain; add round-trip coverage for quotes/backslashes across project, track, bus, source, and clip fields.
+- Add malformed track-number regression coverage. CI validation is pending; no local build/CTest result is claimed.
+
 ## Unreleased — tempo/automation JSON parser hardening
 
 - Decode escaped quotes, backslashes, and control escapes in automation lane IDs/targets so values emitted by the serializer round-trip correctly.
