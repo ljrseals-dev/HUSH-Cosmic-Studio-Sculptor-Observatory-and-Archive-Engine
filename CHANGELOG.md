@@ -27,6 +27,7 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 ## Unreleased — GUI live mixer wiring
 
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
+- Retried committed live-control snapshots after transient bounded-queue saturation, keeping retries on the UI timer without blocking or spinning.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
 
