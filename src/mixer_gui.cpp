@@ -413,6 +413,11 @@ private:
             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
         if (answer == QMessageBox::Yes) return true;
         candidate = disk_project;
+        // A deliberate decline discards this recovery point so it is not offered
+        // again on every subsequent open of the same project.
+        if (!QFile::remove(QString::fromStdString(journal_path.string()))) {
+            autosave_status_->setText("Recovery journal kept: could not remove declined snapshot");
+        }
         return false;
     }
 
