@@ -55,3 +55,8 @@ Still required before claiming a production live mixer:
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.
 
 Do not claim recording, MIDI, automation, plugin hosting, multitrack live source routing, or zero-xrun hardware behavior as delivered by this change.
+
+
+## Block peak/RMS diagnostics
+
+The live track mixer publishes linear-amplitude peak and RMS values for its stereo output at each processed block. The callback writes four 32-bit float bit patterns through compile-time-checked lock-free atomics; the GUI timer reads those values and displays them alongside callback and xrun/recovery counters. Meter values are diagnostics for the most recently completed block, not true-peak/loudness measurements, and do not establish absence of clipping, xruns, or device faults. Synthetic-buffer tests cover the calculations; hardware/loopback evidence is still required.
