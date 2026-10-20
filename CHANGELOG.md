@@ -34,6 +34,10 @@
 
 # Changelog
 
+## Unreleased
+
+- Add configurable `HUSH_MAX_TRACKS` (default 1024), reject over-ceiling schema-v1 project loads and realtime mixer setup, and add a full-capacity process allocation guard. CI passed on PR #78 in run 39451685619. GUI track creation/removal, CLI parity, full-ceiling graph-swap stress, memory measurement, performance qualification, soak, and hardware validation remain open.
+
 ## Unreleased — transport/automation conflict regression coverage
 
 - Kept the current `main` transport and beat-based automation APIs as the canonical implementation; avoided reintroducing overlapping alternate headers from closed PRs.
