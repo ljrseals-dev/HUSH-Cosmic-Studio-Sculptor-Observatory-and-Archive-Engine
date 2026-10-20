@@ -76,7 +76,9 @@ int main() {
     backend.stop();
     engine.reclaim_retired();
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
-              << ", observed recoveries/short transfers: "
-              << backend.xrun_count() << '\n';
+              << ", xruns: " << backend.xrun_count()
+              << ", recoveries: " << backend.recovery_count()
+              << ", short transfers: " << backend.short_transfer_count()
+              << '\n';
     return 0;
 }
