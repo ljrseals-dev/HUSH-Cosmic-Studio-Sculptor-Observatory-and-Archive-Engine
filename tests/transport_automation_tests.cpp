@@ -31,6 +31,14 @@ int main() {
     assert(transport.process_block(64) == 0);
     assert(transport.state() == TransportState::Stopped);
 
+    // A seek to the maximum sample position must saturate rather than wrap.
+    const auto max_sample = std::numeric_limits<std::uint64_t>::max();
+    assert(transport.enqueue_seek(max_sample));
+    assert(transport.enqueue_play());
+    assert(transport.process_block(128) == max_sample);
+    assert(transport.sample_position() == max_sample);
+    assert(transport.state() == TransportState::Playing);
+
     TempoMap tempo(48000.0);
     std::uint64_t sample = 0;
     assert(tempo.beat_to_sample(4.0, sample) && sample == 96000);
@@ -44,6 +52,15 @@ int main() {
     assert(!tempo.set_points(invalid, 2));
     assert(!tempo.beat_to_sample(-1.0, sample));
     assert(!tempo.set_sample_rate(std::numeric_limits<double>::quiet_NaN()));
+    // Rejected edits preserve the last valid tempo map and sample rate.
+    assert(tempo.sample_rate() == 48000.0);
+    assert(tempo.beat_to_sample(5.0, sample) && sample == 144000);
+    const TempoPoint non_finite[] = {
+        {0.0, 120.0},
+        {4.0, std::numeric_limits<double>::infinity()}
+    };
+    assert(!tempo.set_points(non_finite, 2));
+    assert(tempo.beat_to_sample(5.0, sample) && sample == 144000);
 
     AutomationLane linear;
     assert(linear.set_points({{0.0, 0.0F}, {4.0, 1.0F}},
@@ -60,6 +77,12 @@ int main() {
     assert(step.evaluate(2.0) == 0.75F);
     assert(!step.set_points({{0.0, 0.0F}, {0.0, 1.0F}},
                             AutomationInterpolation::Linear));
+    // Invalid replacement is transactional: the accepted lane remains intact.
+    assert(step.point_count() == 2);
+    assert(step.evaluate(1.0) == 0.25F);
+    assert(!step.set_points({{0.0, std::numeric_limits<float>::quiet_NaN()}},
+                            AutomationInterpolation::Linear));
+    assert(step.point_count() == 2);
     assert(step.evaluate(std::numeric_limits<double>::quiet_NaN()) == 0.0F);
     return 0;
 }
