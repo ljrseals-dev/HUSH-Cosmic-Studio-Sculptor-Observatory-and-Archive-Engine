@@ -1,6 +1,7 @@
 #pragma once
 
 #include "hush/spsc_parameter_queue.hpp"
+#include "hush/track_limits.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -22,6 +23,7 @@ struct TrackControlCommand {
 class RealtimeTrackMixer {
 public:
     static constexpr std::size_t kQueueCapacity = 2048;
+    static constexpr std::size_t kMaxTracks = hush::kMaxTracks;
 
     bool configure(std::size_t track_count, std::size_t max_frames) noexcept;
     [[nodiscard]] bool enqueue_control(std::size_t track_index, float gain,
