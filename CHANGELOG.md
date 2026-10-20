@@ -1,3 +1,9 @@
+## Unreleased — graph-publication stress-test startup race
+
+- Synchronize the audio reader's first completed processing attempt before the control thread starts rapid graph replacement. This removes a scheduler-dependent false failure where the control thread could finish all replacements and stop the reader before it processed a single block.
+- Keep the existing assertions for invalid output and require at least one completed audio block; this change makes the test deterministic without weakening its concurrency checks.
+- Validation is pending fresh CI; no local build or test result is claimed.
+
 ## Unreleased — transport command queue boundary tests
 
 - Added regression coverage for FIFO ordering across seek/stop/seek/play commands.

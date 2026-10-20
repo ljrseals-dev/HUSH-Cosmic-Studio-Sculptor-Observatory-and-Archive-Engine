@@ -45,12 +45,14 @@ int main() {
     // single audio reader processes. Every output must come from one valid snapshot.
     std::atomic<bool> stop{false};
     std::atomic<unsigned int> blocks{0U};
+    std::atomic<bool> first_block_done{false};
     std::atomic<bool> invalid_output{false};
     std::thread audio([&] {
         while (!stop.load(std::memory_order_acquire)) {
             const auto status = host.process_to_stereo(inputs, 2, 4, output_left, output_right);
             if (status != RealtimeProcessStatus::Ok) {
                 invalid_output.store(true, std::memory_order_relaxed);
+                first_block_done.store(true, std::memory_order_release);
                 break;
             }
             const float gain = output_left[0];
@@ -60,11 +62,20 @@ int main() {
                 std::abs(gain - 0.5F) > 1.0e-6F &&
                 std::abs(gain - 0.75F) > 1.0e-6F) {
                 invalid_output.store(true, std::memory_order_relaxed);
+                first_block_done.store(true, std::memory_order_release);
                 break;
             }
             blocks.fetch_add(1U, std::memory_order_relaxed);
+            first_block_done.store(true, std::memory_order_release);
         }
     });
+
+    // Do not race the test's 1,000 publications against thread startup. Without
+    // this handshake, a fast control thread can set stop before the audio thread
+    // runs once, making the test fail even when graph publication is correct.
+    while (!first_block_done.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
 
     for (unsigned int i = 0; i < 1000U; ++i) {
         auto replacement = make_graph((i % 2U) == 0U ? 0.25F : 0.75F);
