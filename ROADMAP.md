@@ -38,3 +38,11 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 ## Out of scope for the 0.2 foundation
 
 Recording, MIDI, plugin hosting, Windows/macOS parity, arrangement view, interchange, and HUSH voice/AOC Magic remain later milestones. See [Docs/Prompt](Docs/Prompt) for the full prompt sequence.
+
+
+## HUSH 0.4a recording foundation
+
+- [x] Add a preallocated SPSC capture ring with bounded, non-blocking producer behavior and explicit dropped-frame counts (PR #75; CI pending).
+- [ ] Add a disk-consumer worker and streaming WAV finalization; file I/O must remain off the audio callback.
+- [ ] Integrate capture source/track arming, take IDs and playlists, then punch/comping/crossfades and latency compensation.
+- [ ] Run the Prompt 4 recording gates on deterministic test input and a named audio device; hardware results remain not_run until measured.
