@@ -1,3 +1,9 @@
+## Unreleased — Qt mixer autosave lifecycle
+
+- Integrated `AutosaveController` with the Qt event loop for projects with a known local file path.
+- Added explicit recovery prompting when a newer project-adjacent journal snapshot is found, plus visible write-failure status and retry-preserving dirty state.
+- Added an offscreen Qt integration test that edits a track, runs the autosave lifecycle hook, and verifies the saved recovery snapshot. Fresh CI is pending; power-loss durability is not claimed.
+
 ## Unreleased — GUI-to-engine mixer command-path contract
 
 - Added a deterministic synthetic-buffer test using the production `OperationLog` and `RealtimeTrackMixer` to cover slider preview, commit, undo/redo, pan, mute/solo, and next-block output changes.
