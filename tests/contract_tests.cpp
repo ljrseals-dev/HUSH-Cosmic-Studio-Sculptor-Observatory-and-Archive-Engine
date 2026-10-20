@@ -25,7 +25,7 @@ int main() {
     p.buses={{"bus-master","Master"},{"bus-music","Music"}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
     p.tempo_map={{0.0,120.0},{16.125,89.123456789123}};
-    p.automation_lanes={{"automation-gain","track-1.gain",ProjectAutomationInterpolation::Linear,
+    p.automation_lanes={{"automation-\\\"gain\\\"\\\\lane","track-1.gain\\\"quoted\\\\target",ProjectAutomationInterpolation::Linear,
                          {{0.0,0.5F},{8.0,0.8F},{16.0,0.25F}}},
                         {"automation-mute","track-2.mute",ProjectAutomationInterpolation::Step,
                          {{0.0,0.0F},{4.0,1.0F}}}};
@@ -33,8 +33,14 @@ int main() {
     assert(from_json(json,loaded,err)); assert(loaded==p);
     const std::string invalid_tempo=R"({"schema_version":1,"id":"bad-tempo","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":1,"bpm":120}]})";
     assert(!from_json(invalid_tempo,loaded,err)); assert(err.code=="tempo_point_invalid");
+    const std::string malformed_tempo_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[],"tempo_map":[{"beat":0,"bpm":120.5.6}]})";
+    assert(!from_json(malformed_tempo_number,loaded,err));
+    assert(err.code=="tempo_point_number_invalid");
     const std::string invalid_lane=R"({"schema_version":1,"id":"bad-lane","pan_law":"equal_power_minus_3_db","tracks":[],"automation_lanes":[{"id":"x","target":"track.gain","interpolation":"linear","points":[{"beat":0,"value":0.5},{"beat":0,"value":0.7}]}]})";
     assert(!from_json(invalid_lane,loaded,err)); assert(err.code=="automation_point_invalid");
+    const std::string malformed_automation_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[],"automation_lanes":[{"id":"x","target":"track.gain","interpolation":"linear","points":[{"beat":0,"value":0.5.7}]}]})";
+    assert(!from_json(malformed_automation_number,loaded,err));
+    assert(err.code=="automation_point_number_invalid");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";
