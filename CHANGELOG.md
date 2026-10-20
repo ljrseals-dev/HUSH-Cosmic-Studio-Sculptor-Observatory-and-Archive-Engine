@@ -99,3 +99,9 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added a fixed-capacity MIDI CC-to-parameter mapper with channel/controller validation, linear range scaling, optional inversion, and duplicate-source rejection.
 - Added contract tests for mapping endpoints, invalid MIDI events/configuration, and preservation of the previous map after rejected updates.
 - MIDI device I/O, learn-mode GUI, parameter command delivery, automation playback, and schema-v2 persistence remain outside this increment. Tests have not yet been run in this environment.
+
+
+## 0.3a research branch — 2026-10-20
+
+- Added an isolated arrangement/clip model, validated plugin-editor parameter model, MIDI 1.0 byte parser, bounded realtime recording-capture queue, deterministic voice-command text parser, and contract tests.
+- These are integration foundations, not claims of a completed third-party plugin host, hardware MIDI backend, recording-to-file lifecycle, Qt arrangement UI, or speech-recognition engine.
