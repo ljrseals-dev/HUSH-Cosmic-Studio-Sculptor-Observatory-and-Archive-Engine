@@ -39,7 +39,7 @@ struct AudioClip {
     std::string id;
     std::string track_id;
     std::string source_id;
-    std::uint64_t timeline_start_frame{0};
+    std::int64_t timeline_start_frame{0};
     std::uint64_t source_start_frame{0};
     std::uint64_t frame_count{0};
     float gain{1.0F};
