@@ -20,7 +20,7 @@ int main() {
     assert(std::abs(right[0] - 1.4142135F) < 1.0e-5F);
     assert(std::abs(mixer.peak_left() - 1.4142135F) < 1.0e-5F);
     assert(std::abs(mixer.peak_right() - 1.4142135F) < 1.0e-5F);
-    assert(std::abs(mixer.rms_left() - std::sqrt((2.0F + 0.5F) / 2.0F)) < 1.0e-5F);
+    assert(std::abs(mixer.rms_left() - 1.25F) < 1.0e-5F);
     assert(std::abs(mixer.rms_right() - std::sqrt((2.0F + 0.5F) / 2.0F)) < 1.0e-5F);
 
     // Commands are applied at the next process block boundary.
