@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <system_error>
 #include <memory>
 #include <optional>
 #include <string>
