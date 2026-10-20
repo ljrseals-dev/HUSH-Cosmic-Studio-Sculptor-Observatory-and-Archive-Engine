@@ -9,7 +9,7 @@
 namespace hush {
 
 bool RealtimeTrackMixer::configure(std::size_t track_count, std::size_t max_frames) noexcept {
-    if (configured_ || track_count == 0 ||
+    if (configured_ || track_count == 0 || track_count > kMaxTracks ||
         track_count > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
         max_frames == 0) return false;
     try {
