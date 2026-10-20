@@ -125,7 +125,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     if (!std::regex_search(s,m,version_re) || (m[1].str()!="1" && m[1].str()!="2")) {
         e={"schema_version_unsupported","","Expected schema_version 1 or 2","error"}; return false;
     }
-    const std::uint32_t schema_version = static_cast<std::uint32_t>(std::stoul(m[1].str()));
+    const std::uint32_t schema_version = m[1].str() == "2" ? 2U : 1U;
     Project p;
     p.schema_version=schema_version;
     if (!std::regex_search(s,m,id_re)) { e={"project_id_missing","","Project id is missing","error"}; return false; }
