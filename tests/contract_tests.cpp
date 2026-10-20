@@ -62,6 +62,35 @@ int main() {
     assert(log.redo(p)); assert(p.tracks[0].gain==0.25F); assert(log.dirty());
     assert(log.undo(p)); assert(p==before); assert(log.dirty());
 
+    // Structural track operations participate in the same undo/redo history.
+    Project structural_project;
+    structural_project.id = "structural-track-edit";
+    OperationLog structural_log;
+    const Track added_track{"track-added", "Added Track", 1.0F, 0.0F, false, false};
+    Operation add;
+    add.entity_id = added_track.id;
+    add.kind = OperationKind::AddTrack;
+    add.track_index = 0U;
+    add.track_snapshot = added_track;
+    assert(structural_log.apply_and_append(structural_project, add));
+    assert(structural_project.tracks.size() == 1U);
+    assert(structural_log.undo(structural_project));
+    assert(structural_project.tracks.empty());
+    assert(structural_log.redo(structural_project));
+    assert(structural_project.tracks.size() == 1U && structural_project.tracks[0] == added_track);
+
+    Operation remove;
+    remove.entity_id = added_track.id;
+    remove.kind = OperationKind::RemoveTrack;
+    remove.track_index = 0U;
+    remove.track_snapshot = added_track;
+    assert(structural_log.apply_and_append(structural_project, remove));
+    assert(structural_project.tracks.empty());
+    assert(structural_log.undo(structural_project));
+    assert(structural_project.tracks.size() == 1U && structural_project.tracks[0] == added_track);
+    assert(structural_log.redo(structural_project));
+    assert(structural_project.tracks.empty());
+
     std::vector<std::vector<float>> audio{{1.0F,0.5F},{1.0F,0.5F}};
     p.tracks[0].solo=true;
     const auto mixed=mix_tracks(p,audio);
