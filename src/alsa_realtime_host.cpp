@@ -1,5 +1,6 @@
 #include "hush/alsa_audio_backend.hpp"
 #include "hush/autosave_controller.hpp"
+#include "hush/host_lifecycle.hpp"
 #include "hush/bus_graph.hpp"
 #include "hush/project.hpp"
 #include "hush/realtime_bus_engine_host.hpp"
@@ -201,8 +202,9 @@ int main(int argc, char** argv) {
     engine_host.reclaim_retired();
     if (autosave && dirty) {
         Error save_error;
-        if (!write_project_file(project_path, project, save_error) ||
-            autosave->save_now(project, save_error) != AutosaveController::Outcome::Saved) {
+        const auto outcome = finalize_dirty_project(
+            dirty, project_path, project, *autosave, &write_project_file, save_error);
+        if (outcome != FinalSaveOutcome::Saved) {
             std::cerr << "HUSH_FINAL_SAVE_FAILED path=" << project_path.string()
                       << " message=" << (save_error.message.empty()
                           ? autosave->last_save_message() : save_error.message) << '\n';
