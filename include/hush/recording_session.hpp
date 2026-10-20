@@ -14,9 +14,9 @@ namespace hush {
 class RecordingSession {
 public:
  RecordingSession()=default; RecordingSession(const RecordingSession&)=delete; RecordingSession& operator=(const RecordingSession&)=delete; ~RecordingSession();
- [[nodiscard]] bool start(const std::filesystem::path&,std::uint32_t,std::uint16_t,std::size_t,std::size_t=2048U,std::string*=nullptr);
+ [[nodiscard]] bool start(const std::filesystem::path&,std::uint32_t,std::uint16_t,std::size_t,std::size_t=2048U,std::string* = nullptr);
  [[nodiscard]] std::size_t capture(std::span<const float>) noexcept;
- [[nodiscard]] bool stop(std::string*=nullptr);
+ [[nodiscard]] bool stop(std::string* = nullptr);
  [[nodiscard]] bool running() const noexcept{return accepting_.load(std::memory_order_acquire);}
  [[nodiscard]] std::uint64_t dropped_frames() const noexcept{return ring_.dropped_frames();}
  [[nodiscard]] std::uint64_t frames_written() const noexcept{return frames_written_.load(std::memory_order_acquire);}
