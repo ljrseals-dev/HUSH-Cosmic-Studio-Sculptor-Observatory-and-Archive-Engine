@@ -50,20 +50,20 @@ int main() {
     project.tracks.push_back({"track-1", "Lead", 0.75F, 0.0F, false, false});
     Error error;
 
-    AutosaveController no_dirty_controller(RecoveryJournal(journal_path));
+    AutosaveController no_dirty_controller{RecoveryJournal(journal_path)};
     assert(finalize_dirty_project(false, project_path, project, no_dirty_controller,
                                   &fail_project_writer, error) == FinalSaveOutcome::NotRequired);
     assert(error.message.empty());
     assert(no_dirty_controller.last_save_error() == SaveError::None);
 
-    AutosaveController project_failure_controller(RecoveryJournal(journal_path));
+    AutosaveController project_failure_controller{RecoveryJournal(journal_path)};
     assert(finalize_dirty_project(true, project_path, project, project_failure_controller,
                                   &fail_project_writer, error) == FinalSaveOutcome::Failed);
     assert(project_failure_controller.last_save_error() == SaveError::ProjectWriteFailed);
     assert(project_failure_controller.last_save_message() == "injected final project write failure");
     assert(!std::filesystem::exists(project_path));
 
-    AutosaveController journal_failure_controller(RecoveryJournal(journal_path, &fail_journal_writer));
+    AutosaveController journal_failure_controller{RecoveryJournal(journal_path, &fail_journal_writer)};
     assert(finalize_dirty_project(true, project_path, project, journal_failure_controller,
                                   &write_project_writer, error) == FinalSaveOutcome::Failed);
     assert(journal_failure_controller.last_save_error() == SaveError::JournalWriteFailed);
@@ -71,7 +71,7 @@ int main() {
 
     std::filesystem::remove(project_path, ignored);
     std::filesystem::remove(journal_path, ignored);
-    AutosaveController success_controller(RecoveryJournal(journal_path));
+    AutosaveController success_controller{RecoveryJournal(journal_path)};
     assert(finalize_dirty_project(true, project_path, project, success_controller,
                                   &write_project_writer, error) == FinalSaveOutcome::Saved);
     assert(error.message.empty());
