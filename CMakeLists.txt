@@ -20,6 +20,7 @@ add_library(hush_core
     src/realtime_bus_engine.cpp
     src/realtime_track_mixer.cpp
     src/realtime_bus_audio_adapter.cpp
+    src/published_realtime_bus_audio_adapter.cpp
     src/recovery_journal.cpp
     src/autosave_controller.cpp
 )
