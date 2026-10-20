@@ -84,44 +84,63 @@ bool TempoMap::set_points(const TempoPoint* points, std::size_t count) noexcept 
 }
 
 double TempoMap::sample_to_beat(std::uint64_t sample) const noexcept {
-    const double target = static_cast<double>(sample);
-    double accumulated_samples = 0.0;
-    double current_beat = 0.0;
+    const long double target = static_cast<long double>(sample);
+    long double accumulated_samples = 0.0L;
+    long double current_beat = 0.0L;
 
     for (std::size_t i = 0; i < count_; ++i) {
-        const double next_beat = i + 1 < count_
-            ? points_[i + 1].beat : std::numeric_limits<double>::infinity();
-        const double samples_per_beat =
-            sample_rate_ * kSecondsPerMinute / points_[i].bpm;
-        const double segment_samples = (next_beat - current_beat) * samples_per_beat;
-        if (target < accumulated_samples + segment_samples)
-            return current_beat + (target - accumulated_samples) / samples_per_beat;
+        const long double next_beat = i + 1 < count_
+            ? static_cast<long double>(points_[i + 1].beat)
+            : std::numeric_limits<long double>::infinity();
+        const long double samples_per_beat =
+            static_cast<long double>(sample_rate_) *
+            static_cast<long double>(kSecondsPerMinute) /
+            static_cast<long double>(points_[i].bpm);
+        const long double segment_samples =
+            (next_beat - current_beat) * samples_per_beat;
+        if (target < accumulated_samples + segment_samples) {
+            return static_cast<double>(
+                current_beat + (target - accumulated_samples) / samples_per_beat);
+        }
         accumulated_samples += segment_samples;
         current_beat = next_beat;
     }
-    return current_beat;
+    return static_cast<double>(current_beat);
 }
 
 bool TempoMap::beat_to_sample(double beat, std::uint64_t& sample) const noexcept {
     if (!std::isfinite(beat) || beat < 0.0) return false;
-    double accumulated_samples = 0.0;
-    double current_beat = 0.0;
-    const double max_sample = static_cast<double>(
-        std::numeric_limits<std::uint64_t>::max());
+
+    // Use extended precision for accumulation and rounding. llround() returns
+    // long long, so it cannot represent the upper half of uint64_t. The
+    // exclusive 2^64 bound prevents an out-of-range floating-to-integer cast.
+    long double accumulated_samples = 0.0L;
+    long double current_beat = 0.0L;
+    const long double target_beat = static_cast<long double>(beat);
+    const long double max_sample_exclusive = std::ldexp(1.0L, 64);
 
     for (std::size_t i = 0; i < count_; ++i) {
-        const double next_beat = i + 1 < count_
-            ? points_[i + 1].beat : std::numeric_limits<double>::infinity();
-        const double samples_per_beat =
-            sample_rate_ * kSecondsPerMinute / points_[i].bpm;
-        if (beat < next_beat || i + 1 == count_) {
-            const double value =
-                accumulated_samples + (beat - current_beat) * samples_per_beat;
-            if (!std::isfinite(value) || value < 0.0 || value >= max_sample)
-                return false;
-            sample = static_cast<std::uint64_t>(std::llround(value));
+        const long double next_beat = i + 1 < count_
+            ? static_cast<long double>(points_[i + 1].beat)
+            : std::numeric_limits<long double>::infinity();
+        const long double samples_per_beat =
+            static_cast<long double>(sample_rate_) *
+            static_cast<long double>(kSecondsPerMinute) /
+            static_cast<long double>(points_[i].bpm);
+
+        if (target_beat < next_beat || i + 1 == count_) {
+            const long double value = accumulated_samples +
+                (target_beat - current_beat) * samples_per_beat;
+            if (!std::isfinite(value) || value < 0.0L) return false;
+
+            const long double rounded = std::floor(value + 0.5L);
+            if (!std::isfinite(rounded) || rounded < 0.0L ||
+                rounded >= max_sample_exclusive) return false;
+
+            sample = static_cast<std::uint64_t>(rounded);
             return true;
         }
+
         accumulated_samples += (next_beat - current_beat) * samples_per_beat;
         current_beat = next_beat;
     }
