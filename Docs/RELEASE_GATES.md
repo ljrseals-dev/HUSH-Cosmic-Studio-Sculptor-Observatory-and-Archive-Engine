@@ -16,6 +16,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | Safe graph swap and deferred reclamation | `RealtimeBusEngineHost` publishes configured snapshots off-callback; the ALSA host now routes its callback through a preallocated host adapter. A concurrent adapter/graph-replacement test is registered in CMake | Earlier engine-host tests passed in [run 39274233768](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39274233768); this branch's adapter test awaits fresh CI, and target-device validation remains open |
 | Full track/bus/master routing, insert and solo/mute behavior | Offline bus primitives exist; full track-to-live-graph semantics are incomplete | Open |
 | GUI meter and xrun polling | GUI polls callback/recovery counters from the ALSA backend; peak/RMS meters are not implemented | Partial; target-device verification open |
+| ALSA terminal worker failure reporting | Backend exposes lock-free capture/playback terminal-failure category and raw recovery status; host emits `HUSH_ALSA_WORKER_FAILED` and exits 3 after unrecoverable stream errors | Source change committed on `feat/alsa-terminal-failure-status`; fresh CI and injected/device failure verification required |
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
 | 60-minute zero-xrun run | No target-device artifact attached | Open |
 | Loopback latency and underrun injection | No measurement report | Open |
