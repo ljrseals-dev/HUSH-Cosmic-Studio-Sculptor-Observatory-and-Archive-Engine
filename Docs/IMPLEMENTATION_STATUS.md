@@ -6,6 +6,7 @@
 - [x] Bus-routing validation at project-load boundary, including unknown endpoints, duplicate/empty IDs, self-routes, invalid gain, and cycles.
 - [x] Append-only recovery journal with length-framed full-project snapshots and truncated-tail recovery.
 - [x] Autosave scheduling policy; caller must poll from a non-audio thread.
+- [x] Qt mixer GUI now integrates the autosave controller on a non-audio timer, writes dirty project snapshots to the local application-data recovery journal, offers an explicit startup recovery choice, and surfaces journal failures. Successful manual saves also append the current snapshot so an older recovery record is not presented as the latest state. Fresh CI and restart/recovery UI test evidence are pending; this is process-crash recovery, not power-loss durability.
 - [x] Invertible operation-log primitives and undo/redo tests.
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
