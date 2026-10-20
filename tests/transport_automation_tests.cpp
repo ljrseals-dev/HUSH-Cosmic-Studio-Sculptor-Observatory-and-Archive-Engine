@@ -32,6 +32,22 @@ int main() {
     assert(transport.process_block(64) == 0);
     assert(transport.state() == TransportState::Stopped);
 
+    // The fixed-capacity command queue must reject overflow without blocking.
+    TransportEngine bounded;
+    for (std::size_t i = 0; i < TransportEngine::kCommandCapacity; ++i) {
+        assert(bounded.enqueue_play());
+    }
+    assert(!bounded.enqueue_stop());
+    assert(bounded.commands_pending_approx());
+    (void)bounded.process_block(0);
+    assert(!bounded.commands_pending_approx());
+
+    // Seeking to the largest representable position must not wrap the sample clock.
+    assert(bounded.enqueue_seek(std::numeric_limits<std::uint64_t>::max()));
+    assert(bounded.enqueue_play());
+    assert(bounded.process_block(128) == std::numeric_limits<std::uint64_t>::max());
+    assert(bounded.sample_position() == std::numeric_limits<std::uint64_t>::max());
+
     TempoMap tempo(48000.0);
     std::uint64_t sample = 0;
     assert(tempo.beat_to_sample(4.0, sample));
@@ -46,6 +62,11 @@ int main() {
     assert(!tempo.set_points(invalid, 2));
     assert(!tempo.beat_to_sample(-1.0, sample));
     assert(!tempo.set_sample_rate(std::numeric_limits<double>::quiet_NaN()));
+    // Failed map edits are transactional: the last valid map remains usable.
+    assert(tempo.beat_to_sample(5.0, sample) && sample == 144000);
+    const TempoPoint non_finite[] = {{0.0, 120.0}, {4.0, std::numeric_limits<double>::infinity()}};
+    assert(!tempo.set_points(non_finite, 2));
+    assert(tempo.beat_to_sample(5.0, sample) && sample == 144000);
 
     AutomationLane linear;
     assert(linear.set_points({{0.0, 0.0F}, {4.0, 1.0F}}, AutomationInterpolation::Linear));
@@ -59,6 +80,10 @@ int main() {
     assert(step.evaluate(1.999) == 0.25F);
     assert(step.evaluate(2.0) == 0.75F);
     assert(!step.set_points({{0.0, 0.0F}, {0.0, 1.0F}}, AutomationInterpolation::Linear));
+    assert(!step.set_points({{0.0, 0.0F}}, static_cast<AutomationInterpolation>(255)));
+    // A rejected edit must leave the previously accepted lane intact.
+    assert(step.point_count() == 2);
+    assert(step.evaluate(1.0) == 0.25F);
     assert(step.evaluate(std::numeric_limits<double>::quiet_NaN()) == 0.0F);
     return 0;
 }
