@@ -125,3 +125,19 @@ jobs:
         env:
           TSAN_OPTIONS: halt_on_error=1
         run: ctest --test-dir build-tsan --output-on-failure
+
+  track-capacity-configurations:
+    name: track-capacity-${{ matrix.max_tracks }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        max_tracks: [1, 8, 64, 1024]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure capacity variant
+        run: cmake -S . -B build-capacity -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_STRESS_TOOLS=OFF -DHUSH_MAX_TRACKS=${{ matrix.max_tracks }}
+      - name: Build realtime track-mixer contract
+        run: cmake --build build-capacity --target hush_realtime_track_mixer_tests --parallel 2
+      - name: Run realtime track-mixer contract
+        run: ctest --test-dir build-capacity --output-on-failure -R '^hush_realtime_track_mixer_tests$'
