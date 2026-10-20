@@ -9,6 +9,13 @@ option(HUSH_BUILD_TESTS "Build offline contract tests" ON)
 option(HUSH_ENABLE_ALSA "Build the optional Linux ALSA capture/playback backend and host" OFF)
 option(HUSH_BUILD_GUI "Build the optional Qt 6 mixer GUI" OFF)
 option(HUSH_BUILD_STRESS_TOOLS "Build offline benchmark and soak tools" ON)
+set(HUSH_MAX_TRACKS 1024 CACHE STRING "Maximum supported project/realtime track count")
+if(NOT HUSH_MAX_TRACKS MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR "HUSH_MAX_TRACKS must be a positive integer")
+endif()
+if(HUSH_MAX_TRACKS GREATER 65535)
+  message(FATAL_ERROR "HUSH_MAX_TRACKS must not exceed 65535")
+endif()
 
 add_library(hush_core
     src/project.cpp
@@ -37,6 +44,7 @@ add_library(hush_core
 )
 target_include_directories(hush_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(hush_core PUBLIC cxx_std_20)
+target_compile_definitions(hush_core PUBLIC HUSH_MAX_TRACKS=${HUSH_MAX_TRACKS})
 if(MSVC)
   target_compile_options(hush_core PRIVATE /W4 /permissive-)
 else()
