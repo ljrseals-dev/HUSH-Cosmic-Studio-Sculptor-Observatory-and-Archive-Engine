@@ -17,13 +17,13 @@ Scope: source review only. This document does not claim routing, meter, insert, 
 
 - Track gain/pan/mute/solo are represented in the schema-v1 `Track` model and handled by `RealtimeTrackMixer` on its own path.
 - Bus engine state currently exposes fader updates, not end-to-end track mute/solo.
-- The current code does not establish a single end-to-end solo/mute precedence rule across tracks, buses, sends, and master. Gate 3 must define and test one before claiming completion. This audit does not silently infer behavior from the separate track mixer.
-- Proposed acceptance rule for owner review: **solo is evaluated first as an in-place eligibility mask; muted tracks remain silent even if soloed; when any track is soloed, only soloed and non-muted tracks contribute; master mute silences the final output.** This is a proposed design decision, not yet implemented or test-backed.
+- The new `RealtimeTrackBusRouter` runtime stage implements and tests track-level precedence: muted tracks remain silent even if soloed; when any track is soloed, only soloed and non-muted tracks contribute. This rule is local to the track stage; master mute and cross-bus solo propagation are not implemented.
+- The stage accepts a control-thread-built track-index → bus-index mapping, preallocates stereo bus-input scratch, and applies bounded SPSC control snapshots at block boundaries. It is not yet wired into project persistence, the GUI, `RealtimeBusEngineHost`, or the ALSA device path.
 
 ## Gaps
 
-1. No persisted track-to-bus membership or track-to-bus route endpoint exists.
-2. No unified live graph connects source tracks, track processing, buses, sends, and master.
+1. No persisted track-to-bus membership or track-to-bus route endpoint exists; this runtime mapping is supplied at configure time only.
+2. The new preallocated track-to-bus stage is not yet wired into the project/GUI/ALSA lifecycle, so no unified live graph connects project source tracks, track processing, buses, sends, and master.
 3. No fixed-capacity insert chain exists on each track/bus. Built-in DSP insert capacity and bypass semantics need explicit contract/tests before implementation.
 4. Pre/post-fader bus sends exist as bus-to-bus route metadata. Track-to-bus sends and a shared routing path do not.
 5. No per-node peak/RMS snapshot is exposed to the GUI.
@@ -56,10 +56,11 @@ Scope: source review only. This document does not claim routing, meter, insert, 
 
 ## Gate 3 exit criteria
 
-- [ ] Select and document solo/mute precedence in the implementation contract.
+- [x] Track-stage solo/mute precedence is documented and covered by deterministic router tests: mute wins over solo; if any track is soloed, non-solo tracks are excluded.
 - [ ] Define insert capacity and behavior for full/invalid chains.
 - [ ] Add schema v2 and backward-compatible v1 tests before persisting new route/insert fields.
-- [ ] Add track-to-bus-to-master routing matrix tests, cycle rejection on structural edit, and live graph-swap stress.
+- [ ] Integrate the runtime router with project topology and the published bus engine; add schema-v2 track-bus persistence with v1 compatibility before persisting routing.
+- [ ] Add end-to-end track-to-bus-to-master matrix tests, cycle rejection on structural edit, and live graph-swap stress.
 - [ ] Add deterministic insert passthrough/modification/capacity tests.
 - [ ] Add per-node peak/RMS tolerance tests and a safe snapshot publication test.
 - [ ] Add ALSA stub failure injection for `-EPIPE` and other write outcomes; assert counters and recovery behavior.
