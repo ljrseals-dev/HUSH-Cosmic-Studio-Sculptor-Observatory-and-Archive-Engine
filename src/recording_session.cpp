@@ -18,7 +18,7 @@ bool RecordingSession::start(const std::filesystem::path& path,std::uint32_t rat
 }
 std::size_t RecordingSession::capture(std::span<const float> samples) noexcept {
  if(!accepting_.load(std::memory_order_acquire))return 0U;
- auto accepted=ring_.capture(samples);wake_.notify_one();return accepted;
+ auto accepted=ring_.capture(samples);return accepted;
 }
 void RecordingSession::worker_main(std::filesystem::path path) noexcept {
  WavStreamWriter writer;std::string err;const bool opened=writer.open(path,sample_rate_,channels_,&err);
