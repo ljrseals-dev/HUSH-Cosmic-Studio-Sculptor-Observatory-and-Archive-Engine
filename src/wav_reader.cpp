@@ -65,7 +65,8 @@ bool read_wav(const std::filesystem::path& path, WavAudioFile& out,
     // chunk offsets. Trailing bytes after the RIFF container are permitted.
     in.seekg(0, std::ios::end);
     const auto file_end = in.tellg();
-    if (file_end < 0 || static_cast<std::uint64_t>(file_end) < riff_end)
+    if (file_end < 0 ||
+        static_cast<std::uint64_t>(static_cast<std::streamoff>(file_end)) < riff_end)
         return fail(error, "File is shorter than its declared RIFF boundary.");
     in.seekg(12, std::ios::beg);
     if (!in) return fail(error, "Could not seek to the first WAV chunk.");
