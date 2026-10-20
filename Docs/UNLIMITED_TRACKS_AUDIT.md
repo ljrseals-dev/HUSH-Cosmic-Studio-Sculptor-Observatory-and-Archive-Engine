@@ -2,7 +2,7 @@
 
 ## Status
 
-**Audit started; implementation is blocked on the required baseline.** See [BUILD_LOG.md](BUILD_LOG.md). The connected GitHub workflow can inspect and commit repository files but does not provide a shell in a checked-out clone, so the three requested configure/build/CTest sequences have not been run here. Do not interpret source inspection or older CI runs as satisfying this task's same-revision baseline gate.
+**Baseline prerequisite passed in CI; the first implementation slice is now under review.** See [BUILD_LOG.md](BUILD_LOG.md). The baseline revision passed default C++20, ALSA, Qt, Qt+ALSA, ASan, and TSan in CI run 39449869574. The first capacity implementation passed those same CI configurations in run 39451685619. These are CI results, not local-shell runs.
 
 **No existing tracks, project data, source files, archives, or user assets are to be deleted or rewritten as part of this task.** Existing archive disposition remains a separate review gate.
 
@@ -69,18 +69,18 @@ The required allocation guard must test the actual processing path at full confi
 - Full project track strings, adapter buffers, bus runtime state, GUI state, allocator overhead, and peak memory during graph replacement are not yet measured.
 - Do not mark the memory gate complete until measurements are made for startup and maximum configured capacity on a named machine and exact commit.
 
-## Required next actions after baseline passes
+## Implementation progress and remaining work
 
-1. Add one shared compile-time setting for the documented ceiling and use it at project load/creation, realtime mixer configuration, GUI actions, and CLI validation. A runtime configuration may not permit capacity to drift across those layers.
-2. Reject a project exceeding the ceiling with a clear error and preserve existing schema-v1 documents.
-3. Add boundary tests for capacities 1, 8, 64, and 1024, plus rejection at 1025; include schema-v1 loading/round-trip coverage.
-4. Add an audio-thread allocation guard test at maximum capacity.
-5. Add undoable GUI Add/Remove Track actions, count indicator, and non-blocking ceiling feedback; route commands via a safe non-realtime path.
-6. Add `--max-tracks` / `--add-tracks` CLI behavior and parity tests.
-7. Extend graph-swap stress coverage at the chosen ceiling under ASan and TSan, and record actual CI outputs.
-8. Run the 1024-track offline renderer correctness test and measure startup/full-capacity memory. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
-9. Update README, implementation status, release gates, roadmap, and changelog only to reflect verified progress.
+1. [x] Add the shared `HUSH_MAX_TRACKS` compile definition with default 1024 and CMake cache configurability.
+2. [x] Reject over-ceiling schema-v1 project loads with `track_count_exceeded`; existing schema-v1 format is unchanged.
+3. [x] Add boundary coverage at exactly the ceiling and ceiling+1. The test uses the configured default ceiling; separate runtime tests for 1, 8, and 64 are still required.
+4. [x] Add an `operator new` allocation guard around `RealtimeTrackMixer::process()` at the full configured ceiling. This does not prove every audio path is allocation-free.
+5. [ ] Add undoable GUI Add/Remove Track actions, count indicator, and non-blocking ceiling feedback; route commands via a safe non-realtime path.
+6. [ ] Add `--max-tracks` / `--add-tracks` CLI behavior and parity tests after a real host track-mixer path exists.
+7. [ ] Extend graph-swap stress coverage at the chosen ceiling under ASan and TSan.
+8. [ ] Run the 1024-track offline renderer correctness test and measure startup/full-capacity memory. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
+9. [ ] Update README, implementation status, release gates, roadmap, and changelog to reflect verified progress.
 
 ## Stop condition
 
-Do not implement the capacity change until all three baseline build-and-CTest configurations in `BUILD_LOG.md` pass on the same starting revision. If the baseline cannot be run in the available environment, stop at this audit and ask for a local run or a CI workflow that executes those exact configurations. No track-capacity code has been changed by this audit.
+The baseline stop condition has been satisfied by the successful CI runs recorded in `Docs/BUILD_LOG.md`. Do not claim the full track-capacity prompt complete: GUI/CLI parity, graph-swap stress at 1,024 tracks, memory measurements, performance qualification, soak, and hardware validation remain open.
