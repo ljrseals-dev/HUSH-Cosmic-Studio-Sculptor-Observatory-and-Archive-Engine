@@ -49,14 +49,14 @@ public:
             return false;
         }
         auto mixer = std::make_unique<hush::RealtimeTrackMixer>();
-        if (!mixer->configure(project.tracks.size(), kMaxFrames)) {
+        if (!mixer->configure(hush::kMaxTracks, kMaxFrames)) {
             error = "Could not configure the realtime track mixer.";
             return false;
         }
 
-        std::vector<std::vector<float>> buffers(project.tracks.size(),
+        std::vector<std::vector<float>> buffers(hush::kMaxTracks,
                                                 std::vector<float>(kMaxFrames, 0.0F));
-        std::vector<const float*> pointers(project.tracks.size(), nullptr);
+        std::vector<const float*> pointers(hush::kMaxTracks, nullptr);
         for (std::size_t i = 0; i < buffers.size(); ++i) pointers[i] = buffers[i].data();
 
         mixer_ = std::move(mixer);
@@ -91,24 +91,34 @@ public:
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
+        if (!mixer_ || project.tracks.size() > track_buffers_.size()) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             const auto& t = project.tracks[i];
             if (!mixer_->enqueue_control(i, t.gain, t.pan, t.mute, t.solo)) return false;
         }
-        return true;
+        return mixer_->enqueue_active_track_count(project.tracks.size());
     }
 
     // After startup, enqueue only the track touched by the operation. Sending the
     // whole project for every slider release needlessly consumes the bounded queue.
     bool enqueue_track_control_values(const hush::Project& project, const std::string& track_id,
                                       float gain, float pan, bool mute, bool solo) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
+        if (!mixer_ || project.tracks.size() > track_buffers_.size()) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             if (project.tracks[i].id == track_id)
                 return mixer_->enqueue_control(i, gain, pan, mute, solo);
         }
         return false;
+    }
+
+    bool enqueue_active_track_count(std::size_t count) noexcept {
+        return mixer_ && mixer_->enqueue_active_track_count(count);
+    }
+
+    bool enqueue_track_state_and_count(std::size_t index, const hush::Track& track,
+                                       std::size_t active_count) noexcept {
+        return mixer_ && mixer_->enqueue_track_state_and_count(
+            index, track.gain, track.pan, track.mute, track.solo, active_count);
     }
 
     bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
@@ -130,7 +140,6 @@ private:
             return;
         }
 
-        for (auto& track : self->track_buffers_) std::fill_n(track.data(), frames, 0.0F);
         if (!self->track_buffers_.empty()) {
             for (std::size_t frame = 0; frame < frames; ++frame)
                 self->track_buffers_[0][frame] = input[frame * 2U];
@@ -183,6 +192,9 @@ public:
         auto* bar = new QHBoxLayout;
         auto* open = new QPushButton("Open Project…");
         auto* save = new QPushButton("Save Project");
+        add_track_button_ = new QPushButton("Add Track");
+        remove_track_button_ = new QPushButton("Remove Last Track");
+        track_count_label_ = new QLabel;
         auto* undo = new QPushButton("Undo");
         auto* redo = new QPushButton("Redo");
 #ifdef HUSH_GUI_HAS_ALSA
@@ -195,6 +207,9 @@ public:
         status_ = new QLabel("Offline mixer · live audio stopped");
         bar->addWidget(open);
         bar->addWidget(save);
+        bar->addWidget(add_track_button_);
+        bar->addWidget(remove_track_button_);
+        bar->addWidget(track_count_label_);
         bar->addWidget(undo);
         bar->addWidget(redo);
         bar->addWidget(live_button_);
@@ -213,6 +228,8 @@ public:
 
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
+        connect(add_track_button_, &QPushButton::clicked, this, [this] { addTrack(); });
+        connect(remove_track_button_, &QPushButton::clicked, this, [this] { removeLastTrack(); });
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
@@ -270,6 +287,9 @@ private:
     QTableWidget* table_{};
     QLabel* status_{};
     QPushButton* live_button_{};
+    QPushButton* add_track_button_{};
+    QPushButton* remove_track_button_{};
+    QLabel* track_count_label_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -376,6 +396,8 @@ private:
         case hush::OperationKind::SetPan: controls.pan = value; break;
         case hush::OperationKind::SetMute: controls.mute = value != 0.0F; break;
         case hush::OperationKind::SetSolo: controls.solo = value != 0.0F; break;
+        case hush::OperationKind::AddTrack:
+        case hush::OperationKind::RemoveTrack: break;
         }
     }
 
@@ -413,6 +435,8 @@ private:
         case hush::OperationKind::SetPan: before = it->pan; break;
         case hush::OperationKind::SetMute: before = it->mute ? 1.0F : 0.0F; break;
         case hush::OperationKind::SetSolo: before = it->solo ? 1.0F : 0.0F; break;
+        case hush::OperationKind::AddTrack:
+        case hush::OperationKind::RemoveTrack: return;
         }
         if (before == after) return;
         auto values = LiveControlValues{it->gain, it->pan, it->mute, it->solo};
@@ -471,8 +495,89 @@ private:
     }
 #endif
 
+    bool enqueue_structural_operation(const hush::Operation& operation, bool forward) {
+#ifdef HUSH_GUI_HAS_ALSA
+        if (!live_.running()) return true;
+        const auto count = project_.tracks.size();
+        if (operation.kind == hush::OperationKind::AddTrack) {
+            if (forward) {
+                return live_.enqueue_track_state_and_count(operation.track_index,
+                                                           operation.track_snapshot, count + 1U);
+            }
+            return count > 0U && live_.enqueue_active_track_count(count - 1U);
+        }
+        if (operation.kind == hush::OperationKind::RemoveTrack) {
+            if (forward) return count > 0U && live_.enqueue_active_track_count(count - 1U);
+            return live_.enqueue_track_state_and_count(operation.track_index,
+                                                       operation.track_snapshot, count + 1U);
+        }
+#else
+        (void)operation;
+        (void)forward;
+#endif
+        return true;
+    }
+
+    void addTrack() {
+        if (project_.tracks.size() >= hush::kMaxTracks) {
+            status_->setText("Track limit reached: HUSH_MAX_TRACKS = " +
+                             QString::number(static_cast<qulonglong>(hush::kMaxTracks)));
+            return;
+        }
+        std::size_t serial = project_.tracks.size() + 1U;
+        std::string id;
+        do {
+            id = "track-" + std::to_string(serial++);
+        } while (std::find_if(project_.tracks.begin(), project_.tracks.end(),
+                              [&](const hush::Track& track) { return track.id == id; }) != project_.tracks.end());
+        hush::Track track{id, "Track " + std::to_string(project_.tracks.size() + 1U),
+                          1.0F, 0.0F, false, false};
+        hush::Operation operation;
+        operation.entity_id = track.id;
+        operation.kind = hush::OperationKind::AddTrack;
+        operation.track_index = project_.tracks.size();
+        operation.track_snapshot = track;
+        if (!enqueue_structural_operation(operation, true)) {
+            status_->setText("Add Track not applied: live command queue full; retry after audio drains");
+            return;
+        }
+        if (log_.apply_and_append(project_, operation)) {
+            status_->setText("Track added · undo history " + QString::number(log_.cursor()));
+            refresh();
+        }
+    }
+
+    void removeLastTrack() {
+        if (project_.tracks.empty()) {
+            status_->setText("There are no tracks to remove");
+            return;
+        }
+        const auto index = project_.tracks.size() - 1U;
+        const auto track = project_.tracks.back();
+        hush::Operation operation;
+        operation.entity_id = track.id;
+        operation.kind = hush::OperationKind::RemoveTrack;
+        operation.track_index = index;
+        operation.track_snapshot = track;
+        if (!enqueue_structural_operation(operation, true)) {
+            status_->setText("Remove Track not applied: live command queue full; retry after audio drains");
+            return;
+        }
+        if (log_.apply_and_append(project_, operation)) {
+            status_->setText("Last track removed · undo history " + QString::number(log_.cursor()));
+            refresh();
+        }
+    }
+
     void refresh() {
         table_->setRowCount(static_cast<int>(project_.tracks.size()));
+        track_count_label_->setText(QString::number(static_cast<qulonglong>(project_.tracks.size())) +
+                                    " / " + QString::number(static_cast<qulonglong>(hush::kMaxTracks)) +
+                                    " tracks");
+        add_track_button_->setEnabled(project_.tracks.size() < hush::kMaxTracks);
+        add_track_button_->setToolTip(project_.tracks.size() < hush::kMaxTracks
+            ? "Add a track (undoable)" : "HUSH_MAX_TRACKS limit reached");
+        remove_track_button_->setEnabled(!project_.tracks.empty());
         for (std::size_t i = 0; i < project_.tracks.size(); ++i) {
             const auto& t = project_.tracks[i];
             const int row = static_cast<int>(i);
