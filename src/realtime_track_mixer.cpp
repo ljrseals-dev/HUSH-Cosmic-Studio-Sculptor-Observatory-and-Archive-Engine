@@ -1,12 +1,26 @@
 #include "hush/realtime_track_mixer.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <limits>
 #include <new>
 #include <vector>
 
 namespace hush {
+
+float RealtimeTrackMixer::peak_left() const noexcept {
+    return std::bit_cast<float>(peak_left_bits_.load(std::memory_order_relaxed));
+}
+float RealtimeTrackMixer::peak_right() const noexcept {
+    return std::bit_cast<float>(peak_right_bits_.load(std::memory_order_relaxed));
+}
+float RealtimeTrackMixer::rms_left() const noexcept {
+    return std::bit_cast<float>(rms_left_bits_.load(std::memory_order_relaxed));
+}
+float RealtimeTrackMixer::rms_right() const noexcept {
+    return std::bit_cast<float>(rms_right_bits_.load(std::memory_order_relaxed));
+}
 
 bool RealtimeTrackMixer::configure(std::size_t track_count, std::size_t max_frames) noexcept {
     if (configured_ || track_count == 0 ||
@@ -76,6 +90,24 @@ bool RealtimeTrackMixer::process(const float* const* mono_tracks,
             output_right[frame] += sample * right_gain;
         }
     }
+    float peak_l = 0.0F;
+    float peak_r = 0.0F;
+    double sum_l = 0.0;
+    double sum_r = 0.0;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float left = output_left[frame];
+        const float right = output_right[frame];
+        peak_l = std::max(peak_l, std::abs(left));
+        peak_r = std::max(peak_r, std::abs(right));
+        sum_l += static_cast<double>(left) * static_cast<double>(left);
+        sum_r += static_cast<double>(right) * static_cast<double>(right);
+    }
+    const float rms_l = frames == 0 ? 0.0F : static_cast<float>(std::sqrt(sum_l / static_cast<double>(frames)));
+    const float rms_r = frames == 0 ? 0.0F : static_cast<float>(std::sqrt(sum_r / static_cast<double>(frames)));
+    peak_left_bits_.store(std::bit_cast<std::uint32_t>(peak_l), std::memory_order_relaxed);
+    peak_right_bits_.store(std::bit_cast<std::uint32_t>(peak_r), std::memory_order_relaxed);
+    rms_left_bits_.store(std::bit_cast<std::uint32_t>(rms_l), std::memory_order_relaxed);
+    rms_right_bits_.store(std::bit_cast<std::uint32_t>(rms_r), std::memory_order_relaxed);
     return true;
 }
 
