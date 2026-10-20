@@ -1,10 +1,17 @@
+## Unreleased — full-range tempo conversion fix
+
+- Replaced the `TempoMap::beat_to_sample` `llround()` conversion with extended-precision accumulation and checked rounding, allowing valid sample positions above `INT64_MAX` while rejecting values at or beyond the exclusive `2^64` bound without modifying the output argument.
+- Kept sample-to-beat accumulation in extended precision to reduce avoidable precision loss for large sample positions.
+- Added regression checks for valid positions above `INT64_MAX`, out-of-range rejection, and output-argument preservation.
+- Source changes are committed; CI/build/CTest validation is still required. No local test pass is claimed.
+
+# Changelog
+
 ## Unreleased — transport/automation conflict regression coverage
 
 - Kept the current `main` transport and beat-based automation APIs as the canonical implementation; avoided reintroducing overlapping alternate headers from closed PRs.
 - Expanded `hush_transport_automation_tests` to cover sample-clock saturation at `UINT64_MAX`, transactional rejection of invalid tempo-map edits, and preservation of an accepted automation lane after invalid replacement.
 - These are source-level regression additions only. Build and CTest evidence must come from CI; no local test pass is claimed.
-
-# Changelog
 
 ## Unreleased — voice processor audit baseline
 
@@ -16,12 +23,13 @@
 
 - Add schema-v1-compatible media-source references and sample-positioned audio clips, with track/source reference checks, source-frame bounds validation, and persistence tests. Full arrangement rendering remains a separate step.
 - Add offline RIFF/WAVE media import for PCM16 and IEEE float32 files, with bounded memory use, format validation, and decoder contract tests.
+- Added MIDI CC-to-parameter mapping foundation with validation and transactional rejection tests. MIDI device I/O, learn-mode GUI, automation playback, and schema-v2 persistence remain out of scope.
 
 Notable repository changes. This is a development changelog, not a claim of a finished DAW release.
 
 ## 0.2.0 — headless foundation
 
-- C++20 CMake project with schema-v1 persistence, bus graph validation, offline/reference rendering, preallocated bus processing, and a bounded SPSC parameter queue.
+- C++20 offline CMake project with schema-v1 persistence, bus graph validation, offline/reference rendering, preallocated bus processing, and a bounded SPSC parameter queue.
 - Added realtime stereo adapter and optional ALSA backend/host.
 - Added recovery journal, autosave policy controller, and operation-log undo/redo primitives.
 - Added optional Qt 6 mixer shell and an explicitly started ALSA live-input monitor when both GUI and ALSA options are enabled; GUI fader/pan/mute/solo edits and undo/redo enqueue bounded realtime track-mixer commands. Current live input mapping is limited to stereo capture channels on the first two tracks.
@@ -52,12 +60,12 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added `RealtimeBusEngineHost` to publish fully configured bus-engine snapshots off the audio callback and defer retired graph destruction until the reader guard is clear; added concurrent processing/publication coverage. CI and sanitizer results for this new host are pending.
 
 - Made live GUI edits, undo, and redo transactional with respect to bounded-queue acceptance: if the queue is full, the operation is not committed to project state/history and the UI restores canonical values.
+
 - Expanded realtime track-mixer tests for non-finite values, invalid track indices, upper/lower bounds, block-boundary output changes, and queue saturation. Qt interaction and physical loopback tests remain open.
 
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
-
 
 ## Unreleased — MIDI CC mapping foundation
 
