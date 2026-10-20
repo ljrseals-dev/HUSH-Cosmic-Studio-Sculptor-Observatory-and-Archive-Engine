@@ -99,6 +99,15 @@ endif()
 if(HUSH_BUILD_TESTS)
   enable_testing()
 
+  if(HUSH_BUILD_GUI)
+    add_executable(hush_qt_mixer_interaction_tests tests/qt_mixer_interaction_tests.cpp)
+    target_link_libraries(hush_qt_mixer_interaction_tests PRIVATE hush_core Qt6::Widgets)
+    target_compile_features(hush_qt_mixer_interaction_tests PRIVATE cxx_std_20)
+    add_test(NAME hush_qt_mixer_interaction_tests COMMAND hush_qt_mixer_interaction_tests)
+    set_tests_properties(hush_qt_mixer_interaction_tests PROPERTIES
+      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+  endif()
+
   if(HUSH_BUILD_STRESS_TOOLS)
     add_test(NAME hush_performance_soak_smoke
       COMMAND ${CMAKE_COMMAND}
