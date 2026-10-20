@@ -8,12 +8,12 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | ALSA-enabled configure/build/contracts | Same run, job `linux-alsa-enabled`; compile/contracts only | Pass on tested revision; not hardware validation |
 | Qt 6 mixer configure/build/contracts | Same run, job `linux-qt6-mixer-gui` | Pass on tested revision; Qt interaction test remains open |
 | Qt 6 + ALSA live mixer | Same run, job `linux-qt6-alsa-live-mixer` | Pass on tested revision; audible hardware/loopback verification remains open |
-| ASan instrumented CI | Same run, job `linux-asan` | Pass on tested revision; production graph-swap integration/stress remains open |
+| ASan instrumented CI | Same run, job `linux-asan` | Pass on tested revision; fresh CI for the newly integrated host path remains open |
 | TSan instrumented CI | Same run, job `linux-tsan` | Pass on tested revision; production graph-swap integration/race coverage remains open |
 | Repository artifact hygiene | Same run, job `repo-artifact-hygiene` | Pass on tested revision; legacy ZIP disposition still requires content review |
 | GUI-to-live-engine command path | Optional Start/Stop Live ALSA action queues GUI model controls and undo/redo through bounded SPSC commands; capture L/R feed tracks 1–2 only | Source implemented; GUI interaction test, CLI parity, and target-device checks open |
 | GUI fader command applies at audio block boundary | Existing `RealtimeTrackMixer` applies queued controls at process block boundaries; no Qt interaction/loopback test | Partial; UI-level evidence open |
-| Safe graph swap and deferred reclamation | `RealtimeGraphPublisher` primitive supports guarded readers and control-thread reclamation; test now includes a held-reader lifetime assertion and concurrent publication stress | Primitive only; test result for latest commit pending; engine integration remains open |
+| Safe graph swap and deferred reclamation | `RealtimeGraphPublisher` primitive supports guarded readers and control-thread reclamation; test now includes a held-reader lifetime assertion and concurrent publication stress | Engine wrapper is integrated into the standalone ALSA host; guarded master-output copy and concurrent replacement tests added; fresh CI pending; GUI topology publication and target hardware evidence remain open |
 | Full track/bus/master routing, insert and solo/mute behavior | Offline bus primitives exist; full track-to-live-graph semantics are incomplete | Open |
 | GUI meter and xrun polling | GUI polls callback/recovery counters from the ALSA backend; peak/RMS meters are not implemented | Partial; target-device verification open |
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
