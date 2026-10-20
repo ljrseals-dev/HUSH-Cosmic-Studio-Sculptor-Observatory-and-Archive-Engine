@@ -269,10 +269,12 @@ public:
         log_.mark_dirty(); // The demo project has not been written to disk yet.
         recovery_dirty_ = true;
         refresh();
+#ifndef HUSH_GUI_TESTING
         initialize_recovery();
         recovery_timer_.setInterval(15000);
         connect(&recovery_timer_, &QTimer::timeout, this, [this] { poll_recovery(); });
         recovery_timer_.start();
+#endif
         status_->setText("Demo session · unsaved · offline");
     }
 
@@ -327,7 +329,7 @@ private:
         log_.mark_saved();
         recovery_dirty_ = true;
         refresh();
-        persist_recovery_snapshot("Project loaded");
+        persist_recovery_snapshot();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
     }
 
@@ -506,11 +508,10 @@ private:
 
         // Record the current in-memory session after a declined/absent recovery so
         // the journal never silently keeps presenting an older session as current.
-        persist_recovery_snapshot("Session initialized");
+        persist_recovery_snapshot();
     }
 
-    void persist_recovery_snapshot(const char* success_message) {
-        (void)success_message;
+    void persist_recovery_snapshot() {
         if (!recovery_) return;
         hush::Error error;
         if (recovery_->save_now(project_, error) == hush::AutosaveController::Outcome::Saved) {
