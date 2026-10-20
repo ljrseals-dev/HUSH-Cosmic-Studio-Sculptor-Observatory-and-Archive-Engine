@@ -99,7 +99,7 @@ int main() {
     assert(journal_failure_controller.last_save_error() == SaveError::JournalWriteFailed);
     assert(journal_failure_controller.last_save_message() == "injected final journal write failure");
     Project disk_project;
-    std::string parse_error;
+    Error parse_error;
     assert(from_json(read_file(project_path), disk_project, parse_error));
     assert(disk_project == project);
     assert(journal_writer_calls == 1);
