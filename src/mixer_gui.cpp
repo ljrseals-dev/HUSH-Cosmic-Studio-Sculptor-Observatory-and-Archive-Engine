@@ -15,12 +15,15 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QProgressBar>
 #include <QSlider>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -89,6 +92,8 @@ public:
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
+    [[nodiscard]] float input_peak() const noexcept { return input_peak_.load(std::memory_order_relaxed); }
+    [[nodiscard]] float output_peak() const noexcept { return output_peak_.load(std::memory_order_relaxed); }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
@@ -130,6 +135,11 @@ private:
             return;
         }
 
+        float input_peak = 0.0F;
+        for (std::size_t i = 0; i < frames * 2U; ++i)
+            input_peak = std::max(input_peak, std::abs(input[i]));
+        self->input_peak_.store(input_peak, std::memory_order_relaxed);
+
         for (auto& track : self->track_buffers_) std::fill_n(track.data(), frames, 0.0F);
         if (!self->track_buffers_.empty()) {
             for (std::size_t frame = 0; frame < frames; ++frame)
@@ -147,10 +157,14 @@ private:
             std::fill_n(output, frames * 2U, 0.0F);
             return;
         }
+        float output_peak = 0.0F;
         for (std::size_t frame = 0; frame < frames; ++frame) {
             output[frame * 2U] = self->output_left_[frame];
             output[frame * 2U + 1U] = self->output_right_[frame];
+            output_peak = std::max(output_peak, std::abs(self->output_left_[frame]));
+            output_peak = std::max(output_peak, std::abs(self->output_right_[frame]));
         }
+        self->output_peak_.store(output_peak, std::memory_order_relaxed);
     }
 
 public:
@@ -163,6 +177,8 @@ public:
 
 private:
     hush::AlsaAudioBackend backend_;
+    std::atomic<float> input_peak_{0.0F};
+    std::atomic<float> output_peak_{0.0F};
     std::unique_ptr<hush::RealtimeTrackMixer> mixer_;
     std::vector<std::vector<float>> track_buffers_;
     std::vector<const float*> track_pointers_;
@@ -216,6 +232,48 @@ public:
         table_->verticalHeader()->hide();
         table_->setAlternatingRowColors(true);
         layout->addWidget(table_);
+
+        // Channel Light: meters are refreshed on the GUI thread from atomic peaks
+        // measured in the actual ALSA callback. The callback never touches Qt.
+        auto* light_panel = new QWidget(root);
+        light_panel->setObjectName("channelLightPanel");
+        auto* light_layout = new QHBoxLayout(light_panel);
+        auto* light_title = new QLabel("CHANNEL LIGHT", light_panel);
+        light_title->setObjectName("channelLightTitle");
+        light_layout->addWidget(light_title);
+        input_light_ = new QLabel("INPUT · IDLE", light_panel);
+        process_light_ = new QLabel("PROCESSING · IDLE", light_panel);
+        clip_light_ = new QLabel("CLIP · CLEAR", light_panel);
+        output_light_ = new QLabel("OUTPUT · IDLE", light_panel);
+        for (auto* label : {input_light_, process_light_, clip_light_, output_light_}) {
+            label->setMinimumWidth(125);
+            label->setAlignment(Qt::AlignCenter);
+            label->setMargin(7);
+            light_layout->addWidget(label);
+        }
+        input_meter_ = new QProgressBar(light_panel);
+        input_meter_->setObjectName("channelInputMeter");
+        input_meter_->setRange(0, 1000);
+        input_meter_->setTextVisible(false);
+        output_meter_ = new QProgressBar(light_panel);
+        output_meter_->setObjectName("channelOutputMeter");
+        output_meter_->setRange(0, 1000);
+        output_meter_->setTextVisible(false);
+        light_layout->addWidget(input_meter_, 1);
+        light_layout->addWidget(output_meter_, 1);
+        layout->addWidget(light_panel);
+        setStyleSheet(
+            "QMainWindow,QWidget { background:#111522; color:#E6ECF7; }"
+            "QTableWidget { background:#171D2C; alternate-background-color:#1D2537; gridline-color:#303A50; }"
+            "QHeaderView::section { background:#222B40; color:#DCE7FF; padding:6px; border:0; }"
+            "QPushButton { background:#222B40; border:1px solid #3C4965; border-radius:5px; padding:6px 10px; }"
+            "QPushButton:hover { border-color:#48D9FF; }"
+            "QSlider::groove:horizontal { height:5px; background:#303A50; }"
+            "QSlider::handle:horizontal { background:#48D9FF; width:13px; margin:-5px 0; border-radius:6px; }"
+            "QCheckBox { spacing:6px; }"
+            "QLabel#channelLightTitle { color:#B9A1FF; font-weight:bold; letter-spacing:2px; }"
+            "QProgressBar { background:#20283A; border:1px solid #35415B; border-radius:4px; height:12px; }"
+            "QProgressBar::chunk { background:#48D9FF; border-radius:3px; }");
         setCentralWidget(root);
 
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
@@ -252,7 +310,7 @@ public:
         });
 #ifdef HUSH_GUI_HAS_ALSA
         connect(live_button_, &QPushButton::clicked, this, [this] { toggle_live(); });
-        connect(&status_timer_, &QTimer::timeout, this, [this] { poll_live_status(); });
+        connect(&status_timer_, &QTimer::timeout, this, [this] { poll_live_status(); poll_channel_light(); });
         status_timer_.start(250);
 #endif
 
@@ -281,6 +339,12 @@ private:
     QString project_path_;
     QTableWidget* table_{};
     QLabel* status_{};
+    QLabel* input_light_{};
+    QLabel* process_light_{};
+    QLabel* clip_light_{};
+    QLabel* output_light_{};
+    QProgressBar* input_meter_{};
+    QProgressBar* output_meter_{};
     QPushButton* live_button_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
@@ -443,6 +507,26 @@ private:
     }
 
 #ifdef HUSH_GUI_HAS_ALSA
+    void poll_channel_light() {
+        const bool running = live_.running();
+        const float in = running ? live_.input_peak() : 0.0F;
+        const float out = running ? live_.output_peak() : 0.0F;
+        const auto level = [](float value) {
+            if (!std::isfinite(value) || value <= 0.0F) return 0;
+            return static_cast<int>(std::clamp(value, 0.0F, 1.0F) * 1000.0F);
+        };
+        input_meter_->setValue(level(in));
+        output_meter_->setValue(level(out));
+        input_light_->setText(running && in > 0.0001F ? "INPUT · SIGNAL" : "INPUT · IDLE");
+        process_light_->setText(running ? "PROCESSING · ACTIVE" : "PROCESSING · IDLE");
+        clip_light_->setText((in >= 1.0F || out >= 1.0F) ? "CLIP · CLIPPING" : "CLIP · CLEAR");
+        output_light_->setText(running && out > 0.0001F ? "OUTPUT · SIGNAL" : "OUTPUT · IDLE");
+        input_light_->setStyleSheet(running && in > 0.0001F ? "background:#123C4B;color:#58E4FF;border-radius:5px;" : "background:#20283A;color:#8290AA;border-radius:5px;");
+        process_light_->setStyleSheet(running ? "background:#30264B;color:#C9B5FF;border-radius:5px;" : "background:#20283A;color:#8290AA;border-radius:5px;");
+        clip_light_->setStyleSheet((in >= 1.0F || out >= 1.0F) ? "background:#5A202D;color:#FF8797;border-radius:5px;" : "background:#193C32;color:#8AF0BC;border-radius:5px;");
+        output_light_->setStyleSheet(running && out > 0.0001F ? "background:#193C32;color:#8AF0BC;border-radius:5px;" : "background:#20283A;color:#8290AA;border-radius:5px;");
+    }
+
     void poll_live_status() {
         if (live_.running()) {
             status_->setText("Live ALSA · callbacks " + QString::number(live_.callback_count()) +
