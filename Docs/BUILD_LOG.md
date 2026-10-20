@@ -41,7 +41,7 @@ The source revision `38109986363bfdf96831db1095d998b51184d100` passed [CI run 39
 ### Not run / still open
 
 - No local configure/build/CTest run was performed in this workflow; results above are GitHub Actions evidence.
-- No memory/RSS measurement was run.
+- No memory/RSS measurement was run on the earlier CI head. A new `hush_track_capacity_check` harness and `/usr/bin/time -v` CI step have been added after run 39453091416; their output is pending a fresh run.
 - No 1,024-track graph-swap stress test was added yet.
 - No 500-track performance qualification or 8-hour soak was run.
 - No physical audio hardware validation was performed.
