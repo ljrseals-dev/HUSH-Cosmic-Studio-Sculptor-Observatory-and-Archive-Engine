@@ -4,7 +4,17 @@
 #include <string>
 #include <vector>
 
+#ifndef HUSH_MAX_TRACKS
+#define HUSH_MAX_TRACKS 1024
+#endif
+
+#if HUSH_MAX_TRACKS < 1
+#error "HUSH_MAX_TRACKS must be at least 1"
+#endif
+
 namespace hush {
+inline constexpr std::size_t kMaxTracks = static_cast<std::size_t>(HUSH_MAX_TRACKS);
+
 struct Error {
     std::string code;
     std::string entity_id;
