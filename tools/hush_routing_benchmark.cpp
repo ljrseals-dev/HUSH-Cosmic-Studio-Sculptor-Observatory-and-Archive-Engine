@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const double mean_process_us = process_us.empty() ? 0.0 :
         std::accumulate(process_us.begin(), process_us.end(), 0.0) / static_cast<double>(process_us.size());
-    std::sort(process_us.begin(), process_us.end());
+    const double mean_process_us = process_us.empty() ? 0.0 :\n        std::accumulate(process_us.begin(), process_us.end(), 0.0) / static_cast<double>(process_us.size());\n    std::sort(process_us.begin(), process_us.end());
     const auto percentile = [&process_us](double p) {
         if (process_us.empty()) return 0.0;
         const auto index = static_cast<std::size_t>(p * static_cast<double>(process_us.size() - 1U));
