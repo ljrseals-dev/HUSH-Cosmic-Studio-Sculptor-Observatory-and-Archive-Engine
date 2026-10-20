@@ -32,3 +32,9 @@
 - [ ] Optional JACK/PipeWire backends and preservation of historical 0.1.0 tests are not present in this source archive.
 
 A green CI job establishes only the configuration and tests that actually ran. It does not prove hardware latency, zero xruns, soak stability, or release readiness.
+
+
+## Recording milestone 0.4a
+- [x] Added preallocated SPSC interleaved-float capture ring; capture and drain operate on complete frames without allocation or I/O.
+- [x] Overflow is counted as dropped frames and exposed to the control side.
+- [ ] Off-thread disk writer, streaming WAV finalization, track arm/disarm, takes/playlists, punch, comping, crossfades, latency compensation, and ALSA capture-to-file integration remain incomplete. Do not claim recording is production-ready.
