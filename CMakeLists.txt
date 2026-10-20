@@ -31,6 +31,9 @@ add_library(hush_core
     src/recovery_journal.cpp
     src/autosave_controller.cpp
     src/wav_writer.cpp
+    src/wav_stream_writer.cpp
+    src/recording_ring_buffer.cpp
+    src/recording_session.cpp
     src/wav_reader.cpp
     src/project_wav_export.cpp
 )
@@ -214,6 +217,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_wav_reader_tests PRIVATE hush_core)
   add_test(NAME hush_wav_reader_tests COMMAND hush_wav_reader_tests)
 
+  add_executable(hush_recording_session_tests tests/recording_session_tests.cpp)
+  target_link_libraries(hush_recording_session_tests PRIVATE hush_core)
+  add_test(NAME hush_recording_session_tests COMMAND hush_recording_session_tests)
+
   if(HUSH_ENABLE_ALSA)
     add_test(NAME hush_alsa_host_help COMMAND hush_alsa_realtime_host --help)
     add_test(NAME hush_alsa_host_journal_requires_project
@@ -238,6 +245,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_project_wav_export_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_project_media_timeline_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_wav_reader_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_recording_session_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_clip_renderer_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE /UNDEBUG)
@@ -265,6 +273,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_project_wav_export_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_project_media_timeline_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_wav_reader_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_recording_session_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_bus_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_clip_renderer_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_preallocated_bus_processor_tests PRIVATE -UNDEBUG)
