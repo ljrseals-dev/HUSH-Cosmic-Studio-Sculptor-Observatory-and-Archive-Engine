@@ -15,6 +15,14 @@ class TrackMixerCommandBridge {
 public:
     [[nodiscard]] static bool enqueue_project(const Project& project,
                                               RealtimeTrackMixer& engine) noexcept {
+        // Reject topology mismatches before enqueueing anything. Without this
+        // preflight a short/long project could leave a partially queued snapshot.
+        // This helper is intended for startup seeding before the audio consumer
+        // starts; bounded-queue saturation during live operation is not transactional.
+        if (project.tracks.size() != engine.track_count() ||
+            project.tracks.size() > RealtimeTrackMixer::kQueueCapacity) {
+            return false;
+        }
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             const auto& track = project.tracks[i];
             if (!engine.enqueue_control(i, track.gain, track.pan, track.mute, track.solo))
