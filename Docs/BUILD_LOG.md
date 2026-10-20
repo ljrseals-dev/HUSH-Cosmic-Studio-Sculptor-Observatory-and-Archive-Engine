@@ -41,4 +41,4 @@ The new tests validate schema-v1 acceptance at `HUSH_MAX_TRACKS`, rejection at c
 - No 1,024-track graph-swap stress test was added yet.
 - No 500-track performance qualification or 8-hour soak was run.
 - No physical audio hardware validation was performed.
-- GUI Add/Remove Track controls and CLI parity remain unimplemented.
+- GUI Add Track / Remove Last Track controls, undoable structural operations, count indicator, and block-boundary active-count commands have been added on the current PR branch. Fresh CI for these later changes is pending. Headless Qt widget-interaction tests and CLI parity remain open.
