@@ -43,6 +43,16 @@ int main() {
     expect_near(out_l[0], 1.0F);
     expect_near(out_r[0], 1.0F);
 
+    // Initial snapshot seeding rejects a topology mismatch before enqueueing
+    // any partial state. The current engine output remains unchanged.
+    Project mismatched = project;
+    mismatched.tracks.pop_back();
+    mismatched.tracks[0].gain = 0.1F;
+    assert(!TrackMixerCommandBridge::enqueue_project(mismatched, engine));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 1.0F);
+    expect_near(out_r[0], 1.0F);
+
     // GUI drag preview is sent before the project edit is committed. It must
     // change the next block without creating an undo entry or mutating project.
     OperationLog history;
