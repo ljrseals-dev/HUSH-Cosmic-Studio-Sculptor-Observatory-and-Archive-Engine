@@ -102,6 +102,10 @@ if(HUSH_BUILD_STRESS_TOOLS)
   add_executable(hush_headless_soak tools/hush_headless_soak.cpp)
   target_link_libraries(hush_headless_soak PRIVATE hush_core)
   target_compile_features(hush_headless_soak PRIVATE cxx_std_20)
+
+  add_executable(hush_track_capacity_check tools/hush_track_capacity_check.cpp)
+  target_link_libraries(hush_track_capacity_check PRIVATE hush_core)
+  target_compile_features(hush_track_capacity_check PRIVATE cxx_std_20)
 endif()
 
 if(HUSH_BUILD_TESTS)
@@ -121,6 +125,7 @@ if(HUSH_BUILD_TESTS)
   endif()
 
   if(HUSH_BUILD_STRESS_TOOLS)
+    add_test(NAME hush_track_capacity_check COMMAND hush_track_capacity_check)
     add_test(NAME hush_performance_soak_smoke
       COMMAND ${CMAKE_COMMAND}
         -DBENCHMARK=$<TARGET_FILE:hush_routing_benchmark>
