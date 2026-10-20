@@ -1,6 +1,7 @@
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
 #include "hush/realtime_track_mixer.hpp"
+#include "hush/track_mixer_command_bridge.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -88,37 +89,23 @@ public:
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
-        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-            const auto& t = project.tracks[i];
-            if (!mixer_->enqueue_control(i, t.gain, t.pan, t.mute, t.solo)) return false;
-        }
-        return true;
+        return mixer_ && project.tracks.size() == track_buffers_.size() &&
+               hush::TrackMixerCommandBridge::enqueue_project(project, *mixer_);
     }
 
     // After startup, enqueue only the track touched by the operation. Sending the
     // whole project for every slider movement needlessly consumes the bounded queue.
     bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
-        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-            const auto& track = project.tracks[i];
-            if (track.id == track_id)
-                return mixer_->enqueue_control(i, track.gain, track.pan, track.mute, track.solo);
-        }
-        return false;
+        return mixer_ && project.tracks.size() == track_buffers_.size() &&
+               hush::TrackMixerCommandBridge::enqueue_track(project, *mixer_, track_id);
     }
 
     // Preview gain/pan in the audio engine while the user drags. This command does
     // not mutate project state or add undo entries; slider release commits the edit.
     bool enqueue_track_preview(const hush::Project& project, const std::string& track_id,
                                float gain, float pan) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
-        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-            const auto& track = project.tracks[i];
-            if (track.id == track_id)
-                return mixer_->enqueue_control(i, gain, pan, track.mute, track.solo);
-        }
-        return false;
+        return mixer_ && project.tracks.size() == track_buffers_.size() &&
+               hush::TrackMixerCommandBridge::enqueue_preview(project, *mixer_, track_id, gain, pan);
     }
 
 private:
