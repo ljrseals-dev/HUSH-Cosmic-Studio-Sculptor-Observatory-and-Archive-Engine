@@ -55,7 +55,7 @@ void print_help() {
         << "  --project FILE  Load a local schema-v1 project before audio starts.\n"
         << "  --journal FILE  Recovery journal path (default: FILE.hush-recovery.journal).\n"
         << "Exit codes: 0 normal shutdown; 1 argument, project-open, graph, or audio startup failure;\n"
-        << "            2 recovery or project/journal persistence failure.\n"
+        << "            2 recovery or project/journal persistence failure; 3 terminal ALSA worker failure.\n"
         << "The host currently has no project-edit command surface; loaded project state is not live routing.\n";
 }
 } // namespace
