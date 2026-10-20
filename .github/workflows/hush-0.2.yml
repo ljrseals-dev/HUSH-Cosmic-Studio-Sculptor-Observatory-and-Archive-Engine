@@ -94,7 +94,7 @@ jobs:
           })
           with open(path, "w", encoding="utf-8") as stream:
               json.dump(report, stream, indent=2, sort_keys=True)
-              stream.write("\\n")
+              stream.write("\n")
           print(json.dumps(report, indent=2, sort_keys=True))
           PY
           exit "$benchmark_exit"
