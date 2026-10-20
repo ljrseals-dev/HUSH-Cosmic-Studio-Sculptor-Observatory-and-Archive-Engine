@@ -16,17 +16,17 @@ Why A: the realtime track mixer already configures per-track state before proces
 
 ### Project model and persistence
 
-- `include/hush/project.hpp` stores tracks in `std::vector<Track> tracks`; the `Track` model has ID/name strings, gain, pan, mute, and solo. The inspected declaration does not itself define a track-count ceiling.
+- `include/hush/project.hpp` stores tracks in `std::vector<Track> tracks`; the `Track` model has ID/name/gain/pan/mute/solo. It exposes `hush::kMaxTracks`, controlled by CMake `HUSH_MAX_TRACKS` (default 1024, maximum 4096), and schema-v1 loading rejects excess tracks.
 - The project model declares schema version 1. This task must not add a persisted field or change serialization semantics casually. Schema-v1 reading and round-trip compatibility must remain intact.
 - The Qt mixer now exposes Add Track and Remove Last Track controls plus an N / HUSH_MAX_TRACKS indicator. Structural add/remove operations use the operation log and enqueue a single bounded realtime command that changes active track count at a block boundary; the track mixer is configured to the ceiling before ALSA starts. Core operation-log and block-boundary tests exist. Actual Qt widget-click/headless interaction tests are still open. Only the last track can be removed in this slice; arbitrary selected-track deletion and full track-source routing are not claimed.
 
 ### Realtime track mixer
 
 - `include/hush/realtime_track_mixer.hpp` defines `RealtimeTrackMixer::kQueueCapacity = 2048`. This is the number of queued control commands, **not** the supported track count.
-- `RealtimeTrackMixer::configure(track_count, max_frames)` allocates `gains_`, `pans_`, and `flags_` before processing. `src/realtime_track_mixer.cpp` currently rejects zero tracks and counts exceeding `uint32_t` index range, but has no product-level track ceiling.
+- `RealtimeTrackMixer::configure(track_count, max_frames)` allocates `gains_`, `pans_`, and `flags_` before processing and rejects zero tracks or counts above `hush::kMaxTracks` before allocating.
 - Per-track mixer state is approximately 9 bytes of element storage (one `float` gain, one `float` pan, one `uint8_t` flags), excluding vector capacity/allocator overhead and alignment. At 1024 tracks this is about 9 KiB of element payload. This is not a full-session RAM estimate.
-- `RealtimeTrackMixer::process()` consumes queued controls, scans solo flags, clears output buffers, and sums the supplied mono inputs. The function is declared `noexcept` and uses preconfigured vectors; source inspection shows no explicit allocation, locking, logging, or file/network I/O in its body. This is not yet an allocation-guard test result.
-- The caller owns and prepares the actual per-track input buffers and pointer array. At 128 frames, one mono float buffer per track is 512 KiB total for 1024 tracks (1024 × 128 × 4 bytes), excluding any additional buffers, routing, project strings, GUI objects, and allocator overhead. Actual full-engine memory must be measured on a named build/machine; no such measurement has been run.
+- `RealtimeTrackMixer::process()` consumes bounded controls, applies active-track-count changes at block boundaries, scans solo flags, clears output buffers, and sums active mono inputs. The full-capacity allocation guard is in `tests/realtime_track_mixer_tests.cpp`; it detects global C++ `operator new` calls on this test path, not every possible allocation mechanism or every audio path.
+- The benchmark's 128-frame mono inputs cost 512 KiB for 1024 tracks. The Qt live monitor preallocates 4096-frame mono buffers, costing 16 KiB per track or 16 MiB at 1024 tracks, plus pointer arrays and mixer state. These are element-size estimates, not measured RSS; full startup/peak memory still needs a named-machine measurement.
 
 ### Bus graph and processor
 
@@ -44,8 +44,8 @@ Why A: the realtime track mixer already configures per-track state before proces
 
 | Area | Current constraint/evidence | Meaning |
 |---|---|---|
-| Persisted project tracks | Dynamic `std::vector<Track>`; no explicit product ceiling in inspected declaration | Project-level validation must add a clear cap without breaking schema v1 |
-| Realtime track mixer | Index encoded as `uint32_t`; current code allows counts up to that representational range, subject to allocation | No practical documented ceiling yet |
+| Persisted project tracks | Dynamic `std::vector<Track>` with `HUSH_MAX_TRACKS` validation (default 1024, maximum 4096) | Schema-v1 remains unchanged; excess tracks are rejected with `track_count_exceeded` |
+| Realtime track mixer | Configured capacity must be 1..`HUSH_MAX_TRACKS`; active count changes are queued | Preallocation happens before live start; count changes apply at a process-block boundary |
 | Track-control queue | 2048 commands | Queue capacity, not track count |
 | Realtime bus-fader queue | 1024 commands | Queue capacity, not bus count |
 | Bus graph | Dynamic vectors for buses/routes/order | No fixed ceiling established by inspected header |
@@ -53,7 +53,7 @@ Why A: the realtime track mixer already configures per-track state before proces
 | Stereo adapters | Preallocated planar scratch and bus input views | Configuration must precede live processing |
 | Benchmark tool | Maximum 100000 synthetic tracks accepted by CLI | Tool validation bound only, not engine capacity |
 
-No track-count constant currently unifies these layers. Insert-slot capacity is not applicable to the inspected current engine: a production insert rack is not present in these interfaces, and no insert-slot limit should be invented.
+`HUSH_MAX_TRACKS` unifies project-load validation and track-mixer capacity; bus count remains a separate dynamic topology dimension. Insert-slot capacity is not applicable to the inspected current engine: a production insert rack is not present in these interfaces, and no insert-slot limit should be invented.
 
 ## Realtime boundary
 
