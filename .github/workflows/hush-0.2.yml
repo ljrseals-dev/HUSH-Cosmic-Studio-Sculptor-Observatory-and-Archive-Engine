@@ -82,6 +82,8 @@ jobs:
         run: cmake -S . -B build-gui -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON
       - name: Build GUI and contracts
         run: cmake --build build-gui --parallel 2
+      - name: Require Qt widget interaction test target
+        run: cmake --build build-gui --target hush_mixer_widget_interaction_tests --parallel 2
       - name: Contract tests
         run: ctest --test-dir build-gui --output-on-failure
 
@@ -97,6 +99,8 @@ jobs:
         run: cmake -S . -B build-gui-alsa -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_BUILD_GUI=ON -DHUSH_ENABLE_ALSA=ON
       - name: Build GUI and ALSA live monitor
         run: cmake --build build-gui-alsa --parallel 2
+      - name: Require Qt widget interaction test target
+        run: cmake --build build-gui-alsa --target hush_mixer_widget_interaction_tests --parallel 2
       - name: Contract tests
         run: ctest --test-dir build-gui-alsa --output-on-failure
 
