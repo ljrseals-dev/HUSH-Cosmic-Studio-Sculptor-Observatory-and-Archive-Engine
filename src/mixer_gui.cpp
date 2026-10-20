@@ -87,6 +87,10 @@ public:
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
+    [[nodiscard]] float peak_left() const noexcept { return mixer_ ? mixer_->peak_left() : 0.0F; }
+    [[nodiscard]] float peak_right() const noexcept { return mixer_ ? mixer_->peak_right() : 0.0F; }
+    [[nodiscard]] float rms_left() const noexcept { return mixer_ ? mixer_->rms_left() : 0.0F; }
+    [[nodiscard]] float rms_right() const noexcept { return mixer_ ? mixer_->rms_right() : 0.0F; }
 
     bool enqueue_project_controls(const hush::Project& project) noexcept {
         return mixer_ && project.tracks.size() == track_buffers_.size() &&
@@ -373,7 +377,11 @@ private:
         if (live_.running()) {
             flush_pending_live_sync();
             QString message = "Live ALSA · callbacks " + QString::number(live_.callback_count()) +
-                             " · xruns/recoveries " + QString::number(live_.xrun_count());
+                             " · xruns/recoveries " + QString::number(live_.xrun_count()) +
+                             " · peak L/R " + QString::number(live_.peak_left(), 'f', 3) + "/" +
+                             QString::number(live_.peak_right(), 'f', 3) +
+                             " · RMS L/R " + QString::number(live_.rms_left(), 'f', 3) + "/" +
+                             QString::number(live_.rms_right(), 'f', 3);
             if (!pending_live_sync_.empty()) {
                 message += " · controls awaiting delivery " +
                            QString::number(static_cast<qulonglong>(pending_live_sync_.size()));
