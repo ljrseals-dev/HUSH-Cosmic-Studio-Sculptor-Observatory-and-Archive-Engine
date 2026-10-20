@@ -2,13 +2,13 @@
 
 ## Status
 
-**Baseline prerequisite passed in CI; the first implementation slice is now under review.** See [BUILD_LOG.md](BUILD_LOG.md). The baseline revision passed default C++20, ALSA, Qt, Qt+ALSA, ASan, and TSan in CI run 39449869574. The first capacity implementation passed those same CI configurations in run 39451685619. These are CI results, not local-shell runs.
+**Baseline prerequisite passed in CI; the bounded-capacity core and structural track controls are implemented on this branch, with fresh CI validation pending.** See [BUILD_LOG.md](BUILD_LOG.md). The baseline revision passed default C++20, ALSA, Qt, Qt+ALSA, ASan, and TSan in CI run 39449869574. The first capacity implementation passed those same CI configurations in run 39451685619. These are CI results, not local-shell runs.
 
 **No existing tracks, project data, source files, archives, or user assets are to be deleted or rewritten as part of this task.** Existing archive disposition remains a separate review gate.
 
 ## Strategy decision
 
-Choose **Strategy A: a documented hard ceiling**, provisionally `HUSH_MAX_TRACKS=1024`, after the required baseline is green. This is not mathematically unlimited. It is a predictable maximum, with rejection and a visible non-blocking error at the limit. Do not implement a different strategy without an explicit owner decision.
+Choose **Strategy A: a documented hard ceiling**, `HUSH_MAX_TRACKS=1024` by default, configurable up to 4096. The default is the supported product target; higher values increase preallocated live-monitor memory. This is not mathematically unlimited. It is a predictable maximum, with rejection and a visible non-blocking error at the limit. Do not implement a different strategy without an explicit owner decision.
 
 Why A: the realtime track mixer already configures per-track state before processing and processes with preallocated vectors. A hard ceiling is the least invasive fit for the no-allocation callback rule. It avoids growing track state while audio is running. It does not establish that 1024 tracks meet any performance budget.
 
@@ -18,7 +18,7 @@ Why A: the realtime track mixer already configures per-track state before proces
 
 - `include/hush/project.hpp` stores tracks in `std::vector<Track> tracks`; the `Track` model has ID/name strings, gain, pan, mute, and solo. The inspected declaration does not itself define a track-count ceiling.
 - The project model declares schema version 1. This task must not add a persisted field or change serialization semantics casually. Schema-v1 reading and round-trip compatibility must remain intact.
-- The current mixer GUI's refresh loop renders the tracks present in the project, but the inspected GUI has no Add Track/Remove Track controls. A GUI workflow must be implemented later through the existing operation log and a safe control-to-engine path; direct callback-side graph mutation is not acceptable.
+- The Qt mixer now exposes Add Track and Remove Last Track controls plus an N / HUSH_MAX_TRACKS indicator. Structural add/remove operations use the operation log and enqueue a single bounded realtime command that changes active track count at a block boundary; the track mixer is configured to the ceiling before ALSA starts. Core operation-log and block-boundary tests exist. Actual Qt widget-click/headless interaction tests are still open. Only the last track can be removed in this slice; arbitrary selected-track deletion and full track-source routing are not claimed.
 
 ### Realtime track mixer
 
@@ -71,16 +71,16 @@ The required allocation guard must test the actual processing path at full confi
 
 ## Implementation progress and remaining work
 
-1. [x] Add the shared `HUSH_MAX_TRACKS` compile definition with default 1024 and CMake cache configurability.
+1. [x] Add the shared `HUSH_MAX_TRACKS` compile definition with default 1024, CMake cache configurability, and a 4096 maximum to bound live-monitor memory.
 2. [x] Reject over-ceiling schema-v1 project loads with `track_count_exceeded`; existing schema-v1 format is unchanged.
 3. [x] Add boundary coverage at exactly the ceiling and ceiling+1. The test uses the configured default ceiling; separate runtime tests for 1, 8, and 64 are still required.
 4. [x] Add an `operator new` allocation guard around `RealtimeTrackMixer::process()` at the full configured ceiling. This does not prove every audio path is allocation-free.
-5. [ ] Add undoable GUI Add/Remove Track actions, count indicator, and non-blocking ceiling feedback; route commands via a safe non-realtime path.
-6. [ ] Add `--max-tracks` / `--add-tracks` CLI behavior and parity tests after a real host track-mixer path exists.
+5. [x] Add undoable Add Track / Remove Last Track actions, a track-count indicator, non-blocking ceiling feedback, and block-boundary active-count commands. [ ] Add headless Qt widget-interaction tests; current tests exercise the core operation log and mixer command path.
+6. [ ] CLI parity remains open: the current ALSA CLI host is a bus-graph host, not the GUI's realtime track mixer, so adding flags alone would not create genuine engine parity.
 7. [ ] Extend graph-swap stress coverage at the chosen ceiling under ASan and TSan.
 8. [ ] Run the 1024-track offline renderer correctness test and measure startup/full-capacity memory. Keep the 500-track performance budget, 8-hour soak, and physical hardware gates open until their own evidence exists.
 9. [ ] Update README, implementation status, release gates, roadmap, and changelog to reflect verified progress.
 
 ## Stop condition
 
-The baseline stop condition has been satisfied by the successful CI runs recorded in `Docs/BUILD_LOG.md`. Do not claim the full track-capacity prompt complete: GUI/CLI parity, graph-swap stress at 1,024 tracks, memory measurements, performance qualification, soak, and hardware validation remain open.
+The baseline stop condition has been satisfied by CI. Do not claim the full track-capacity prompt complete: headless Qt interaction tests, CLI parity, full-ceiling graph-swap stress, measured memory, 500-track performance qualification, 8-hour soak, and hardware validation remain open.
