@@ -34,6 +34,10 @@ PR head `51f89e972caa0b88df14fcae81de7dfa4bf9ac17` passed all seven jobs in [CI 
 
 The new tests validate schema-v1 acceptance at `HUSH_MAX_TRACKS`, rejection at ceiling+1, rejection by realtime mixer configuration above the ceiling, and no calls to global `operator new` during a 1,024-track / 128-frame `RealtimeTrackMixer::process()` call after setup. These tests passed in the ASan and TSan CI jobs. The allocation guard covers C++ `operator new` calls in that mixer process test; it is not a universal proof against every possible allocator/API or every audio path.
 
+### Follow-on structural-edit and configuration-matrix CI
+
+The source revision `38109986363bfdf96831db1095d998b51184d100` passed [CI run 39453091416](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39453091416), including the default, ALSA, Qt, Qt+ALSA, ASan, TSan, repository-hygiene jobs and the new `track-capacity-1`, `track-capacity-8`, `track-capacity-64`, and `track-capacity-1024` jobs. The capacity jobs build and run the realtime mixer contract at each configured limit. The Qt GUI now has undoable Add Track / Remove Last Track controls and block-boundary active-count commands; these tests are core contract coverage, not Qt click-level interaction evidence.
+
 ### Not run / still open
 
 - No local configure/build/CTest run was performed in this workflow; results above are GitHub Actions evidence.
@@ -41,4 +45,4 @@ The new tests validate schema-v1 acceptance at `HUSH_MAX_TRACKS`, rejection at c
 - No 1,024-track graph-swap stress test was added yet.
 - No 500-track performance qualification or 8-hour soak was run.
 - No physical audio hardware validation was performed.
-- GUI Add Track / Remove Last Track controls, undoable structural operations, count indicator, and block-boundary active-count commands have been added on the current PR branch. Fresh CI for these later changes is pending. Headless Qt widget-interaction tests and CLI parity remain open.
+- No local configure/build/CTest run was performed in this workflow; CI evidence is recorded above. Headless Qt widget-interaction tests, CLI parity, full-ceiling graph-swap stress, RSS measurement, 500-track performance qualification, 8-hour soak, and physical-device validation remain open.
