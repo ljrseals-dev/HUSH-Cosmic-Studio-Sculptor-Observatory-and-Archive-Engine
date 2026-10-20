@@ -1,3 +1,10 @@
+## Unreleased — closed PR #23 transport/automation follow-up
+
+- Reused the transport, tempo-map, and beat-based automation implementation already present on `main`; did not copy the stale closed PR branch over newer fixes.
+- Extended `hush_transport_automation_tests` to cover inclusive sample-rate limits, rejection of out-of-range rates and invalid/null/oversized tempo maps, and rejection of invalid automation interpolation enum values.
+- Invalid configuration attempts are checked for transactional behavior: the last accepted tempo map, sample rate, and automation lane remain intact.
+- This is source/test coverage only. Build and CTest have not been run in this GitHub editing workflow; CI validation is still required. GUI transport wiring, automation-to-parameter application, and project persistence remain separate work.
+
 ## Unreleased — ALSA host recovery failure reporting
 
 - Port the CLI project/recovery entry point onto current `main` without copying the stale Gate 7 branch wholesale.
