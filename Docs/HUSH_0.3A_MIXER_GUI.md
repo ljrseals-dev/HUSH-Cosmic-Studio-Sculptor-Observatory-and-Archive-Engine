@@ -46,10 +46,10 @@ The default capture and playback devices are ALSA `default`, at a requested 48 k
 
 The registered `hush_gui_engine_command_path_tests` is a deterministic headless synthetic-buffer contract test for project/history → bounded track-command queue → next processing block behavior. It covers gain preview without project mutation or an undo entry, commit, undo/redo, pan, mute, solo, stable-ID lookup, and transactional queue-full rejection using the production `OperationLog` and `RealtimeTrackMixer` APIs. It requires no Qt display, ALSA device, network, or physical audio hardware.
 
-This is core command-path coverage, not a Qt widget-click test. It mirrors the GUI's stable-track-ID lookup and command submission; it does not establish physical loopback, audible device behavior, latency, or zero-xrun performance.
+The separate `hush_qt_mixer_interaction_tests` target runs the real `MixerWindow` offscreen and invokes actual slider-release signals and checkbox/button clicks. It verifies that gain/pan, mute/solo, and Undo/Redo update canonical project state and the operation-history cursor. It is not an ALSA hardware test and does not yet prove that a physical-device callback receives those commands; the headless engine test and Qt widget test cover adjacent parts of the path.
 
 Still required before claiming a production live mixer:
-- Qt interaction test that drives the actual widgets and verifies that widget signals submit the expected commands;
+- Fresh CI for the offscreen Qt widget interaction test; a test that drives the actual widgets and verifies their project/history effects is now registered, while proving live-device command delivery still requires integration/loopback coverage;
 - a dedicated two-channel loopback integration test;
 - full track-source and track-to-bus routing, rather than the current first-two-input-channel mapping;
 - target-device startup/shutdown, callback timing, lock-free atomic checks, and a documented soak/latency report. The status counters are diagnostics, not a peak/RMS meter or proof of zero xruns.

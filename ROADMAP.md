@@ -14,7 +14,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [ ] Connect decoded clip buffers to track gain/pan/mute/solo and route complete arrangement rendering through the bus graph.
 - [ ] Verify remaining committed archive contents and remove redundant binary archives.
 - [x] Wire GUI fader/pan/mute/solo and undo/redo to bounded realtime commands through an explicitly started ALSA live monitor (source mapping limited to capture L/R → tracks 1–2).
-- [ ] Add Qt interaction/loopback tests and GUI/CLI parity; run combined Qt + ALSA CI and target-device checks.
+- [x] Add an offscreen Qt widget interaction test for slider-release, mute/solo, and Undo/Redo effects on project/history state (fresh CI pending).
+- [ ] Add live-queue widget integration/loopback tests and GUI/CLI parity; run combined Qt + ALSA CI and target-device checks.
 - [ ] Implement safe graph replacement and deferred reclamation.
 - [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
 - [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
@@ -27,7 +28,7 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 
 ## Ordered gates
 
-1. **GUI wiring:** source integration is in place for a user-started ALSA monitor and bounded block-boundary track controls; remaining acceptance gates are combined CI, Qt interaction/loopback tests, and target-device evidence.
+1. **GUI wiring:** source integration is in place for a user-started ALSA monitor and bounded block-boundary track controls; remaining acceptance gates are fresh combined CI, live-queue/loopback tests, GUI/CLI parity, and target-device evidence.
 2. **Graph lifetime:** choose/document deferred-free, hazard-pointer, or epoch reclamation; stress under sanitizers.
 3. **Full routing:** define and test track/bus/master semantics, inserts, mute/solo, meters, and xrun counters.
 4. **ALSA validation:** target-machine startup/shutdown, callback timing, loopback latency, underrun injection, and sustained zero-xrun evidence.
