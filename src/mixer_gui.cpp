@@ -485,7 +485,13 @@ private:
 
         hush::Project recovered;
         hush::Error error;
-        if (hush::RecoveryJournal(journal_path).recover_latest(recovered, error)) {
+        std::error_code path_error;
+        const bool journal_exists = std::filesystem::exists(journal_path, path_error);
+        if (path_error) {
+            status_->setText("Could not inspect recovery journal path: " +
+                             QString::fromStdString(path_error.message()));
+        } else if (journal_exists &&
+                   hush::RecoveryJournal(journal_path).recover_latest(recovered, error)) {
             const auto choice = QMessageBox::question(
                 this, "Recover previous session",
                 "A local recovery snapshot was found for project '" +
@@ -501,7 +507,7 @@ private:
                 status_->setText("Recovered local session · save the project file to keep it");
                 return;
             }
-        } else if (!error.message.empty()) {
+        } else if (journal_exists && !error.message.empty()) {
             status_->setText("Recovery journal could not be read: " +
                              QString::fromStdString(error.message));
         }
