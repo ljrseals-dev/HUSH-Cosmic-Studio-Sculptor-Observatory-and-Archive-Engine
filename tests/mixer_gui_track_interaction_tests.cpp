@@ -1,5 +1,4 @@
 #define HUSH_GUI_NO_MAIN
-#define HUSH_GUI_TESTING 1
 #include "../src/mixer_gui.cpp"
 
 #include <QApplication>
