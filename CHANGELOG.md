@@ -51,3 +51,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Connected GUI model edits and undo/redo to the preconfigured realtime track mixer through its bounded SPSC queue.
 - Added explicit Start/Stop Live ALSA controls; callback buffers are prepared before start and backend shutdown joins the callback before releasing mixer state.
 - Documented the current limitation: stereo capture channels feed only the first two tracks; full track-source routing, GUI interaction tests, loopback, and hardware/soak validation remain outstanding.
+
+
+## Unreleased — MIDI CC mapping foundation
+
+- Added a fixed-capacity MIDI CC-to-parameter mapper with channel/controller validation, linear range scaling, optional inversion, and duplicate-source rejection.
+- Added contract tests for mapping endpoints, invalid MIDI events/configuration, and preservation of the previous map after rejected updates.
+- MIDI device I/O, learn-mode GUI, parameter command delivery, automation playback, and schema-v2 persistence remain outside this increment. Tests have not yet been run in this environment.
