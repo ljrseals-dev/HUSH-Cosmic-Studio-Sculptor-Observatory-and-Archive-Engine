@@ -67,7 +67,7 @@ std::string to_json(const Project& p) {
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(t.id)
           << "\", \"name\": \"" << escape_json(t.name) << "\", \"gain\": " << t.gain
           << ", \"pan\": " << t.pan << ", \"mute\": " << (t.mute?"true":"false")
-          << ", \"solo\": " << (t.solo?"true":"false") << "}";
+          << ", \"solo\": " << (t.solo?"true":"false") << ", \"bus_id\": \"" << escape_json(t.bus_id) << "\"}";
     }
     if (!p.tracks.empty()) o << "\n  ";
     o << "],\n  \"buses\": [";
@@ -134,14 +134,14 @@ bool from_json(const std::string& s, Project& out, Error& e) {
 
     std::string body;
     if (!extract_array(s,"tracks",body,true,e)) return false;
-    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
+    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)(?:\s*,\s*"bus_id"\s*:\s*"([^"]*)")?\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
         Track t; const auto& x=*it;
         t.id=x[1].str(); t.name=x[2].str();
         try { t.gain=std::stof(x[3].str()); t.pan=std::stof(x[4].str()); }
         catch (...) { e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false; }
-        t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
+        t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true"; t.bus_id=x[7].matched ? x[7].str() : "";
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
         }
