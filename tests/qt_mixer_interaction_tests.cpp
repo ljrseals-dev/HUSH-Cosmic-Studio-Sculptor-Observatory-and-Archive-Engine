@@ -5,8 +5,10 @@
 #include <QMetaObject>
 #include <QPushButton>
 #include <QSlider>
+#include "hush/recovery_journal.hpp"
 #include <cassert>
 #include <cmath>
+#include <filesystem>
 
 namespace {
 bool near(float actual, float expected) {
@@ -73,5 +75,27 @@ int main(int argc, char** argv) {
     solo->click();
     assert(window.test_project().tracks[0].solo);
     assert(window.test_history_cursor() == 4U);
+
+    // Exercise the GUI lifecycle hook against a temporary local recovery journal.
+    // This is a software integration test; it does not claim power-loss durability.
+    const auto journal_base = std::filesystem::temp_directory_path() /
+                              "hush-qt-autosave-lifecycle-test.json";
+    const std::filesystem::path journal_path(journal_base.string() + ".hush-recovery.journal");
+    std::error_code cleanup_error;
+    std::filesystem::remove(journal_path, cleanup_error);
+    window.test_configure_autosave(QString::fromStdString(journal_base.string()));
+    gain = slider(window, "gain-track-1");
+    assert(gain != nullptr);
+    gain->setValue(75);
+    assert(QMetaObject::invokeMethod(gain, "sliderReleased", Qt::DirectConnection));
+    assert(window.test_autosave_dirty());
+    window.test_poll_autosave();
+    assert(!window.test_autosave_dirty());
+
+    hush::Project recovered;
+    hush::Error recovery_error;
+    assert(hush::RecoveryJournal(journal_path).recover_latest(recovered, recovery_error));
+    assert(std::abs(recovered.tracks[0].gain - 0.75F) < 1.0e-5F);
+    std::filesystem::remove(journal_path, cleanup_error);
     return 0;
 }
