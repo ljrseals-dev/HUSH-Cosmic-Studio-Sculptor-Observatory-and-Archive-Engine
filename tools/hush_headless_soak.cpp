@@ -92,9 +92,10 @@ int main(int argc, char** argv) {
     const auto drift = rss_end >= rss_start ? rss_end - rss_start : 0;
     const bool rss_available = rss_start != 0U && rss_end != 0U;
     const std::uint64_t max_drift_bytes = max_rss_drift_mb * 1024ULL * 1024ULL;
-    const bool passed = !rss_available || drift <= max_drift_bytes;
+    const bool passed = rss_available && drift <= max_drift_bytes;
+    const char* status = !rss_available ? "not_measured" : (passed ? "pass" : "fail");
     std::cout << "{\n"
-              << "  \"status\": \"" << (passed ? "pass" : "fail") << "\",\n"
+              << "  \"status\": \"" << status << "\",\n"
               << "  \"requested_seconds\": " << seconds << ",\n"
               << "  \"elapsed_seconds\": " << elapsed << ",\n"
               << "  \"track_count\": " << tracks << ",\n"
@@ -110,5 +111,5 @@ int main(int argc, char** argv) {
               << "  \"hardware_audio_test\": false,\n"
               << "  \"pass_threshold_configured\": true\n"
               << "}\n";
-    return passed ? 0 : 3;
+    return !rss_available ? 4 : (passed ? 0 : 3);
 }
