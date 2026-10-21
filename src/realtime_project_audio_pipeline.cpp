@@ -80,7 +80,7 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
 
         ProcessorSetupError setup_error;
         if (!engine_host_.replace_graph(runtime_graph.graph, max_frames,
-                                        runtime_graph.master_bus_id, setup_error)) {
+                                        runtime_graph.master_bus_id, setup_error, project.inserts)) {
             error = setup_error.code + ": " + setup_error.message;
             return false;
         }
