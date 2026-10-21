@@ -1,10 +1,7 @@
 #include "hush/alsa_audio_backend.hpp"
 #include "hush/autosave_controller.hpp"
-#include "hush/bus_graph.hpp"
 #include "hush/project.hpp"
-#include "hush/project_runtime_graph.hpp"
-#include "hush/realtime_bus_engine_host.hpp"
-#include "hush/realtime_bus_engine_host_audio_adapter.hpp"
+#include "hush/realtime_project_audio_pipeline.hpp"
 
 #include <chrono>
 #include <csignal>
@@ -160,31 +157,21 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, handle_signal);
     std::signal(SIGTERM, handle_signal);
 
-    RoutingError routing_error;
-    ProjectRuntimeGraph runtime_graph;
-    if (!configure_project_runtime_graph(project, runtime_graph, routing_error)) {
-        std::cerr << "Bus graph setup failed: " << routing_error.code
-                  << ": " << routing_error.message << '\n';
-        return 1;
+    // When launched without a project, provide two explicit capture source tracks.
+    // A loaded project with no tracks is rejected rather than silently inventing tracks.
+    Project runtime_project = project;
+    if (!has_project) {
+        runtime_project.tracks = {
+            {"track-1", "Capture L", 1.0F, -1.0F, false, false},
+            {"track-2", "Capture R", 1.0F, 1.0F, false, false}
+        };
     }
-    const auto& graph = runtime_graph.graph;
-    const auto& input_bus_id = runtime_graph.input_bus_id;
-    const auto& master_bus_id = runtime_graph.master_bus_id;
-    const auto input_bus_index = runtime_graph.input_bus_index;
 
     constexpr std::size_t max_frames = 4096;
-    RealtimeBusEngineHost engine_host;
-    ProcessorSetupError setup_error;
-    if (!engine_host.replace_graph(graph, max_frames, master_bus_id, setup_error)) {
-        std::cerr << "Realtime engine setup failed: " << setup_error.code
-                  << ": " << setup_error.message << '\n';
-        return 1;
-    }
-
-    RealtimeBusEngineHostAudioAdapter adapter;
-    std::string adapter_error;
-    if (!adapter.configure(engine_host, input_bus_index, graph.buses().size(), max_frames, adapter_error)) {
-        std::cerr << "Audio adapter setup failed: " << adapter_error << '\n';
+    RealtimeProjectAudioPipeline pipeline;
+    std::string pipeline_error;
+    if (!pipeline.configure(runtime_project, max_frames, pipeline_error)) {
+        std::cerr << "Realtime project pipeline setup failed: " << pipeline_error << '\n';
         return 1;
     }
 
@@ -193,8 +180,8 @@ int main(int argc, char** argv) {
     config.sample_rate = 48000;
     config.period_frames = 128;
     std::string backend_error;
-    if (!backend.start(config, &RealtimeBusEngineHostAudioAdapter::alsa_callback,
-                      &adapter, backend_error)) {
+    if (!backend.start(config, &RealtimeProjectAudioPipeline::alsa_callback,
+                      &pipeline, backend_error)) {
         std::cerr << "ALSA startup failed: " << backend_error << '\n';
         return 1;
     }
@@ -202,11 +189,11 @@ int main(int argc, char** argv) {
     std::cout << "HUSH ALSA realtime host running at "
               << backend.actual_sample_rate() << " Hz, "
               << backend.actual_period_frames() << " frames/period.\n"
-              << "Capture bus '" << input_bus_id << "' routes through the configured bus graph to master '"
-              << master_bus_id << "'. Press Ctrl-C to stop.\n";
+              << "Capture L/R feed source tracks 1-2 through track controls and project bus routing.\n"
+              << "Additional tracks are silent until a source is connected. Press Ctrl-C to stop.\n";
     if (has_project) {
         std::cout << "Loaded project: " << project.id
-                  << " (project bus graph is active; track-source routing and per-track controls remain disconnected).\n";
+                  << " (persisted track bus assignments and gain/pan/mute/solo are active).\n";
     }
 
     while (keep_running != 0 && backend.running()) {
@@ -219,7 +206,7 @@ int main(int argc, char** argv) {
                           << " code=" << autosave_error.code
                           << " message=" << autosave->last_save_message() << '\n';
                 backend.stop();
-                engine_host.reclaim_retired();
+                pipeline.reclaim_retired();
                 return 2;
             }
         }
@@ -240,7 +227,7 @@ int main(int argc, char** argv) {
     }
 
     backend.stop();
-    engine_host.reclaim_retired();
+    pipeline.reclaim_retired();
     if (autosave_failed) return 2;
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
