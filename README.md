@@ -108,7 +108,7 @@ The following are **not complete or not verified**. A claim should be upgraded o
 
 - **GUI-to-live-engine automated interaction and GUI/CLI parity:** supported GUI edits and undo/redo are queued to the live track-mixer path, but automated Qt interaction/loopback coverage and target-device validation remain outstanding.
 - **Graph replacement and deferred reclamation:** the host adapter documents guarded same-topology replacement while processing. That does not establish complete general graph-swap/reclamation safety; dedicated lifetime/reclamation stress coverage, including ASan/TSan evidence, remains outstanding.
-- **Complete mixer signal path:** full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters are not implemented as a complete live mixer.
+- **Complete mixer signal path:** the ALSA CLI host now uses persisted project bus-to-bus routes when present (otherwise the default capture→master graph). Track-source assignment into buses, track controls in that path, inserts, end-to-end mute/solo, graph-wide meters, and integrated xrun reporting are still not implemented as a complete live mixer.
 - **ALSA hardware behavior:** real-device startup/shutdown, callback timing, lock-free suitability on target atomics, and xrun reporting remain unverified for a named Linux kernel/CPU/ALSA/device configuration.
 - **Long-duration audio qualification:** no committed 60-minute zero-xrun report, loopback-latency report, or underrun-injection report is claimed.
 - **Scale and soak qualification:** no committed 500-track performance budget or 8-hour soak/memory-drift report is claimed.
