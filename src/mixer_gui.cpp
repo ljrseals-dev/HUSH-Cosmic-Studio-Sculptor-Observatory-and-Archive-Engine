@@ -40,10 +40,10 @@
 namespace {
 
 #ifdef HUSH_GUI_HAS_ALSA
-// Optional, explicitly user-started ALSA monitor. All storage and mixer state are
-// prepared before start(); callback() performs no allocation, locking, logging or I/O.
-// Current ALSA adapter exposes one stereo capture stream: L/R feed tracks 0/1.
-// Further project tracks have no live source until track-source routing is implemented.
+// Optional, explicitly user-started ALSA monitor. The project-aware pipeline and all
+// scratch buffers are configured before start(); its callback performs no allocation,
+// locking, logging or I/O. Stereo capture feeds source tracks 0/1; later tracks remain
+// silent until a media/device source is connected, but their bus assignments are honored.
 class LiveMixer final {
 public:
     static constexpr std::size_t kMaxFrames = 4096;
