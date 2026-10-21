@@ -112,7 +112,7 @@ The following are **not complete or not verified**. A claim should be upgraded o
 - **ALSA hardware behavior:** real-device startup/shutdown, callback timing, lock-free suitability on target atomics, and xrun reporting remain unverified for a named Linux kernel/CPU/ALSA/device configuration.
 - **Long-duration audio qualification:** no committed 60-minute zero-xrun report, loopback-latency report, or underrun-injection report is claimed.
 - **Scale and soak qualification:** no committed 500-track performance budget or 8-hour soak/memory-drift report is claimed.
-- **Autosave lifecycle/failure surfacing:** the ALSA CLI host now polls the recovery-journal autosave controller on its control loop and reports journal-write failures with exit code 2. Qt GUI autosave/recovery integration and automated host-level failure-path coverage remain open.
+- **Autosave lifecycle/failure surfacing:** the ALSA CLI host and Qt GUI now poll the recovery-journal controller off the audio callback. The GUI prompts before restoring a newer snapshot, honors explicit discard by clearing the journal, and surfaces/retries journal failures. Automated Qt recovery/autosave interaction coverage and host-level failure-path coverage remain open.
 - **Power-loss durability:** explicitly not claimed. Current documented evidence covers completed journal records across process restart and truncated-tail handling only.
 - **MIDI/automation integration:** this branch adds a bounded MIDI CC-to-parameter mapping foundation. MIDI device I/O, GUI learn mode, engine parameter delivery, automation playback, and schema-v2 persistence remain unimplemented.
 - **Archive contents:** two non-empty archives remain preserved but unverified; see `Docs/REPO_AUDIT.md`.
