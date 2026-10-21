@@ -8,7 +8,8 @@
 namespace hush {
 
 bool RealtimeBusEngine::configure(const BusGraph& graph, std::size_t max_frames,
-                                  ProcessorSetupError& error) {
+                                  ProcessorSetupError& error,
+                                  const std::vector<BusInsert>& inserts) {
     if (configured_) {
         error = {"already_configured", "", "RealtimeBusEngine is configure-once; create a new instance to change topology"};
         return false;
@@ -48,7 +49,7 @@ bool RealtimeBusEngine::configure(const BusGraph& graph, std::size_t max_frames,
         }
         new_route_edges.emplace_back(source->second, destination->second);
     }
-    if (!processor_.configure(graph, max_frames, error)) return false;
+    if (!processor_.configure(graph, max_frames, error, inserts)) return false;
 
     input_scratch_.swap(new_input_scratch);
     fader_gains_.swap(new_fader_gains);
