@@ -14,6 +14,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace {
 volatile std::sig_atomic_t keep_running = 1;
