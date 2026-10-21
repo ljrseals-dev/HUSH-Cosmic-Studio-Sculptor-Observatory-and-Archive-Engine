@@ -9,6 +9,9 @@ bool BusGraph::configure(std::vector<Bus> buses, std::vector<BusRoute> routes, R
  std::unordered_map<std::string, std::size_t> index; index.reserve(buses.size());
  for (std::size_t i=0; i<buses.size(); ++i) {
   if (buses[i].id.empty()) { error={"bus_id_empty","","Bus ID must not be empty"}; return false; }
+  if (!std::isfinite(buses[i].gain) || buses[i].gain < 0.0F || buses[i].gain > 16.0F) {
+   error={"bus_gain_invalid",buses[i].id,"Bus gain must be finite and in [0, 16]"}; return false;
+  }
   if (!index.emplace(buses[i].id,i).second) { error={"bus_id_duplicate",buses[i].id,"Bus IDs must be unique"}; return false; }
  }
  std::vector<std::vector<std::size_t>> edges(buses.size());
