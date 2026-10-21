@@ -19,6 +19,9 @@ struct Track {
     float pan{0.0F};
     bool mute{false};
     bool solo{false};
+    // Empty preserves legacy behavior: route to the host's selected input bus.
+    // Non-empty IDs are validated against Project::buses at load/configure time.
+    std::string bus_id;
     bool operator==(const Track&) const = default;
 };
 
