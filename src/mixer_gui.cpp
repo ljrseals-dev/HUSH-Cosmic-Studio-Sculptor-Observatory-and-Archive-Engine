@@ -603,7 +603,6 @@ private:
         if (log_.apply_and_append(project_, operation)) {
             autosave_dirty_ = true;
             status_->setText("Bus edited · undo history " + QString::number(log_.cursor()));
-            refresh_bus_table();
         }
     }
 
