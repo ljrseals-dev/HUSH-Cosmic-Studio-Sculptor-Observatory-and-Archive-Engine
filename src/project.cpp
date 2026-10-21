@@ -67,7 +67,8 @@ std::string to_json(const Project& p) {
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(t.id)
           << "\", \"name\": \"" << escape_json(t.name) << "\", \"gain\": " << t.gain
           << ", \"pan\": " << t.pan << ", \"mute\": " << (t.mute?"true":"false")
-          << ", \"solo\": " << (t.solo?"true":"false") << "}";
+          << ", \"solo\": " << (t.solo?"true":"false")
+          << ", \"bus_id\": \"" << escape_json(t.bus_id) << "\"}";
     }
     if (!p.tracks.empty()) o << "\n  ";
     o << "],\n  \"buses\": [";
@@ -134,7 +135,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
 
     std::string body;
     if (!extract_array(s,"tracks",body,true,e)) return false;
-    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
+    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)(?:\s*,\s*"bus_id"\s*:\s*"([^"]*)")?\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
         Track t; const auto& x=*it;
@@ -142,6 +143,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         try { t.gain=std::stof(x[3].str()); t.pan=std::stof(x[4].str()); }
         catch (...) { e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false; }
         t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
+        t.bus_id = x[7].matched ? x[7].str() : std::string{};
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
         }
@@ -161,6 +163,18 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
     if (body.find('{')!=std::string::npos && p.buses.empty()) {
         e={"bus_parse_failed","","Bus object did not match schema-v1 fields","error"}; return false;
+    }
+
+    for (const auto& track : p.tracks) {
+        if (!track.bus_id.empty()) {
+            const auto bus = std::find_if(p.buses.begin(), p.buses.end(),
+                [&](const Bus& candidate) { return candidate.id == track.bus_id; });
+            if (bus == p.buses.end()) {
+                e={"track_bus_unknown",track.id,
+                   "Track bus_id does not reference a project bus","error"};
+                return false;
+            }
+        }
     }
 
     if (!extract_array(s,"routes",body,false,e)) return false;
