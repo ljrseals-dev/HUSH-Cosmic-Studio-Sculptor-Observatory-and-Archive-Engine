@@ -11,6 +11,35 @@ void OperationLog::append(Operation op) {
 bool OperationLog::apply_value(Project& p, const Operation& op, bool forward) {
     const float v = forward ? op.after_value : op.before_value;
     switch (op.kind) {
+      case OperationKind::AddBusInsert:
+      case OperationKind::RemoveBusInsert: {
+        const bool should_exist = (op.kind == OperationKind::AddBusInsert) == forward;
+        auto it = std::find_if(p.inserts.begin(), p.inserts.end(),
+                               [&](const BusInsert& insert) { return insert.id == op.entity_id; });
+        if (should_exist) {
+            if (it != p.inserts.end()) return false;
+            const auto& insert = forward ? op.after_insert : op.before_insert;
+            const auto index = forward ? op.after_index : op.before_index;
+            const auto position = p.inserts.begin() +
+                static_cast<std::ptrdiff_t>(std::min(index, p.inserts.size()));
+            p.inserts.insert(position, insert);
+            return true;
+        }
+        if (it == p.inserts.end()) return false;
+        p.inserts.erase(it);
+        return true;
+      }
+      case OperationKind::SetInsertGain:
+      case OperationKind::SetInsertEnabled:
+      case OperationKind::SetInsertKind: {
+        auto it = std::find_if(p.inserts.begin(), p.inserts.end(),
+                               [&](const BusInsert& insert) { return insert.id == op.entity_id; });
+        if (it == p.inserts.end()) return false;
+        if (op.kind == OperationKind::SetInsertGain) it->gain = v;
+        else if (op.kind == OperationKind::SetInsertEnabled) it->enabled = (v != 0.0F);
+        else it->kind = v == 0.0F ? InsertKind::Gain : InsertKind::SoftClip;
+        return true;
+      }
       case OperationKind::SetBusGain:
       case OperationKind::SetBusMute:
       case OperationKind::SetBusSolo: {
