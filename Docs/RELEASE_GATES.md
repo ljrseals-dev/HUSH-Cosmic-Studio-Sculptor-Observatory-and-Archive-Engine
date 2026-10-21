@@ -24,7 +24,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` now enforces a configurable positive RSS-drift threshold (default 64 MiB); CTest smoke test checks JSON status and journal write | Threshold enforcement implemented; fresh CI and 28,800-second report still required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
-| Autosave lifecycle | Scheduling policy exists; application lifecycle and save-failure surfacing are not integrated | Open |
+| Autosave lifecycle | ALSA CLI host polls the controller off the callback, journals on interval/stop transition, and reports failure with exit code 2; Qt GUI autosave lifecycle remains unintegrated | Partial; fresh CI and failure-path test evidence required |
 | Legacy ZIP disposition | Committed ZIP remains; content has not yet been reviewed in this gate ledger | Open; do not delete or relocate before review |
 
 ## Report requirements
