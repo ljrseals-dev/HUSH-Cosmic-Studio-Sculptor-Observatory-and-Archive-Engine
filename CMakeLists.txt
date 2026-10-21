@@ -21,6 +21,7 @@ add_library(hush_core
     src/realtime_bus_engine.cpp
     src/realtime_bus_engine_host.cpp
     src/realtime_track_mixer.cpp
+    src/realtime_track_bus_router.cpp
     src/transport_engine.cpp
     src/automation_lane.cpp
     src/midi_learn.cpp
@@ -174,6 +175,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
 
+  add_executable(hush_realtime_track_bus_router_tests tests/realtime_track_bus_router_tests.cpp)
+  target_link_libraries(hush_realtime_track_bus_router_tests PRIVATE hush_core)
+  add_test(NAME hush_realtime_track_bus_router_tests COMMAND hush_realtime_track_bus_router_tests)
+
   add_executable(hush_gui_engine_command_path_tests tests/gui_engine_command_path_tests.cpp)
   target_link_libraries(hush_gui_engine_command_path_tests PRIVATE hush_core)
   add_test(NAME hush_gui_engine_command_path_tests COMMAND hush_gui_engine_command_path_tests)
@@ -279,6 +284,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_mixer_engine_bridge_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_realtime_track_bus_router_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_gui_engine_command_path_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_transport_automation_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_studio_03a_tests PRIVATE /UNDEBUG)
@@ -308,6 +314,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_realtime_bus_engine_host_audio_adapter_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_mixer_engine_bridge_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_track_mixer_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_realtime_track_bus_router_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_gui_engine_command_path_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_transport_automation_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_studio_03a_tests PRIVATE -UNDEBUG)
