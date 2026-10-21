@@ -26,7 +26,6 @@ public:
     static void alsa_callback(const float* input, float* output, std::size_t frames,
                               void* user_data) noexcept;
 
-    [[nodiscard]] std::uint64_t xrun_count_placeholder() const noexcept { return 0U; }
     [[nodiscard]] float input_peak() const noexcept { return input_peak_.load(std::memory_order_relaxed); }
     [[nodiscard]] float output_peak() const noexcept { return output_peak_.load(std::memory_order_relaxed); }
     [[nodiscard]] const std::string& input_bus_id() const noexcept { return input_bus_id_; }
