@@ -28,6 +28,8 @@ public:
     // Control thread only; use stable bus IDs to map to indices in the active topology.
     // Returns false for an invalid value/index, absent engine, or full bounded queue.
     [[nodiscard]] bool enqueue_fader_change(std::size_t bus_index, float gain) noexcept;
+    [[nodiscard]] bool enqueue_bus_control(std::size_t bus_index, float gain,
+                                           bool mute, bool solo) noexcept;
 
     // Audio thread only. No allocation, lock, logging, filesystem/network I/O, or GUI
     // work. Inputs are ordered like the graph's bus list. The selected master bus is
