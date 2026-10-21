@@ -75,7 +75,9 @@ std::string to_json(const Project& p) {
     for (std::size_t i=0;i<p.buses.size();++i) {
         const auto& b=p.buses[i];
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(b.id)
-          << "\", \"name\": \"" << escape_json(b.name) << "\"}";
+          << "\", \"name\": \"" << escape_json(b.name) << "\", \"gain\": " << b.gain
+          << ", \"mute\": " << (b.mute ? "true" : "false")
+          << ", \"solo\": " << (b.solo ? "true" : "false") << "}";
     }
     if (!p.buses.empty()) o << "\n  ";
     o << "],\n  \"routes\": [";
@@ -154,11 +156,23 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"buses",body,false,e)) return false;
-    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*\})json");
+    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"(?:\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+))?(?:\s*,\s*"mute"\s*:\s*(true|false))?(?:\s*,\s*"solo"\s*:\s*(true|false))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),bus_re);
     for (auto it=begin;it!=end;++it) {
-        Bus b{(*it)[1].str(),(*it)[2].str()};
+        const auto& x=*it;
+        Bus b;
+        b.id=x[1].str(); b.name=x[2].str();
+        try {
+            if (x[3].matched) b.gain=std::stof(x[3].str());
+        } catch (...) {
+            e={"bus_gain_invalid",b.id,"Bus gain is invalid","error"}; return false;
+        }
+        b.mute=x[4].matched && x[4].str()=="true";
+        b.solo=x[5].matched && x[5].str()=="true";
         if (b.id.empty()) { e={"bus_id_empty","","Bus ID must not be empty","error"}; return false; }
+        if (!std::isfinite(b.gain) || b.gain < 0.0F || b.gain > 16.0F) {
+            e={"bus_gain_invalid",b.id,"Bus gain must be finite and in [0, 16]","error"}; return false;
+        }
         p.buses.push_back(std::move(b));
     }
     if (body.find('{')!=std::string::npos && p.buses.empty()) {
