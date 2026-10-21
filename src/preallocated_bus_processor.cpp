@@ -2,12 +2,14 @@
 
 #include <cmath>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace hush {
 
 bool PreallocatedBusProcessor::configure(const BusGraph& graph, std::size_t max_frames,
-                                         ProcessorSetupError& error) {
+                                         ProcessorSetupError& error,
+                                         const std::vector<BusInsert>& inserts) {
     configured_ = false;
     buses_.clear();
     routes_.clear();
@@ -36,6 +38,24 @@ bool PreallocatedBusProcessor::configure(const BusGraph& graph, std::size_t max_
         runtime.post_left.assign(max_frames, 0.0F);
         runtime.post_right.assign(max_frames, 0.0F);
         buses_.push_back(std::move(runtime));
+    }
+
+    std::unordered_set<std::string> insert_ids;
+    insert_ids.reserve(inserts.size());
+    for (const auto& insert : inserts) {
+        const auto bus = indices.find(insert.bus_id);
+        if (insert.id.empty() || !insert_ids.insert(insert.id).second ||
+            bus == indices.end() || !std::isfinite(insert.gain) ||
+            insert.gain < 0.0F || insert.gain > 16.0F) {
+            error = {"bus_insert_invalid", insert.id,
+                     "Insert ID, bus reference, and gain must be valid"};
+            buses_.clear();
+            routes_.clear();
+            render_order_.clear();
+            return false;
+        }
+        buses_[bus->second].inserts.push_back(
+            {insert.kind, insert.enabled, insert.gain});
     }
 
     routes_.reserve(graph.routes().size());
@@ -100,6 +120,20 @@ RealtimeProcessStatus PreallocatedBusProcessor::process(const BusInputView* inpu
 
     for (const auto source_index : render_order_) {
         auto& source = buses_[source_index];
+        // Built-in inserts execute in persisted order before the bus fader. All
+        // storage was allocated by configure(); this loop never resizes buffers.
+        for (const auto& insert : source.inserts) {
+            if (!insert.enabled) continue;
+            for (std::size_t frame = 0; frame < frame_count; ++frame) {
+                if (insert.kind == InsertKind::Gain) {
+                    source.pre_left[frame] *= insert.gain;
+                    source.pre_right[frame] *= insert.gain;
+                } else {
+                    source.pre_left[frame] = std::tanh(source.pre_left[frame]);
+                    source.pre_right[frame] = std::tanh(source.pre_right[frame]);
+                }
+            }
+        }
         const float fader_gain = inputs[source_index].fader_gain;
         for (std::size_t frame = 0; frame < frame_count; ++frame) {
             source.post_left[frame] = source.pre_left[frame] * fader_gain;
