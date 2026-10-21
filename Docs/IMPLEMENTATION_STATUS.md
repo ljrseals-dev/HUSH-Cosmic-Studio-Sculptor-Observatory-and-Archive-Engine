@@ -38,4 +38,5 @@ A green CI job establishes only the configuration and tests that actually ran. I
 ## Recording milestone 0.4a
 - [x] Added preallocated SPSC interleaved-float capture ring; capture and drain operate on complete frames without allocation or I/O.
 - [x] Overflow is counted as dropped frames and exposed to the control side.
-- [ ] Off-thread disk writer, streaming WAV finalization, track arm/disarm, takes/playlists, punch, comping, crossfades, latency compensation, and ALSA capture-to-file integration remain incomplete. Do not claim recording is production-ready.
+- [x] Explicit ALSA CLI `--record FILE.wav` now feeds stereo capture into the preallocated SPSC ring and a background `RecordingSession`/`WavStreamWriter`, finalizes the float-WAV header on stop, and reports frames written/dropped. The pipeline recording test verifies a finalized WAV header and frame count. Fresh CI for this newest recording integration and physical-device recording qualification remain pending.
+- [ ] Track arm/disarm, take IDs/playlists, punch, comping, crossfades, latency compensation, and zero-dropped-frame recording qualification remain incomplete. Do not claim recording is production-ready.
