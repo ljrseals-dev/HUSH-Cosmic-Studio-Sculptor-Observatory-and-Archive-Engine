@@ -59,6 +59,8 @@ struct Project {
     // Bus routing is part of canonical project state. Validate it with BusGraph before rendering.
     std::vector<Bus> buses;
     std::vector<BusRoute> routes;
+    // Optional schema-v1 built-in bus inserts, ordered per bus by this vector.
+    std::vector<BusInsert> inserts;
     // Optional additive schema-v1 arrays. Older projects without them remain valid.
     std::vector<MediaSource> media_sources;
     std::vector<AudioClip> clips;
