@@ -27,6 +27,7 @@ int main() {
     assert(pipeline.configure(project, 8U, error));
     assert(pipeline.input_bus_id() == "capture");
     assert(pipeline.master_bus_id() == "master");
+    assert(pipeline.bus_input_meter_count() == 3U);
 
     const float input[] = {1.0F, 0.25F, 0.5F, 0.5F};
     float output[4]{};
@@ -35,12 +36,21 @@ int main() {
     assert(near(output[1], 0.25F));
     assert(near(output[2], 0.5F));
     assert(near(output[3], 0.5F));
+    const auto music_meter = pipeline.bus_input_meter(1U);
+    assert(near(music_meter.peak_left, 1.0F));
+    assert(near(music_meter.peak_right, 0.5F));
+    assert(near(music_meter.rms_left, std::sqrt(0.625F)));
+    assert(near(music_meter.rms_right, std::sqrt(0.15625F)));
+    assert(near(pipeline.bus_input_meter(99U).peak_left, 0.0F));
 
     // A queued mute is applied at the next processing-block boundary.
     assert(pipeline.enqueue_track_control(0U, 1.0F, -1.0F, true, false));
     assert(pipeline.process(input, output, 2U));
     assert(near(output[0], 0.0F));
     assert(near(output[1], 0.25F));
+    const auto muted_music_meter = pipeline.bus_input_meter(1U);
+    assert(near(muted_music_meter.peak_left, 0.0F));
+    assert(near(muted_music_meter.peak_right, 0.5F));
 
     // Explicit track bus IDs must resolve to a bus in the validated project graph.
     Project invalid = project;
