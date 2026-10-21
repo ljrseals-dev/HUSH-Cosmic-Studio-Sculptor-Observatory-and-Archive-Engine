@@ -21,11 +21,13 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 
 int main() {
     using namespace hush;
-    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
+    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false,"bus-music"},{"track-2","Pad",0.5F,-0.5F,false,false,"bus-master"}};
     p.buses={{"bus-master","Master"},{"bus-music","Music"}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    Project bad_track_bus = p; bad_track_bus.tracks[0].bus_id = "missing-bus";
+    assert(!from_json(to_json(bad_track_bus),loaded,err)); assert(err.code=="track_bus_unknown");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";
