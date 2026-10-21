@@ -1,4 +1,5 @@
 #include "hush/operation_log.hpp"
+#include "hush/autosave_controller.hpp"
 #include "hush/project.hpp"
 #include "hush/project_close_policy.hpp"
 #include "hush/realtime_track_mixer.hpp"
@@ -24,6 +25,8 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <chrono>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -289,6 +292,7 @@ public:
                 return;
             }
             if (log_.undo(project_)) {
+                autosave_dirty_ = true;
                 status_->setText("Undo applied");
                 refresh();
             }
@@ -304,6 +308,7 @@ public:
                 return;
             }
             if (log_.redo(project_)) {
+                autosave_dirty_ = true;
                 status_->setText("Redo applied");
                 refresh();
             }
@@ -313,6 +318,9 @@ public:
         connect(&status_timer_, &QTimer::timeout, this, [this] { poll_live_status(); poll_channel_light(); });
         status_timer_.start(250);
 #endif
+
+        connect(&autosave_timer_, &QTimer::timeout, this, [this] { poll_autosave(); });
+        autosave_timer_.start(1000);
 
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
@@ -337,6 +345,11 @@ private:
     hush::Project project_;
     hush::OperationLog log_;
     QString project_path_;
+    QString autosave_project_path_;
+    std::unique_ptr<hush::AutosaveController> autosave_;
+    QTimer autosave_timer_;
+    bool autosave_dirty_{false};
+    std::optional<hush::AutosaveController::Clock::time_point> autosave_retry_after_;
     QTableWidget* table_{};
     QLabel* status_{};
     QLabel* input_light_{};
@@ -366,16 +379,52 @@ private:
             QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
             return;
         }
+
+        bool recovered_from_journal = false;
+        const std::filesystem::path journal_path(path.toStdString() + ".hush-recovery.journal");
+        std::error_code filesystem_error;
+        const bool journal_exists = std::filesystem::exists(journal_path, filesystem_error);
+        if (filesystem_error) {
+            QMessageBox::warning(this, "Recovery check failed",
+                                 QString::fromStdString(filesystem_error.message()));
+        } else if (journal_exists) {
+            hush::Project recovered = candidate;
+            bool applied = false;
+            hush::Error recovery_error;
+            if (!hush::RecoveryJournal(journal_path).recover_if_different(
+                    recovered, applied, recovery_error)) {
+                QMessageBox::warning(this, "Recovery unavailable",
+                    "The saved project will open, but its recovery journal could not be read: " +
+                    QString::fromStdString(recovery_error.message));
+            } else if (applied) {
+                const auto choice = QMessageBox::question(
+                    this, "Recover unsaved changes",
+                    "A newer recovery snapshot exists for this project. Restore it?",
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+                if (choice == QMessageBox::Yes) {
+                    candidate = std::move(recovered);
+                    recovered_from_journal = true;
+                }
+            }
+        }
 #ifdef HUSH_GUI_HAS_ALSA
         live_.stop();
         live_button_->setText("Start Live ALSA");
 #endif
         project_ = std::move(candidate);
         project_path_ = path;
+        configure_autosave(path);
         log_ = hush::OperationLog{};
-        log_.mark_saved();
+        if (recovered_from_journal) {
+            log_.mark_dirty();
+            autosave_dirty_ = true;
+            status_->setText("Recovered journal snapshot · review and save changes");
+        } else {
+            log_.mark_saved();
+            autosave_dirty_ = false;
+            status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
+        }
         refresh();
-        status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
     }
 
     bool saveProject() {
@@ -403,8 +452,19 @@ private:
         }
 
         project_path_ = path;
+        configure_autosave(path);
         log_.mark_saved();
-        status_->setText("Saved · " + QFileInfo(path).fileName());
+        hush::Error journal_error;
+        if (autosave_->save_now(project_, journal_error) == hush::AutosaveController::Outcome::Failed) {
+            autosave_dirty_ = true;
+            autosave_retry_after_ = hush::AutosaveController::Clock::now() + std::chrono::seconds(30);
+            status_->setText("Project saved; recovery journal failed: " +
+                             QString::fromStdString(autosave_->last_save_message()));
+        } else {
+            autosave_dirty_ = false;
+            autosave_retry_after_.reset();
+            status_->setText("Saved · " + QFileInfo(path).fileName() + " · recovery snapshot saved");
+        }
         return true;
     }
 
@@ -502,6 +562,7 @@ private:
             return;
         }
         if (log_.apply_and_append(project_, std::move(operation))) {
+            autosave_dirty_ = true;
             status_->setText("Edited · undo history " + QString::number(log_.cursor()));
         }
     }
@@ -566,6 +627,37 @@ private:
         refresh();
     }
 #endif
+
+    void configure_autosave(const QString& project_path) {
+        if (autosave_ && autosave_project_path_ == project_path) return;
+        autosave_project_path_ = project_path;
+        const std::filesystem::path journal_path(project_path.toStdString() + ".hush-recovery.journal");
+        autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
+        autosave_dirty_ = false;
+        autosave_retry_after_.reset();
+    }
+
+    void poll_autosave() {
+        if (!autosave_ || !autosave_dirty_) return;
+        const auto now = hush::AutosaveController::Clock::now();
+        if (autosave_retry_after_ && now < *autosave_retry_after_) return;
+
+        bool transport_running = false;
+#ifdef HUSH_GUI_HAS_ALSA
+        transport_running = live_.running();
+#endif
+        hush::Error error;
+        const auto outcome = autosave_->poll_if_dirty(
+            project_, now, autosave_dirty_, transport_running, error);
+        if (outcome == hush::AutosaveController::Outcome::Failed) {
+            autosave_retry_after_ = now + std::chrono::seconds(30);
+            status_->setText("Recovery journal write failed; retrying: " +
+                             QString::fromStdString(autosave_->last_save_message()));
+        } else if (outcome == hush::AutosaveController::Outcome::Saved) {
+            autosave_retry_after_.reset();
+            status_->setText("Recovery snapshot saved · project file may still be unsaved");
+        }
+    }
 
     void refresh() {
         table_->setRowCount(static_cast<int>(project_.tracks.size()));
