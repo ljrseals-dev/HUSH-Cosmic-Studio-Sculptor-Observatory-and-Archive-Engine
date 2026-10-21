@@ -21,11 +21,47 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 
 int main() {
     using namespace hush;
-    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
-    p.buses={{"bus-master","Master"},{"bus-music","Music"}};
+    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false,"bus-music"},{"track-2","Pad",0.5F,-0.5F,false,false,"bus-master"}};
+    p.buses={{"bus-master","Master",0.85F,false,true},{"bus-music","Music",0.65F,true,false}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
+    p.inserts={{"music-gain","bus-music",InsertKind::Gain,true,0.5F},
+               {"master-softclip","bus-master",InsertKind::SoftClip,false,1.0F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    OperationLog bus_operations;
+    Project bus_edit = p;
+    assert(bus_operations.apply_and_append(bus_edit, {"bus-music", OperationKind::SetBusGain, 0.65F, 0.4F}));
+    assert(std::abs(bus_edit.buses[1].gain - 0.4F) < 1.0e-6F);
+    assert(bus_operations.undo(bus_edit) && std::abs(bus_edit.buses[1].gain - 0.65F) < 1.0e-6F);
+    assert(bus_operations.redo(bus_edit) && std::abs(bus_edit.buses[1].gain - 0.4F) < 1.0e-6F);
+    assert(bus_operations.apply_and_append(bus_edit, {"bus-music", OperationKind::SetBusMute, 1.0F, 0.0F}));
+    assert(!bus_edit.buses[1].mute);
+    OperationLog insert_operations;
+    Project insert_edit = p;
+    Operation add_insert{"new-insert", OperationKind::AddBusInsert, 0.0F, 1.0F};
+    add_insert.after_insert = {"new-insert", "bus-music", InsertKind::Gain, true, 1.0F};
+    add_insert.after_index = insert_edit.inserts.size();
+    assert(insert_operations.apply_and_append(insert_edit, add_insert));
+    assert(insert_edit.inserts.size() == 3U);
+    assert(insert_operations.undo(insert_edit) && insert_edit.inserts.size() == 2U);
+    assert(insert_operations.redo(insert_edit) && insert_edit.inserts.size() == 3U);
+    Operation remove_insert{"new-insert", OperationKind::RemoveBusInsert, 1.0F, 0.0F};
+    remove_insert.before_insert = insert_edit.inserts.back();
+    remove_insert.before_index = insert_edit.inserts.size() - 1U;
+    assert(insert_operations.apply_and_append(insert_edit, remove_insert));
+    assert(insert_edit.inserts.size() == 2U);
+    assert(insert_operations.undo(insert_edit) && insert_edit.inserts.back().id == "new-insert");
+    Project bad_insert_bus = p; bad_insert_bus.inserts[0].bus_id = "missing-bus";
+    assert(!from_json(to_json(bad_insert_bus),loaded,err)); assert(err.code=="bus_insert_invalid");
+    Project bad_insert_gain = p; bad_insert_gain.inserts[0].gain = 17.0F;
+    assert(!from_json(to_json(bad_insert_gain),loaded,err)); assert(err.code=="bus_insert_invalid");
+    Project bad_bus_gain = p; bad_bus_gain.buses[0].gain = 17.0F;
+    assert(!from_json(to_json(bad_bus_gain),loaded,err)); assert(err.code=="bus_gain_invalid");
+    const std::string legacy_bus=R"({"schema_version":1,"id":"legacy-bus","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
+    assert(from_json(legacy_bus,loaded,err)); assert(loaded.buses.size()==1);
+    assert(loaded.buses[0].gain==1.0F && !loaded.buses[0].mute && !loaded.buses[0].solo);
+    Project bad_track_bus = p; bad_track_bus.tracks[0].bus_id = "missing-bus";
+    assert(!from_json(to_json(bad_track_bus),loaded,err)); assert(err.code=="track_bus_unknown");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";

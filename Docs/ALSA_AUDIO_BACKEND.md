@@ -15,17 +15,23 @@ ALSA is optional and disabled by default. CMake does not install packages or acc
 
 The host accepts `--help`, `--project FILE`, and `--journal FILE`. When a project is supplied, it validates the local schema-v1 JSON before starting audio. The journal defaults to `FILE.hush-recovery.journal`. If the journal exists but cannot be opened or contains no complete valid snapshot, the host reports `HUSH_RECOVERY_FAILED` and exits with code 2 rather than silently continuing. When a newer recovery snapshot differs from the project file, the host writes the recovered project file and appends the canonical snapshot before starting ALSA.
 
-This is recovery/session metadata handling only: the current host still routes synthetic Capture-to-Master audio and does not apply the loaded project's buses/tracks to live routing. It has no project-edit command surface, so normal operation does not dirty the loaded project or perform a final save. The recovery error path is tested before device startup using a deliberately invalid journal; physical ALSA behavior still requires hardware validation.
+The host configures `RealtimeProjectAudioPipeline` from the loaded project. Persisted bus routes and optional per-track `bus_id` values are applied to live processing; an empty track bus ID routes to the selected input bus. Stereo capture populates source tracks 1 and 2 (left/right); other tracks remain silent until media/device source playback is connected. Track gain, pan, mute, and solo snapshots are applied at block boundaries. Projects without bus arrays use a compatible Capture-to-Master fallback. The host autosaves recovery snapshots on its control loop and reports journal failures. Physical ALSA behavior still requires hardware validation.
 
 ## Connect ALSA to the realtime bus engine
 
-The host demonstrates the required control-thread setup sequence:
-1. Configure a valid `BusGraph` with a Capture bus routed to a Master bus.
-2. Configure `RealtimeBusEngineHost` with the validated graph, master bus ID, and maximum period size. The host builds the replacement snapshot off the callback and publishes it safely.
-3. Configure `RealtimeBusEngineHostAudioAdapter` with the host, input bus index, bus count, and maximum period size.
-4. Start `AlsaAudioBackend` with `RealtimeBusEngineHostAudioAdapter::alsa_callback` and a pointer to the adapter as user data.
+The host's project-aware setup sequence is:
+1. Load and validate the local project and its optional per-track bus IDs.
+2. Configure `RealtimeProjectAudioPipeline` off the audio thread. It resolves track bus IDs against the validated bus graph, preallocates source/output buffers, and configures the bounded track-control queue and published bus engine.
+3. Start `AlsaAudioBackend` with `RealtimeProjectAudioPipeline::alsa_callback` and a pointer to the pipeline as user data.
+4. Stop/join the backend before reclaiming retired graph snapshots or destroying the pipeline.
 
-The adapter maps interleaved stereo float input to planar left/right data. It supplies silence to all other bus input slots, calls the published host once per block, then copies the selected master's post-fader output back to interleaved stereo while the host's read guard is held. A bus index follows the graph's original `buses()` order. Same-topology graph replacements may be published while the worker runs. Stop/join the worker before changing bus count/order, reconfiguring the adapter, or destroying the host.
+The callback maps interleaved stereo capture to the first two mono source tracks, routes all source tracks through their assigned bus inputs, processes the bus graph, and copies master output back to interleaved stereo. Empty per-track bus IDs use the selected input bus. This is a live track-to-bus/master path for available source buffers, not yet a media-playback or recording engine. The lower-level `RealtimeBusEngineHostAudioAdapter` remains available for adapter-specific tests and applications that supply bus inputs directly.
+
+## Explicit stereo capture recording
+
+Pass `--record FILE.wav` to explicitly record the raw stereo ALSA input to a local IEEE-float WAV. The pipeline copies capture frames into a preallocated SPSC ring; a separate `RecordingSession` worker performs disk writes and finalizes the WAV header when recording stops. The CLI allocates five seconds of ring capacity and reports frames written and dropped on shutdown. If the writer fails, the host reports a recording persistence error rather than claiming a complete file.
+
+This records the input capture stream, not the processed master output. It is not multitrack recording: track arming, take/playlist management, punch, comping, crossfades, latency compensation, and zero-dropped-frame device qualification remain open.
 
 ## Callback contract
 
@@ -37,7 +43,7 @@ Capture and playback must negotiate the same sample rate and period size; otherw
 
 - Uses blocking ALSA read/write on a dedicated worker, not ALSA's callback API; callback worst-case execution time still needs measurement.
 - Device setup and stop can block and must be called from a control thread.
-- The host is a minimal Capture -> Master integration harness using guarded graph replacement, not a full track mixer or application GUI.
+- Only stereo capture source tracks 1–2 receive samples; other project tracks remain silent until media/device source routing is implemented.
 - The adapter's bus count and input-bus index are fixed at configuration; changing topology requires stopping the backend and reconfiguring the adapter.
 - No latency, zero-xrun, hardware-compatibility, or release-readiness claim is made until tested on a named Linux machine.
 - If capture or playback recovery fails, the backend publishes a lock-free terminal failure category and the raw negative `snd_pcm_recover` status. After the worker has stopped and been joined, the host prints `HUSH_ALSA_WORKER_FAILED side=capture|playback recover_error=<negative-code>` and exits with code 3. Expected errors caused by an intentional `stop()` are not classified as terminal device failures. This identifies the failing stream and preserves the ALSA status code; it does not replace device-specific diagnosis or hardware validation.

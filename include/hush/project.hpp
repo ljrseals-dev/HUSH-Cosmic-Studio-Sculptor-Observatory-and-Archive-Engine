@@ -19,6 +19,9 @@ struct Track {
     float pan{0.0F};
     bool mute{false};
     bool solo{false};
+    // Empty preserves legacy behavior: route to the host's selected input bus.
+    // Non-empty IDs are validated against Project::buses at load/configure time.
+    std::string bus_id;
     bool operator==(const Track&) const = default;
 };
 
@@ -56,6 +59,8 @@ struct Project {
     // Bus routing is part of canonical project state. Validate it with BusGraph before rendering.
     std::vector<Bus> buses;
     std::vector<BusRoute> routes;
+    // Optional schema-v1 built-in bus inserts, ordered per bus by this vector.
+    std::vector<BusInsert> inserts;
     // Optional additive schema-v1 arrays. Older projects without them remain valid.
     std::vector<MediaSource> media_sources;
     std::vector<AudioClip> clips;

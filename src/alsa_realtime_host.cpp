@@ -1,9 +1,8 @@
 #include "hush/alsa_audio_backend.hpp"
 #include "hush/autosave_controller.hpp"
-#include "hush/bus_graph.hpp"
 #include "hush/project.hpp"
-#include "hush/realtime_bus_engine_host.hpp"
-#include "hush/realtime_bus_engine_host_audio_adapter.hpp"
+#include "hush/realtime_project_audio_pipeline.hpp"
+#include "hush/recording_session.hpp"
 
 #include <chrono>
 #include <csignal>
@@ -14,6 +13,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace {
 volatile std::sig_atomic_t keep_running = 1;
@@ -51,12 +52,13 @@ bool write_project_file(const std::filesystem::path& path, const hush::Project& 
 void print_help() {
     std::cout
         << "HUSH ALSA realtime host\n"
-        << "Usage: hush_alsa_realtime_host [--help] [--project FILE] [--journal FILE]\n"
+        << "Usage: hush_alsa_realtime_host [--help] [--project FILE] [--journal FILE] [--record FILE]\n"
         << "  --project FILE  Load a local schema-v1 project before audio starts.\n"
         << "  --journal FILE  Recovery journal path (default: FILE.hush-recovery.journal).\n"
+        << "  --record FILE   Explicitly record stereo ALSA input to a float WAV on a disk-writer thread.\n"
         << "Exit codes: 0 normal shutdown; 1 argument, project-open, graph, or audio startup failure;\n"
-        << "            2 recovery or project/journal persistence failure; 3 terminal ALSA worker failure.\n"
-        << "The host currently has no project-edit command surface; loaded project state is not live routing.\n";
+        << "            2 recovery/recording persistence failure; 3 terminal ALSA worker failure.\n"
+        << "Project track controls and bus routing are active; tracks beyond capture L/R have no source yet.\n";
 }
 } // namespace
 
@@ -65,14 +67,16 @@ int main(int argc, char** argv) {
 
     std::filesystem::path project_path;
     std::filesystem::path journal_path;
+    std::filesystem::path recording_path;
     bool has_project = false;
+    bool has_recording = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
         }
-        if ((arg == "--project" || arg == "--journal") && i + 1 >= argc) {
+        if ((arg == "--project" || arg == "--journal" || arg == "--record") && i + 1 >= argc) {
             std::cerr << "HUSH_ARGUMENT_ERROR missing value for " << arg << '\n';
             return 1;
         }
@@ -81,6 +85,9 @@ int main(int argc, char** argv) {
             has_project = true;
         } else if (arg == "--journal") {
             journal_path = argv[++i];
+        } else if (arg == "--record") {
+            recording_path = argv[++i];
+            has_recording = true;
         } else {
             std::cerr << "HUSH_ARGUMENT_ERROR unknown argument: " << arg << '\n';
             return 1;
@@ -157,30 +164,21 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, handle_signal);
     std::signal(SIGTERM, handle_signal);
 
-    RoutingError routing_error;
-    BusGraph graph;
-    if (!graph.configure(
-            {{"capture", "Capture"}, {"master", "Master"}},
-            {{"capture", "master", SendTap::PostFader, 1.0F}},
-            routing_error)) {
-        std::cerr << "Bus graph setup failed: " << routing_error.code
-                  << ": " << routing_error.message << '\n';
-        return 1;
+    // When launched without a project, provide two explicit capture source tracks.
+    // A loaded project with no tracks is rejected rather than silently inventing tracks.
+    Project runtime_project = project;
+    if (!has_project) {
+        runtime_project.tracks = {
+            {"track-1", "Capture L", 1.0F, -1.0F, false, false},
+            {"track-2", "Capture R", 1.0F, 1.0F, false, false}
+        };
     }
 
     constexpr std::size_t max_frames = 4096;
-    RealtimeBusEngineHost engine_host;
-    ProcessorSetupError setup_error;
-    if (!engine_host.replace_graph(graph, max_frames, "master", setup_error)) {
-        std::cerr << "Realtime engine setup failed: " << setup_error.code
-                  << ": " << setup_error.message << '\n';
-        return 1;
-    }
-
-    RealtimeBusEngineHostAudioAdapter adapter;
-    std::string adapter_error;
-    if (!adapter.configure(engine_host, 0, graph.buses().size(), max_frames, adapter_error)) {
-        std::cerr << "Audio adapter setup failed: " << adapter_error << '\n';
+    RealtimeProjectAudioPipeline pipeline;
+    std::string pipeline_error;
+    if (!pipeline.configure(runtime_project, max_frames, pipeline_error)) {
+        std::cerr << "Realtime project pipeline setup failed: " << pipeline_error << '\n';
         return 1;
     }
 
@@ -188,9 +186,30 @@ int main(int argc, char** argv) {
     AlsaAudioBackend::Config config;
     config.sample_rate = 48000;
     config.period_frames = 128;
+    std::unique_ptr<RecordingSession> recording;
+    if (has_recording) {
+        recording = std::make_unique<RecordingSession>();
+        std::string recording_error;
+        // Five seconds of bounded capture buffering; overflow is counted, never blocked.
+        if (!recording->start(recording_path, config.sample_rate, 2U,
+                              static_cast<std::size_t>(config.sample_rate) * 5U,
+                              2048U, &recording_error)) {
+            std::cerr << "HUSH_RECORDING_START_FAILED path=" << recording_path.string()
+                      << " message=" << recording_error << '\n';
+            return 2;
+        }
+        pipeline.set_recording_session(recording.get());
+    }
+
     std::string backend_error;
-    if (!backend.start(config, &RealtimeBusEngineHostAudioAdapter::alsa_callback,
-                      &adapter, backend_error)) {
+    if (!backend.start(config, &RealtimeProjectAudioPipeline::alsa_callback,
+                      &pipeline, backend_error)) {
+        if (recording) {
+            std::string recording_error;
+            if (!recording->stop(&recording_error))
+                std::cerr << "HUSH_RECORDING_FINALIZE_FAILED message=" << recording_error << '\n';
+            pipeline.set_recording_session(nullptr);
+        }
         std::cerr << "ALSA startup failed: " << backend_error << '\n';
         return 1;
     }
@@ -198,18 +217,65 @@ int main(int argc, char** argv) {
     std::cout << "HUSH ALSA realtime host running at "
               << backend.actual_sample_rate() << " Hz, "
               << backend.actual_period_frames() << " frames/period.\n"
-              << "Capture is routed to the Master bus. Press Ctrl-C to stop.\n";
+              << "Capture L/R feed source tracks 1-2 through track controls and project bus routing.\n"
+              << "Additional tracks are silent until a source is connected. Press Ctrl-C to stop.\n";
     if (has_project) {
-        std::cout << "Loaded project metadata: " << project.id
-                  << " (project state is not connected to live routing).\n";
+        std::cout << "Loaded project: " << project.id
+                  << " (persisted track bus assignments and gain/pan/mute/solo are active).\n";
     }
 
     while (keep_running != 0 && backend.running()) {
+        if (autosave) {
+            Error autosave_error;
+            const auto outcome = autosave->poll(
+                project, AutosaveController::Clock::now(), backend.running(), autosave_error);
+            if (outcome == AutosaveController::Outcome::Failed) {
+                std::cerr << "HUSH_AUTOSAVE_FAILED path=" << journal_path.string()
+                          << " code=" << autosave_error.code
+                          << " message=" << autosave->last_save_message() << '\n';
+                backend.stop();
+                if (recording) {
+                    std::string recording_error;
+                    if (!recording->stop(&recording_error))
+                        std::cerr << "HUSH_RECORDING_FINALIZE_FAILED message=" << recording_error << '\n';
+                    pipeline.set_recording_session(nullptr);
+                }
+                pipeline.reclaim_retired();
+                return 2;
+            }
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    bool autosave_failed = false;
+    if (autosave) {
+        Error autosave_error;
+        const auto outcome = autosave->poll(
+            project, AutosaveController::Clock::now(), false, autosave_error);
+        if (outcome == AutosaveController::Outcome::Failed) {
+            autosave_failed = true;
+            std::cerr << "HUSH_AUTOSAVE_FAILED path=" << journal_path.string()
+                      << " code=" << autosave_error.code
+                      << " message=" << autosave->last_save_message() << '\n';
+        }
+    }
+
     backend.stop();
-    engine_host.reclaim_retired();
+    bool recording_failed = false;
+    if (recording) {
+        std::string recording_error;
+        if (!recording->stop(&recording_error)) {
+            recording_failed = true;
+            std::cerr << "HUSH_RECORDING_FINALIZE_FAILED path=" << recording_path.string()
+                      << " message=" << recording_error << '\n';
+        }
+        pipeline.set_recording_session(nullptr);
+        std::cout << "Recording frames: " << recording->frames_written()
+                  << ", dropped frames: " << recording->dropped_frames()
+                  << ", file: " << recording_path.string() << '\n';
+    }
+    pipeline.reclaim_retired();
+    if (autosave_failed || recording_failed) return 2;
     std::cout << "Stopped. Callbacks: " << backend.callback_count()
               << ", observed recoveries/short transfers: "
               << backend.xrun_count() << '\n';

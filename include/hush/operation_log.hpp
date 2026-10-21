@@ -1,10 +1,24 @@
 #pragma once
 #include "hush/project.hpp"
+#include <cstddef>
 #include <string>
 #include <vector>
 namespace hush {
-enum class OperationKind { SetGain, SetPan, SetMute, SetSolo };
-struct Operation { std::string entity_id; OperationKind kind{}; float before_value{}; float after_value{}; };
+enum class OperationKind {
+    SetGain, SetPan, SetMute, SetSolo,
+    SetBusGain, SetBusMute, SetBusSolo,
+    AddBusInsert, RemoveBusInsert, SetInsertGain, SetInsertEnabled, SetInsertKind
+};
+struct Operation {
+    std::string entity_id;
+    OperationKind kind{};
+    float before_value{};
+    float after_value{};
+    BusInsert before_insert{};
+    BusInsert after_insert{};
+    std::size_t before_index{0};
+    std::size_t after_index{0};
+};
 class OperationLog {
 public:
     bool apply_and_append(Project& project, Operation op);

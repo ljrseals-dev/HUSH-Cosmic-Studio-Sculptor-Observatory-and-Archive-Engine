@@ -40,7 +40,8 @@ struct ProcessorSetupError {
 class PreallocatedBusProcessor {
 public:
     bool configure(const BusGraph& graph, std::size_t max_frames,
-                   ProcessorSetupError& error);
+                   ProcessorSetupError& error,
+                   const std::vector<BusInsert>& inserts = {});
 
     [[nodiscard]] RealtimeProcessStatus process(const BusInputView* inputs,
                                                 std::size_t input_count,
@@ -55,8 +56,14 @@ public:
                                             std::size_t frames) const noexcept;
 
 private:
+    struct RuntimeInsert {
+        InsertKind kind{InsertKind::Gain};
+        bool enabled{true};
+        float gain{1.0F};
+    };
     struct RuntimeBus {
         std::string id;
+        std::vector<RuntimeInsert> inserts;
         std::vector<float> pre_left;
         std::vector<float> pre_right;
         std::vector<float> post_left;

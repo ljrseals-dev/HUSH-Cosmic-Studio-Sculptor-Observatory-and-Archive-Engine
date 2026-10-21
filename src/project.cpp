@@ -29,6 +29,9 @@ std::string law_name(PanLaw law) {
 std::string tap_name(SendTap tap) {
     return tap == SendTap::PreFader ? "pre_fader" : "post_fader";
 }
+std::string insert_kind_name(InsertKind kind) {
+    return kind == InsertKind::SoftClip ? "soft_clip" : "gain";
+}
 bool extract_array(const std::string& s, const std::string& key, std::string& body, bool required, Error& e) {
     const auto key_pos=s.find("\"" + key + "\"");
     if (key_pos==std::string::npos) {
@@ -67,14 +70,17 @@ std::string to_json(const Project& p) {
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(t.id)
           << "\", \"name\": \"" << escape_json(t.name) << "\", \"gain\": " << t.gain
           << ", \"pan\": " << t.pan << ", \"mute\": " << (t.mute?"true":"false")
-          << ", \"solo\": " << (t.solo?"true":"false") << "}";
+          << ", \"solo\": " << (t.solo?"true":"false")
+          << ", \"bus_id\": \"" << escape_json(t.bus_id) << "\"}";
     }
     if (!p.tracks.empty()) o << "\n  ";
     o << "],\n  \"buses\": [";
     for (std::size_t i=0;i<p.buses.size();++i) {
         const auto& b=p.buses[i];
         o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(b.id)
-          << "\", \"name\": \"" << escape_json(b.name) << "\"}";
+          << "\", \"name\": \"" << escape_json(b.name) << "\", \"gain\": " << b.gain
+          << ", \"mute\": " << (b.mute ? "true" : "false")
+          << ", \"solo\": " << (b.solo ? "true" : "false") << "}";
     }
     if (!p.buses.empty()) o << "\n  ";
     o << "],\n  \"routes\": [";
@@ -85,6 +91,16 @@ std::string to_json(const Project& p) {
           << "\", \"tap\": \"" << tap_name(r.tap) << "\", \"gain\": " << r.gain << "}";
     }
     if (!p.routes.empty()) o << "\n  ";
+    o << "],\n  \"inserts\": [";
+    for (std::size_t i=0;i<p.inserts.size();++i) {
+        const auto& insert=p.inserts[i];
+        o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(insert.id)
+          << "\", \"bus_id\": \"" << escape_json(insert.bus_id)
+          << "\", \"kind\": \"" << insert_kind_name(insert.kind)
+          << "\", \"enabled\": " << (insert.enabled ? "true" : "false")
+          << ", \"gain\": " << insert.gain << "}";
+    }
+    if (!p.inserts.empty()) o << "\n  ";
     o << "],\n  \"media_sources\": [";
     for (std::size_t i=0;i<p.media_sources.size();++i) {
         const auto& source=p.media_sources[i];
@@ -134,7 +150,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
 
     std::string body;
     if (!extract_array(s,"tracks",body,true,e)) return false;
-    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
+    const std::regex track_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)(?:\s*,\s*"bus_id"\s*:\s*"([^"]*)")?\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
         Track t; const auto& x=*it;
@@ -142,6 +158,7 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         try { t.gain=std::stof(x[3].str()); t.pan=std::stof(x[4].str()); }
         catch (...) { e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false; }
         t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
+        t.bus_id = x[7].matched ? x[7].str() : std::string{};
         if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
             e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
         }
@@ -152,15 +169,39 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"buses",body,false,e)) return false;
-    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"\s*\})json");
+    const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"name"\s*:\s*"([^"]*)"(?:\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+))?(?:\s*,\s*"mute"\s*:\s*(true|false))?(?:\s*,\s*"solo"\s*:\s*(true|false))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),bus_re);
     for (auto it=begin;it!=end;++it) {
-        Bus b{(*it)[1].str(),(*it)[2].str()};
+        const auto& x=*it;
+        Bus b;
+        b.id=x[1].str(); b.name=x[2].str();
+        try {
+            if (x[3].matched) b.gain=std::stof(x[3].str());
+        } catch (...) {
+            e={"bus_gain_invalid",b.id,"Bus gain is invalid","error"}; return false;
+        }
+        b.mute=x[4].matched && x[4].str()=="true";
+        b.solo=x[5].matched && x[5].str()=="true";
         if (b.id.empty()) { e={"bus_id_empty","","Bus ID must not be empty","error"}; return false; }
+        if (!std::isfinite(b.gain) || b.gain < 0.0F || b.gain > 16.0F) {
+            e={"bus_gain_invalid",b.id,"Bus gain must be finite and in [0, 16]","error"}; return false;
+        }
         p.buses.push_back(std::move(b));
     }
     if (body.find('{')!=std::string::npos && p.buses.empty()) {
         e={"bus_parse_failed","","Bus object did not match schema-v1 fields","error"}; return false;
+    }
+
+    for (const auto& track : p.tracks) {
+        if (!track.bus_id.empty()) {
+            const auto bus = std::find_if(p.buses.begin(), p.buses.end(),
+                [&](const Bus& candidate) { return candidate.id == track.bus_id; });
+            if (bus == p.buses.end()) {
+                e={"track_bus_unknown",track.id,
+                   "Track bus_id does not reference a project bus","error"};
+                return false;
+            }
+        }
     }
 
     if (!extract_array(s,"routes",body,false,e)) return false;
@@ -181,6 +222,32 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         if (!graph.configure(p.buses,p.routes,routing_error)) {
             e={routing_error.code,routing_error.entity_id,routing_error.message,"error"}; return false;
         }
+    }
+
+    if (!extract_array(s,"inserts",body,false,e)) return false;
+    const std::regex insert_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"bus_id"\s*:\s*"([^"]*)"\s*,\s*"kind"\s*:\s*"(gain|soft_clip)"\s*,\s*"enabled"\s*:\s*(true|false)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),insert_re);
+    std::unordered_set<std::string> insert_ids;
+    for (auto it=begin;it!=end;++it) {
+        const auto& x=*it;
+        try {
+            BusInsert insert;
+            insert.id=x[1].str(); insert.bus_id=x[2].str();
+            insert.kind=x[3].str()=="soft_clip" ? InsertKind::SoftClip : InsertKind::Gain;
+            insert.enabled=x[4].str()=="true";
+            insert.gain=std::stof(x[5].str());
+            const auto bus=std::find_if(p.buses.begin(),p.buses.end(),
+                [&](const Bus& candidate){ return candidate.id==insert.bus_id; });
+            if (insert.id.empty() || insert.bus_id.empty() || !insert_ids.insert(insert.id).second ||
+                bus==p.buses.end() || !std::isfinite(insert.gain) ||
+                insert.gain<0.0F || insert.gain>16.0F) {
+                e={"bus_insert_invalid",insert.id,"Insert ID, bus reference, or gain is invalid","error"}; return false;
+            }
+            p.inserts.push_back(std::move(insert));
+        } catch (...) { e={"bus_insert_gain_invalid",x[1].str(),"Insert gain is invalid","error"}; return false; }
+    }
+    if (body.find('{')!=std::string::npos && p.inserts.empty()) {
+        e={"bus_insert_parse_failed","","Insert object did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"media_sources",body,false,e)) return false;

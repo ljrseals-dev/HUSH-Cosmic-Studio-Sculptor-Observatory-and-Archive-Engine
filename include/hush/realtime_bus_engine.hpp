@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace hush {
@@ -15,9 +16,14 @@ struct BusAudioInputView {
     const float* right{};
 };
 
-struct BusFaderChange {
+struct BusControlChange {
     std::uint32_t bus_index{};
     float gain{1.0F};
+    bool mute{false};
+    bool solo{false};
+    bool update_gain{true};
+    bool update_mute{false};
+    bool update_solo{false};
 };
 
 // Integrates the fixed-capacity parameter queue with the preallocated bus processor.
@@ -30,10 +36,14 @@ public:
     static constexpr std::size_t kParameterQueueCapacity = 1024;
 
     bool configure(const BusGraph& graph, std::size_t max_frames,
-                   ProcessorSetupError& error);
+                   ProcessorSetupError& error,
+                   const std::vector<BusInsert>& inserts = {});
 
     // Single control/UI producer. Returns false for invalid values or a full queue.
     [[nodiscard]] bool enqueue_fader_change(std::size_t bus_index, float gain) noexcept;
+    // Atomically enqueue the complete bus control snapshot at a block boundary.
+    [[nodiscard]] bool enqueue_bus_control(std::size_t bus_index, float gain,
+                                           bool mute, bool solo) noexcept;
 
     // Single audio-thread consumer. Inputs must be ordered like graph.buses().
     [[nodiscard]] RealtimeProcessStatus process(const BusAudioInputView* inputs,
@@ -56,9 +66,13 @@ public:
 
 private:
     PreallocatedBusProcessor processor_;
-    SpscParameterQueue<BusFaderChange, kParameterQueueCapacity> parameter_queue_;
+    SpscParameterQueue<BusControlChange, kParameterQueueCapacity> parameter_queue_;
     std::vector<BusInputView> input_scratch_;
     std::vector<float> fader_gains_;
+    std::vector<bool> muted_;
+    std::vector<bool> soloed_;
+    std::vector<bool> solo_audible_;
+    std::vector<std::pair<std::size_t, std::size_t>> route_edges_;
     bool configured_{false};
 };
 

@@ -44,9 +44,40 @@ int main() {
     source = engine.post_fader(0, 1);
     assert(std::abs(source.left[0] - 0.75F) < 1.0e-6F);
 
+    // Bus mute suppresses the post-fader signal and therefore downstream post-fader sends.
+    assert(engine.enqueue_bus_control(0, 0.75F, true, false));
+    assert(engine.process(inputs, 2, 1) == RealtimeProcessStatus::Ok);
+    source = engine.post_fader(0, 1);
+    master = engine.post_fader(1, 1);
+    assert(std::abs(source.left[0]) < 1.0e-6F);
+    assert(std::abs(master.left[0]) < 1.0e-6F);
+
+    // Solo preserves the soloed bus and its downstream route to master.
+    assert(engine.enqueue_bus_control(0, 0.75F, false, true));
+    assert(engine.process(inputs, 2, 1) == RealtimeProcessStatus::Ok);
+    source = engine.post_fader(0, 1);
+    master = engine.post_fader(1, 1);
+    assert(std::abs(source.left[0] - 0.75F) < 1.0e-6F);
+    assert(std::abs(master.left[0] - 0.75F) < 1.0e-6F);
+
     assert(!engine.enqueue_fader_change(99, 1.0F));
     assert(!engine.enqueue_fader_change(0, -1.0F));
     assert(!engine.enqueue_fader_change(0, 17.0F));
+
+    // Inserts execute in declared order before the bus fader and are preconfigured
+    // off the audio thread. Gain followed by soft-clip maps 1.0 -> tanh(0.5).
+    RealtimeBusEngine inserted_engine;
+    const std::vector<BusInsert> inserts{
+        {"drive", "source", InsertKind::Gain, true, 0.5F},
+        {"clip", "source", InsertKind::SoftClip, true, 1.0F},
+        {"bypassed", "source", InsertKind::Gain, false, 0.1F}
+    };
+    assert(inserted_engine.configure(graph, 16, setup_error, inserts));
+    assert(inserted_engine.process(inputs, 2, 1) == RealtimeProcessStatus::Ok);
+    const auto inserted_source = inserted_engine.post_fader(0, 1);
+    const auto inserted_master = inserted_engine.post_fader(1, 1);
+    assert(std::abs(inserted_source.left[0] - std::tanh(0.5F)) < 1.0e-6F);
+    assert(std::abs(inserted_master.left[0] - std::tanh(0.5F)) < 1.0e-6F);
 
     const BusAudioInputView invalid[] = {
         {nullptr, source_r},
