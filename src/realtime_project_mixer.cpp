@@ -1,6 +1,7 @@
 #include "hush/realtime_project_mixer.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <limits>
 #include <unordered_set>
@@ -37,13 +38,22 @@ bool RealtimeProjectMixer::configure(const Project& project,
     }
 
     std::unordered_set<std::string> track_ids;
+    std::vector<std::string> new_track_ids;
     track_ids.reserve(project.tracks.size());
+    new_track_ids.reserve(project.tracks.size());
     for (const auto& track : project.tracks) {
         if (track.id.empty() || !track_ids.insert(track.id).second) {
             set_error(error, "project_mixer_track_id_invalid", track.id,
                       "Track IDs must be non-empty and unique");
             return false;
         }
+        if (!std::isfinite(track.gain) || track.gain < 0.0F || track.gain > 2.0F ||
+            !std::isfinite(track.pan) || track.pan < -1.0F || track.pan > 1.0F) {
+            set_error(error, "project_mixer_track_control_invalid", track.id,
+                      "Track gain must be finite in [0, 2] and pan finite in [-1, 1]");
+            return false;
+        }
+        new_track_ids.push_back(track.id);
     }
 
     std::vector<std::size_t> mapping;
@@ -93,8 +103,7 @@ bool RealtimeProjectMixer::configure(const Project& project,
         }
     }
 
-    track_ids_.reserve(project.tracks.size());
-    for (const auto& track : project.tracks) track_ids_.push_back(track.id);
+    track_ids_.swap(new_track_ids);
     bus_count_ = project.buses.size();
     max_frames_ = max_frames;
     configured_ = true;
