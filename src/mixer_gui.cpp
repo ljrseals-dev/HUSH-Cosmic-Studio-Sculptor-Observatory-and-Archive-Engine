@@ -269,6 +269,12 @@ public:
 #ifdef HUSH_GUI_TESTING
     [[nodiscard]] const hush::Project& test_project() const noexcept { return project_; }
     [[nodiscard]] std::size_t test_history_cursor() const noexcept { return log_.cursor(); }
+    bool test_load_project_from_path(const QString& path, bool accept_recovery) {
+        return load_project_from_path(path, accept_recovery);
+    }
+    void test_poll_autosave() { poll_autosave(); }
+    [[nodiscard]] QString test_status_text() const { return status_->text(); }
+    [[nodiscard]] std::filesystem::path test_journal_path() const { return autosave_journal_path_; }
 #endif
 
     ~MixerWindow() override {
@@ -306,16 +312,22 @@ private:
         if (!confirmProjectReplacement()) return;
         const auto path = QFileDialog::getOpenFileName(this, "Open HUSH Project", {}, "HUSH Project (*.json)");
         if (path.isEmpty()) return;
+        (void)load_project_from_path(path, std::nullopt);
+    }
+
+    bool load_project_from_path(const QString& path, std::optional<bool> test_recovery_choice) {
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly)) {
-            QMessageBox::warning(this, "Open failed", file.errorString());
-            return;
+            if (!test_recovery_choice)
+                QMessageBox::warning(this, "Open failed", file.errorString());
+            return false;
         }
         hush::Project candidate;
         hush::Error error;
         if (!hush::from_json(QString::fromUtf8(file.readAll()).toStdString(), candidate, error)) {
-            QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
-            return;
+            if (!test_recovery_choice)
+                QMessageBox::warning(this, "Invalid project", QString::fromStdString(error.message));
+            return false;
         }
 
         bool recovered_from_journal = false;
@@ -323,23 +335,27 @@ private:
         std::error_code filesystem_error;
         const bool journal_exists = std::filesystem::exists(journal_path, filesystem_error);
         if (filesystem_error) {
-            QMessageBox::warning(this, "Recovery check failed",
-                                 QString::fromStdString(filesystem_error.message()));
+            if (!test_recovery_choice)
+                QMessageBox::warning(this, "Recovery check failed",
+                                     QString::fromStdString(filesystem_error.message()));
         } else if (journal_exists) {
             hush::Project recovered = candidate;
             bool applied = false;
             hush::Error recovery_error;
             if (!hush::RecoveryJournal(journal_path).recover_if_different(
                     recovered, applied, recovery_error)) {
-                QMessageBox::warning(this, "Recovery unavailable",
-                    "The saved project will open, but its recovery journal could not be read: " +
-                    QString::fromStdString(recovery_error.message));
+                if (!test_recovery_choice)
+                    QMessageBox::warning(this, "Recovery unavailable",
+                        "The saved project will open, but its recovery journal could not be read: " +
+                        QString::fromStdString(recovery_error.message));
             } else if (applied) {
-                const auto choice = QMessageBox::question(
-                    this, "Recover unsaved changes",
-                    "A newer recovery snapshot exists for this project. Restore it?",
-                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-                if (choice == QMessageBox::Yes) {
+                const bool accept = test_recovery_choice.has_value()
+                    ? *test_recovery_choice
+                    : QMessageBox::question(
+                          this, "Recover unsaved changes",
+                          "A newer recovery snapshot exists for this project. Restore it?",
+                          QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes;
+                if (accept) {
                     candidate = std::move(recovered);
                     recovered_from_journal = true;
                 } else {
@@ -347,11 +363,10 @@ private:
                     // the same stale journal could be offered again on the next launch.
                     std::error_code remove_error;
                     std::filesystem::remove(journal_path, remove_error);
-                    if (remove_error) {
+                    if (remove_error && !test_recovery_choice)
                         QMessageBox::warning(this, "Recovery journal",
                             "Could not discard the declined recovery snapshot: " +
                             QString::fromStdString(remove_error.message()));
-                    }
                 }
             }
         }
@@ -373,6 +388,7 @@ private:
             status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
         }
         refresh();
+        return true;
     }
 
     bool saveProject() {
