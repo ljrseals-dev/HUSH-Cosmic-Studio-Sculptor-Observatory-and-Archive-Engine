@@ -2,7 +2,7 @@
 #include "hush/autosave_controller.hpp"
 #include "hush/project.hpp"
 #include "hush/project_close_policy.hpp"
-#include "hush/realtime_track_mixer.hpp"
+#include "hush/realtime_project_audio_pipeline.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -54,30 +54,18 @@ public:
             error = "The project has no tracks.";
             return false;
         }
-        auto mixer = std::make_unique<hush::RealtimeTrackMixer>();
-        if (!mixer->configure(project.tracks.size(), kMaxFrames)) {
-            error = "Could not configure the realtime track mixer.";
+
+        auto pipeline = std::make_unique<hush::RealtimeProjectAudioPipeline>();
+        if (!pipeline->configure(project, kMaxFrames, error)) {
             return false;
         }
-
-        std::vector<std::vector<float>> buffers(project.tracks.size(),
-                                                std::vector<float>(kMaxFrames, 0.0F));
-        std::vector<const float*> pointers(project.tracks.size(), nullptr);
-        for (std::size_t i = 0; i < buffers.size(); ++i) pointers[i] = buffers[i].data();
-
-        mixer_ = std::move(mixer);
-        track_buffers_ = std::move(buffers);
-        track_pointers_ = std::move(pointers);
-        if (!enqueue_project_controls(project)) {
-            stop();
-            error = "The bounded realtime command queue rejected initial controls.";
-            return false;
-        }
+        pipeline_ = std::move(pipeline);
 
         hush::AlsaAudioBackend::Config config;
         config.sample_rate = 48000;
         config.period_frames = 128;
-        if (!backend_.start(config, &LiveMixer::callback, this, error)) {
+        if (!backend_.start(config, &hush::RealtimeProjectAudioPipeline::alsa_callback,
+                            pipeline_.get(), error)) {
             stop();
             return false;
         }
@@ -86,35 +74,26 @@ public:
     }
 
     void stop() noexcept {
-        backend_.stop(); // Joins the callback thread before callback-owned state is freed.
-        mixer_.reset();
-        track_buffers_.clear();
-        track_pointers_.clear();
+        backend_.stop(); // Join the callback before releasing the pipeline and its buffers.
+        pipeline_.reset();
     }
 
     [[nodiscard]] bool running() const noexcept { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
-    [[nodiscard]] float input_peak() const noexcept { return input_peak_.load(std::memory_order_relaxed); }
-    [[nodiscard]] float output_peak() const noexcept { return output_peak_.load(std::memory_order_relaxed); }
-
-    bool enqueue_project_controls(const hush::Project& project) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
-        for (std::size_t i = 0; i < project.tracks.size(); ++i) {
-            const auto& t = project.tracks[i];
-            if (!mixer_->enqueue_control(i, t.gain, t.pan, t.mute, t.solo)) return false;
-        }
-        return true;
+    [[nodiscard]] float input_peak() const noexcept {
+        return pipeline_ ? pipeline_->input_peak() : 0.0F;
+    }
+    [[nodiscard]] float output_peak() const noexcept {
+        return pipeline_ ? pipeline_->output_peak() : 0.0F;
     }
 
-    // After startup, enqueue only the track touched by the operation. Sending the
-    // whole project for every slider release needlessly consumes the bounded queue.
     bool enqueue_track_control_values(const hush::Project& project, const std::string& track_id,
                                       float gain, float pan, bool mute, bool solo) noexcept {
-        if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
+        if (!pipeline_) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             if (project.tracks[i].id == track_id)
-                return mixer_->enqueue_control(i, gain, pan, mute, solo);
+                return pipeline_->enqueue_track_control(i, gain, pan, mute, solo);
         }
         return false;
     }
@@ -128,65 +107,12 @@ public:
         return false;
     }
 
-private:
-    static void callback(const float* input, float* output, std::size_t frames,
-                         void* user_data) noexcept {
-        auto* self = static_cast<LiveMixer*>(user_data);
-        if (!self || !output) return;
-        if (!input || frames > kMaxFrames || !self->mixer_) {
-            std::fill_n(output, frames * 2U, 0.0F);
-            return;
-        }
-
-        float input_peak = 0.0F;
-        for (std::size_t i = 0; i < frames * 2U; ++i)
-            input_peak = std::max(input_peak, std::abs(input[i]));
-        self->input_peak_.store(input_peak, std::memory_order_relaxed);
-
-        for (auto& track : self->track_buffers_) std::fill_n(track.data(), frames, 0.0F);
-        if (!self->track_buffers_.empty()) {
-            for (std::size_t frame = 0; frame < frames; ++frame)
-                self->track_buffers_[0][frame] = input[frame * 2U];
-        }
-        if (self->track_buffers_.size() > 1U) {
-            for (std::size_t frame = 0; frame < frames; ++frame)
-                self->track_buffers_[1][frame] = input[frame * 2U + 1U];
-        }
-
-        if (!self->mixer_->process(self->track_pointers_.data(),
-                                   self->track_pointers_.size(),
-                                   self->output_left_.data(), self->output_right_.data(),
-                                   frames)) {
-            std::fill_n(output, frames * 2U, 0.0F);
-            return;
-        }
-        float output_peak = 0.0F;
-        for (std::size_t frame = 0; frame < frames; ++frame) {
-            output[frame * 2U] = self->output_left_[frame];
-            output[frame * 2U + 1U] = self->output_right_[frame];
-            output_peak = std::max(output_peak, std::abs(self->output_left_[frame]));
-            output_peak = std::max(output_peak, std::abs(self->output_right_[frame]));
-        }
-        self->output_peak_.store(output_peak, std::memory_order_relaxed);
-    }
-
-public:
-    // Called before backend start; these buffers never resize during processing.
-    bool prepare_output() {
-        output_left_.assign(kMaxFrames, 0.0F);
-        output_right_.assign(kMaxFrames, 0.0F);
-        return true;
-    }
+    // Pipeline buffers are allocated in start(), before the ALSA callback begins.
+    bool prepare_output() const noexcept { return true; }
 
 private:
     hush::AlsaAudioBackend backend_;
-    std::atomic<float> input_peak_{0.0F};
-    std::atomic<float> output_peak_{0.0F};
-    std::unique_ptr<hush::RealtimeTrackMixer> mixer_;
-    std::vector<std::vector<float>> track_buffers_;
-    std::vector<const float*> track_pointers_;
-    std::vector<float> output_left_{kMaxFrames, 0.0F};
-    std::vector<float> output_right_{kMaxFrames, 0.0F};
+    std::unique_ptr<hush::RealtimeProjectAudioPipeline> pipeline_;
 };
 #endif
 
@@ -643,7 +569,7 @@ private:
             return;
         }
         live_button_->setText("Stop Live ALSA");
-        status_->setText("Live ALSA · capture L/R → tracks 1–2; later tracks have no live source");
+        status_->setText("Live ALSA · tracks 1–2 → project buses; later tracks have no live source");
         refresh();
     }
 #endif
