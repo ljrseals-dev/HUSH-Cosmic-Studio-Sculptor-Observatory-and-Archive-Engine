@@ -51,6 +51,8 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         for (std::size_t i = 0; i < buffers.size(); ++i) pointers[i] = buffers[i].data();
         std::vector<float> left(max_frames, 0.0F);
         std::vector<float> right(max_frames, 0.0F);
+        auto bus_meters = std::make_unique<AtomicBusInputMeter[]>(runtime_graph.graph.buses().size());
+        const auto bus_meter_count = runtime_graph.graph.buses().size();
 
         if (!track_router_.configure(std::move(track_bus_indices),
                                      runtime_graph.graph.buses().size(), max_frames)) {
@@ -84,6 +86,8 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         track_pointers_.swap(pointers);
         output_left_.swap(left);
         output_right_.swap(right);
+        bus_input_meters_ = std::move(bus_meters);
+        bus_meter_count_ = bus_meter_count;
         input_bus_id_ = std::move(runtime_graph.input_bus_id);
         master_bus_id_ = std::move(runtime_graph.master_bus_id);
         max_frames_ = max_frames;
@@ -144,6 +148,32 @@ bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
         std::fill_n(interleaved_output, frames * 2U, 0.0F);
         return false;
     }
+
+    // Publish lock-free block-level measurements for every routed bus input. This
+    // deliberately measures the signal entering the bus graph, not post-fader or
+    // post-insert output; those require a separate engine-stage meter contract.
+    const auto* bus_inputs = track_router_.bus_inputs();
+    for (std::size_t bus = 0; bus < bus_meter_count_; ++bus) {
+        float peak_left = 0.0F;
+        float peak_right = 0.0F;
+        double sum_left = 0.0;
+        double sum_right = 0.0;
+        for (std::size_t frame = 0; frame < frames; ++frame) {
+            const float left = std::isfinite(bus_inputs[bus].left[frame]) ? bus_inputs[bus].left[frame] : 0.0F;
+            const float right = std::isfinite(bus_inputs[bus].right[frame]) ? bus_inputs[bus].right[frame] : 0.0F;
+            peak_left = std::max(peak_left, std::abs(left));
+            peak_right = std::max(peak_right, std::abs(right));
+            sum_left += static_cast<double>(left) * static_cast<double>(left);
+            sum_right += static_cast<double>(right) * static_cast<double>(right);
+        }
+        const float rms_left = static_cast<float>(std::sqrt(sum_left / static_cast<double>(frames)));
+        const float rms_right = static_cast<float>(std::sqrt(sum_right / static_cast<double>(frames)));
+        bus_input_meters_[bus].peak_left.store(peak_left, std::memory_order_relaxed);
+        bus_input_meters_[bus].peak_right.store(peak_right, std::memory_order_relaxed);
+        bus_input_meters_[bus].rms_left.store(rms_left, std::memory_order_relaxed);
+        bus_input_meters_[bus].rms_right.store(rms_right, std::memory_order_relaxed);
+    }
+
     const auto status = engine_host_.process_to_stereo(
         track_router_.bus_inputs(), track_router_.bus_count(), frames,
         output_left_.data(), output_right_.data());
@@ -163,6 +193,15 @@ bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
     }
     output_peak_.store(peak, std::memory_order_relaxed);
     return true;
+}
+
+BusInputMeterSnapshot RealtimeProjectAudioPipeline::bus_input_meter(std::size_t bus_index) const noexcept {
+    if (bus_index >= bus_meter_count_ || bus_input_meters_ == nullptr) return {};
+    const auto& meter = bus_input_meters_[bus_index];
+    return {meter.peak_left.load(std::memory_order_relaxed),
+            meter.peak_right.load(std::memory_order_relaxed),
+            meter.rms_left.load(std::memory_order_relaxed),
+            meter.rms_right.load(std::memory_order_relaxed)};
 }
 
 void RealtimeProjectAudioPipeline::alsa_callback(const float* input, float* output,
