@@ -26,6 +26,14 @@ int main() {
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    OperationLog bus_operations;
+    Project bus_edit = p;
+    assert(bus_operations.apply_and_append(bus_edit, {"bus-music", OperationKind::SetBusGain, 0.65F, 0.4F}));
+    assert(std::abs(bus_edit.buses[1].gain - 0.4F) < 1.0e-6F);
+    assert(bus_operations.undo(bus_edit) && std::abs(bus_edit.buses[1].gain - 0.65F) < 1.0e-6F);
+    assert(bus_operations.redo(bus_edit) && std::abs(bus_edit.buses[1].gain - 0.4F) < 1.0e-6F);
+    assert(bus_operations.apply_and_append(bus_edit, {"bus-music", OperationKind::SetBusMute, 1.0F, 0.0F}));
+    assert(!bus_edit.buses[1].mute);
     Project bad_bus_gain = p; bad_bus_gain.buses[0].gain = 17.0F;
     assert(!from_json(to_json(bad_bus_gain),loaded,err)); assert(err.code=="bus_gain_invalid");
     const std::string legacy_bus=R"({"schema_version":1,"id":"legacy-bus","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
