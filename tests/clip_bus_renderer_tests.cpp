@@ -9,6 +9,7 @@
 int main() {
     using namespace hush;
     Project project;
+    project.schema_version = 2;
     project.id = "clip-bus-routing";
     project.tracks = {
         {"left-track", "Left", 0.5F, -1.0F, false, false, "bus-left"},
@@ -36,7 +37,7 @@ int main() {
         {"right-source", 1U, {10.0F, 20.0F, 30.0F, 40.0F}}
     };
 
-    // Track bus assignments are persisted in schema-v1 and round-trip.
+    // Track bus assignments are schema-v2 fields and round-trip.
     Project loaded;
     Error project_error;
     assert(from_json(to_json(project), loaded, project_error));
@@ -78,5 +79,21 @@ int main() {
     const std::string legacy = R"({"schema_version":1,"id":"legacy","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":1,"pan":0,"mute":false,"solo":false}],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
     assert(from_json(legacy, loaded, project_error));
     assert(loaded.tracks.front().bus_id.empty());
+
+    // Schema-v1 serialization never writes the schema-v2 track bus field.
+    Project v1;
+    v1.schema_version = 1;
+    v1.id = "v1-no-track-routing";
+    v1.tracks = {{"legacy-track", "Legacy", 1.0F, 0.0F, false, false, "must-not-leak"}};
+    const auto v1_json = to_json(v1);
+    assert(v1_json.find("\\"bus_id\\"") == std::string::npos);
+    assert(from_json(v1_json, loaded, project_error));
+    assert(loaded.schema_version == 1U);
+    assert(loaded.tracks.front().bus_id.empty());
+
+    // A schema-v1 document cannot smuggle in a v2-only routing field.
+    const std::string invalid_v1 = R"({"schema_version":1,"id":"bad-v1","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":1,"pan":0,"mute":false,"solo":false,"bus_id":"master"}],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
+    assert(!from_json(invalid_v1, loaded, project_error));
+    assert(project_error.code == "track_bus_requires_schema_v2");
     return 0;
 }
