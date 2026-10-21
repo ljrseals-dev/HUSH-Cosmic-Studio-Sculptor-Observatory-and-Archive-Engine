@@ -24,6 +24,8 @@ int main() {
     Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false,"bus-music"},{"track-2","Pad",0.5F,-0.5F,false,false,"bus-master"}};
     p.buses={{"bus-master","Master",0.85F,false,true},{"bus-music","Music",0.65F,true,false}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
+    p.inserts={{"music-gain","bus-music",InsertKind::Gain,true,0.5F},
+               {"master-softclip","bus-master",InsertKind::SoftClip,false,1.0F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
     OperationLog bus_operations;
@@ -34,6 +36,10 @@ int main() {
     assert(bus_operations.redo(bus_edit) && std::abs(bus_edit.buses[1].gain - 0.4F) < 1.0e-6F);
     assert(bus_operations.apply_and_append(bus_edit, {"bus-music", OperationKind::SetBusMute, 1.0F, 0.0F}));
     assert(!bus_edit.buses[1].mute);
+    Project bad_insert_bus = p; bad_insert_bus.inserts[0].bus_id = "missing-bus";
+    assert(!from_json(to_json(bad_insert_bus),loaded,err)); assert(err.code=="bus_insert_invalid");
+    Project bad_insert_gain = p; bad_insert_gain.inserts[0].gain = 17.0F;
+    assert(!from_json(to_json(bad_insert_gain),loaded,err)); assert(err.code=="bus_insert_invalid");
     Project bad_bus_gain = p; bad_bus_gain.buses[0].gain = 17.0F;
     assert(!from_json(to_json(bad_bus_gain),loaded,err)); assert(err.code=="bus_gain_invalid");
     const std::string legacy_bus=R"({"schema_version":1,"id":"legacy-bus","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
