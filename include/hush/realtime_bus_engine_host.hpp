@@ -3,11 +3,19 @@
 #include "hush/realtime_bus_engine.hpp"
 #include "hush/realtime_graph_publisher.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <string>
 
 namespace hush {
+
+struct BusOutputMeterSnapshot {
+    float peak_left{0.0F};
+    float peak_right{0.0F};
+    float rms_left{0.0F};
+    float rms_right{0.0F};
+};
 
 // Control-thread graph replacement host for the existing realtime bus engine.
 // Replacement graphs are validated/configured off the callback and published as
@@ -39,13 +47,22 @@ public:
         float* output_left, float* output_right) noexcept;
 
     [[nodiscard]] std::size_t bus_count_for_control() const noexcept;
+    [[nodiscard]] BusOutputMeterSnapshot bus_output_meter(std::size_t bus_index) const noexcept;
     [[nodiscard]] std::size_t max_frames_for_control() const noexcept;
     void reclaim_retired() noexcept { publisher_.reclaim_retired(); }
 
 private:
+    struct AtomicBusOutputMeter {
+        std::atomic<float> peak_left{0.0F};
+        std::atomic<float> peak_right{0.0F};
+        std::atomic<float> rms_left{0.0F};
+        std::atomic<float> rms_right{0.0F};
+    };
     struct Snapshot {
         // Processing mutates preallocated DSP state, while topology/lifetime remain guarded.
         mutable RealtimeBusEngine engine;
+        std::unique_ptr<AtomicBusOutputMeter[]> meters;
+        std::size_t meter_count{0};
         std::size_t master_bus_index{0};
     };
     RealtimeGraphPublisher<Snapshot> publisher_;
