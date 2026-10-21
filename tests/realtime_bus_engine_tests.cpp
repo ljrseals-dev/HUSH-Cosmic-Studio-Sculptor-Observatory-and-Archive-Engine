@@ -44,6 +44,22 @@ int main() {
     source = engine.post_fader(0, 1);
     assert(std::abs(source.left[0] - 0.75F) < 1.0e-6F);
 
+    // Bus mute suppresses the post-fader signal and therefore downstream post-fader sends.
+    assert(engine.enqueue_bus_control(0, 0.75F, true, false));
+    assert(engine.process(inputs, 2, 1) == RealtimeProcessStatus::Ok);
+    source = engine.post_fader(0, 1);
+    master = engine.post_fader(1, 1);
+    assert(std::abs(source.left[0]) < 1.0e-6F);
+    assert(std::abs(master.left[0]) < 1.0e-6F);
+
+    // Solo preserves the soloed bus and its downstream route to master.
+    assert(engine.enqueue_bus_control(0, 0.75F, false, true));
+    assert(engine.process(inputs, 2, 1) == RealtimeProcessStatus::Ok);
+    source = engine.post_fader(0, 1);
+    master = engine.post_fader(1, 1);
+    assert(std::abs(source.left[0] - 0.75F) < 1.0e-6F);
+    assert(std::abs(master.left[0] - 0.75F) < 1.0e-6F);
+
     assert(!engine.enqueue_fader_change(99, 1.0F));
     assert(!engine.enqueue_fader_change(0, -1.0F));
     assert(!engine.enqueue_fader_change(0, 17.0F));
