@@ -45,6 +45,9 @@ int main(int argc, char** argv) {
     auto* bus_meters = window.findChild<QLabel*>("busInputMeters");
     assert(bus_meters != nullptr);
     assert(bus_meters->text().contains("BUS INPUTS"));
+    auto* bus_outputs = window.findChild<QLabel*>("busOutputMeters");
+    assert(bus_outputs != nullptr);
+    assert(bus_outputs->text().contains("BUS OUTPUTS"));
 
     auto* gain = slider(window, "gain-track-1");
     assert(gain != nullptr);
