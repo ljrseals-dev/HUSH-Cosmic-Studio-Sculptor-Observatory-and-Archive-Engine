@@ -10,7 +10,8 @@ namespace hush {
 
 bool RealtimeBusEngineHost::replace_graph(const BusGraph& graph, std::size_t max_frames,
                                           const std::string& master_bus_id,
-                                          ProcessorSetupError& error) {
+                                          ProcessorSetupError& error,
+                                          const std::vector<BusInsert>& inserts) {
     if (!graph.valid()) {
         error = {"bus_graph_invalid", "", "Replacement graph must be validated before publication"};
         return false;
@@ -30,7 +31,7 @@ bool RealtimeBusEngineHost::replace_graph(const BusGraph& graph, std::size_t max
 
     try {
         auto replacement = std::make_unique<Snapshot>();
-        if (!replacement->engine.configure(graph, max_frames, error)) return false;
+        if (!replacement->engine.configure(graph, max_frames, error, inserts)) return false;
         replacement->meters = std::make_unique<AtomicBusOutputMeter[]>(graph.buses().size());
         replacement->meter_count = graph.buses().size();
         replacement->master_bus_index = master_index;
