@@ -87,6 +87,12 @@ public:
     [[nodiscard]] float output_peak() const noexcept {
         return pipeline_ ? pipeline_->output_peak() : 0.0F;
     }
+    [[nodiscard]] std::size_t bus_input_meter_count() const noexcept {
+        return pipeline_ ? pipeline_->bus_input_meter_count() : 0U;
+    }
+    [[nodiscard]] hush::BusInputMeterSnapshot bus_input_meter(std::size_t index) const noexcept {
+        return pipeline_ ? pipeline_->bus_input_meter(index) : hush::BusInputMeterSnapshot{};
+    }
 
     bool enqueue_track_control_values(const hush::Project& project, const std::string& track_id,
                                       float gain, float pan, bool mute, bool solo) noexcept {
@@ -191,6 +197,10 @@ public:
         light_layout->addWidget(input_meter_, 1);
         light_layout->addWidget(output_meter_, 1);
         layout->addWidget(light_panel);
+        bus_input_meter_label_ = new QLabel("BUS INPUTS · IDLE", root);
+        bus_input_meter_label_->setObjectName("busInputMeters");
+        bus_input_meter_label_->setMinimumHeight(24);
+        layout->addWidget(bus_input_meter_label_);
         setStyleSheet(
             "QMainWindow,QWidget { background:#111522; color:#E6ECF7; }"
             "QTableWidget { background:#171D2C; alternate-background-color:#1D2537; gridline-color:#303A50; }"
@@ -285,6 +295,7 @@ private:
     QLabel* output_light_{};
     QProgressBar* input_meter_{};
     QProgressBar* output_meter_{};
+    QLabel* bus_input_meter_label_{};
     QPushButton* live_button_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
@@ -532,6 +543,22 @@ private:
         process_light_->setStyleSheet(running ? "background:#30264B;color:#C9B5FF;border-radius:5px;" : "background:#20283A;color:#8290AA;border-radius:5px;");
         clip_light_->setStyleSheet((in >= 1.0F || out >= 1.0F) ? "background:#5A202D;color:#FF8797;border-radius:5px;" : "background:#193C32;color:#8AF0BC;border-radius:5px;");
         output_light_->setStyleSheet(running && out > 0.0001F ? "background:#193C32;color:#8AF0BC;border-radius:5px;" : "background:#20283A;color:#8290AA;border-radius:5px;");
+        if (!running) {
+            bus_input_meter_label_->setText("BUS INPUTS · IDLE");
+        } else {
+            QString summary = "BUS INPUTS · peak L/R · RMS L/R: ";
+            const auto count = live_.bus_input_meter_count();
+            for (std::size_t bus = 0; bus < count; ++bus) {
+                const auto meter = live_.bus_input_meter(bus);
+                if (bus != 0U) summary += " | ";
+                summary += "B" + QString::number(static_cast<qulonglong>(bus)) + ": ";
+                summary += QString::number(meter.peak_left, 'f', 2) + "/" +
+                           QString::number(meter.peak_right, 'f', 2) + " · ";
+                summary += QString::number(meter.rms_left, 'f', 2) + "/" +
+                           QString::number(meter.rms_right, 'f', 2);
+            }
+            bus_input_meter_label_->setText(count == 0U ? "BUS INPUTS · NO METERS" : summary);
+        }
     }
 
     void poll_live_status() {
