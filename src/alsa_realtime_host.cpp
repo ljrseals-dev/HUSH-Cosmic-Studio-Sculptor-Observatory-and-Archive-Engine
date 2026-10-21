@@ -159,19 +159,45 @@ int main(int argc, char** argv) {
 
     RoutingError routing_error;
     BusGraph graph;
-    if (!graph.configure(
-            {{"capture", "Capture"}, {"master", "Master"}},
-            {{"capture", "master", SendTap::PostFader, 1.0F}},
-            routing_error)) {
+    std::vector<Bus> runtime_buses;
+    std::vector<BusRoute> runtime_routes;
+    std::string input_bus_id = "capture";
+    std::string master_bus_id = "master";
+    if (has_project && !project.buses.empty()) {
+        runtime_buses = project.buses;
+        runtime_routes = project.routes;
+        input_bus_id = runtime_buses.front().id;
+        master_bus_id = runtime_buses.back().id;
+        for (const auto& bus : runtime_buses) {
+            if (bus.id == "capture") input_bus_id = bus.id;
+            if (bus.id == "master") master_bus_id = bus.id;
+        }
+    } else {
+        runtime_buses = {{"capture", "Capture"}, {"master", "Master"}};
+        runtime_routes = {{"capture", "master", SendTap::PostFader, 1.0F}};
+    }
+    if (!graph.configure(std::move(runtime_buses), std::move(runtime_routes), routing_error)) {
         std::cerr << "Bus graph setup failed: " << routing_error.code
                   << ": " << routing_error.message << '\n';
+        return 1;
+    }
+
+    std::size_t input_bus_index = graph.buses().size();
+    for (std::size_t i = 0; i < graph.buses().size(); ++i) {
+        if (graph.buses()[i].id == input_bus_id) {
+            input_bus_index = i;
+            break;
+        }
+    }
+    if (input_bus_index == graph.buses().size()) {
+        std::cerr << "HUSH_INPUT_BUS_NOT_FOUND id=" << input_bus_id << '\n';
         return 1;
     }
 
     constexpr std::size_t max_frames = 4096;
     RealtimeBusEngineHost engine_host;
     ProcessorSetupError setup_error;
-    if (!engine_host.replace_graph(graph, max_frames, "master", setup_error)) {
+    if (!engine_host.replace_graph(graph, max_frames, master_bus_id, setup_error)) {
         std::cerr << "Realtime engine setup failed: " << setup_error.code
                   << ": " << setup_error.message << '\n';
         return 1;
@@ -179,7 +205,7 @@ int main(int argc, char** argv) {
 
     RealtimeBusEngineHostAudioAdapter adapter;
     std::string adapter_error;
-    if (!adapter.configure(engine_host, 0, graph.buses().size(), max_frames, adapter_error)) {
+    if (!adapter.configure(engine_host, input_bus_index, graph.buses().size(), max_frames, adapter_error)) {
         std::cerr << "Audio adapter setup failed: " << adapter_error << '\n';
         return 1;
     }
@@ -198,10 +224,11 @@ int main(int argc, char** argv) {
     std::cout << "HUSH ALSA realtime host running at "
               << backend.actual_sample_rate() << " Hz, "
               << backend.actual_period_frames() << " frames/period.\n"
-              << "Capture is routed to the Master bus. Press Ctrl-C to stop.\n";
+              << "Capture bus '" << input_bus_id << "' routes through the configured bus graph to master '"
+              << master_bus_id << "'. Press Ctrl-C to stop.\n";
     if (has_project) {
-        std::cout << "Loaded project metadata: " << project.id
-                  << " (project state is not connected to live routing).\n";
+        std::cout << "Loaded project: " << project.id
+                  << " (project bus graph is active; track-source routing and per-track controls remain disconnected).\n";
     }
 
     while (keep_running != 0 && backend.running()) {
