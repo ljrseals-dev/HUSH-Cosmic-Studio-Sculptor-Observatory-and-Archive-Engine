@@ -9,17 +9,40 @@ void OperationLog::append(Operation op) {
     dirty_ = true;
 }
 bool OperationLog::apply_value(Project& p, const Operation& op, bool forward) {
-    auto it = std::find_if(p.tracks.begin(), p.tracks.end(),
-                           [&](const Track& t) { return t.id == op.entity_id; });
-    if (it == p.tracks.end()) return false;
     const float v = forward ? op.after_value : op.before_value;
     switch (op.kind) {
-      case OperationKind::SetGain: it->gain = v; break;
-      case OperationKind::SetPan: it->pan = v; break;
-      case OperationKind::SetMute: it->mute = (v != 0.0F); break;
-      case OperationKind::SetSolo: it->solo = (v != 0.0F); break;
+      case OperationKind::SetBusGain:
+      case OperationKind::SetBusMute:
+      case OperationKind::SetBusSolo: {
+        auto it = std::find_if(p.buses.begin(), p.buses.end(),
+                               [&](const Bus& bus) { return bus.id == op.entity_id; });
+        if (it == p.buses.end()) return false;
+        switch (op.kind) {
+          case OperationKind::SetBusGain: it->gain = v; break;
+          case OperationKind::SetBusMute: it->mute = (v != 0.0F); break;
+          case OperationKind::SetBusSolo: it->solo = (v != 0.0F); break;
+          default: return false;
+        }
+        return true;
+      }
+      case OperationKind::SetGain:
+      case OperationKind::SetPan:
+      case OperationKind::SetMute:
+      case OperationKind::SetSolo: {
+        auto it = std::find_if(p.tracks.begin(), p.tracks.end(),
+                               [&](const Track& t) { return t.id == op.entity_id; });
+        if (it == p.tracks.end()) return false;
+        switch (op.kind) {
+          case OperationKind::SetGain: it->gain = v; break;
+          case OperationKind::SetPan: it->pan = v; break;
+          case OperationKind::SetMute: it->mute = (v != 0.0F); break;
+          case OperationKind::SetSolo: it->solo = (v != 0.0F); break;
+          default: return false;
+        }
+        return true;
+      }
     }
-    return true;
+    return false;
 }
 bool OperationLog::apply_and_append(Project& project, Operation op) {
     if (!apply_value(project, op, true)) return false;
