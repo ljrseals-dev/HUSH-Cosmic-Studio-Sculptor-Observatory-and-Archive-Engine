@@ -34,6 +34,10 @@ public:
                                              float pan, bool mute, bool solo) noexcept;
     [[nodiscard]] bool enqueue_bus_control(const std::string& bus_id, float gain,
                                            bool mute, bool solo) noexcept;
+    // Control-thread-only safe graph replacement for insert/bus processing edits.
+    // Builds the replacement off-callback and preserves the current graph on failure.
+    [[nodiscard]] bool replace_project_bus_processing(const Project& project,
+                                                      std::string& error);
     // Attach/detach on the control thread before/after the device runs. The capture
     // ring is SPSC and the disk writer remains on its own non-realtime worker.
     void set_recording_session(RecordingSession* session) noexcept { recording_ = session; }
