@@ -346,6 +346,7 @@ private:
     hush::OperationLog log_;
     QString project_path_;
     QString autosave_project_path_;
+    std::filesystem::path autosave_journal_path_;
     std::unique_ptr<hush::AutosaveController> autosave_;
     QTimer autosave_timer_;
     bool autosave_dirty_{false};
@@ -485,6 +486,15 @@ private:
         else if (prompt.clickedButton() == discard) choice = hush::ProjectCloseChoice::Discard;
 
         const bool saved = choice == hush::ProjectCloseChoice::Save && saveProject();
+        if (choice == hush::ProjectCloseChoice::Discard && autosave_) {
+            std::error_code remove_error;
+            std::filesystem::remove(autosave_journal_path_, remove_error);
+            autosave_dirty_ = false;
+            if (remove_error) {
+                status_->setText("Could not discard recovery journal: " +
+                                 QString::fromStdString(remove_error.message()));
+            }
+        }
         const bool allow = hush::should_close_project(log_.dirty(), choice, saved);
         if (!allow && choice == hush::ProjectCloseChoice::Save)
             status_->setText("Project remains open: save did not complete");
@@ -631,8 +641,10 @@ private:
     void configure_autosave(const QString& project_path) {
         if (autosave_ && autosave_project_path_ == project_path) return;
         autosave_project_path_ = project_path;
-        const std::filesystem::path journal_path(project_path.toStdString() + ".hush-recovery.journal");
-        autosave_ = std::make_unique<hush::AutosaveController>(hush::RecoveryJournal(journal_path));
+        autosave_journal_path_ = std::filesystem::path(
+            project_path.toStdString() + ".hush-recovery.journal");
+        autosave_ = std::make_unique<hush::AutosaveController>(
+            hush::RecoveryJournal(autosave_journal_path_));
         autosave_dirty_ = false;
         autosave_retry_after_.reset();
     }
