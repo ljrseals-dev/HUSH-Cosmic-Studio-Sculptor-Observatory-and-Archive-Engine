@@ -205,6 +205,19 @@ int main(int argc, char** argv) {
     }
 
     while (keep_running != 0 && backend.running()) {
+        if (autosave) {
+            Error autosave_error;
+            const auto outcome = autosave->poll(
+                project, AutosaveController::Clock::now(), backend.running(), autosave_error);
+            if (outcome == AutosaveController::Outcome::Failed) {
+                std::cerr << "HUSH_AUTOSAVE_FAILED path=" << journal_path.string()
+                          << " code=" << autosave_error.code
+                          << " message=" << autosave->last_save_message() << '\n';
+                backend.stop();
+                engine_host.reclaim_retired();
+                return 2;
+            }
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
