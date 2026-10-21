@@ -28,6 +28,7 @@ int main() {
     assert(pipeline.input_bus_id() == "capture");
     assert(pipeline.master_bus_id() == "master");
     assert(pipeline.bus_input_meter_count() == 3U);
+    assert(pipeline.bus_output_meter_count() == 3U);
 
     const float input[] = {1.0F, 0.25F, 0.5F, 0.5F};
     float output[4]{};
@@ -41,7 +42,13 @@ int main() {
     assert(near(music_meter.peak_right, 0.5F));
     assert(near(music_meter.rms_left, std::sqrt(0.625F)));
     assert(near(music_meter.rms_right, std::sqrt(0.15625F)));
+    const auto music_output_meter = pipeline.bus_output_meter(1U);
+    assert(near(music_output_meter.peak_left, 1.0F));
+    assert(near(music_output_meter.peak_right, 0.5F));
+    assert(near(music_output_meter.rms_left, std::sqrt(0.625F)));
+    assert(near(music_output_meter.rms_right, std::sqrt(0.15625F)));
     assert(near(pipeline.bus_input_meter(99U).peak_left, 0.0F));
+    assert(near(pipeline.bus_output_meter(99U).peak_left, 0.0F));
 
     // A queued mute is applied at the next processing-block boundary.
     assert(pipeline.enqueue_track_control(0U, 1.0F, -1.0F, true, false));
@@ -57,6 +64,8 @@ int main() {
     assert(pipeline.process(input, output, 2U));
     assert(near(output[0], 0.0F) && near(output[1], 0.0F));
     assert(near(output[2], 0.0F) && near(output[3], 0.0F));
+    assert(near(pipeline.bus_output_meter(1U).peak_left, 0.0F));
+    assert(near(pipeline.bus_output_meter(2U).peak_right, 0.0F));
     assert(!pipeline.enqueue_bus_control("missing-bus", 1.0F, false, false));
 
     // Explicit track bus IDs must resolve to a bus in the validated project graph.
