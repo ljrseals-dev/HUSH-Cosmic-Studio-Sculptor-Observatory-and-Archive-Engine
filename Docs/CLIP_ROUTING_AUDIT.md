@@ -15,6 +15,17 @@
 - Adds `render_project_clip_tracks()` to sum decoded clips into per-track mono buffers with clip gain and linear fades. Negative-start clips skip source frames before zero; output is truncated to the requested length.
 - Adds a hand-computed two-track/four-clip test covering fades, pre-roll, truncation, and canonical track gain/pan.
 
-## Still open
+## Follow-up wiring added
 
-This does not claim clips are wired into the live callback or into bus nodes. The current project model has bus-to-bus routes but no track-to-bus assignment. A follow-up must define that mapping and connect the clip-rendered buffers to the canonical live/offline mixer and bus graph. This renderer allocates and is for offline/control-thread use only.
+- `Track::bus_id` optionally selects the destination bus and is serialized in schema-v1. Older project JSON without `bus_id` remains readable; an empty value routes to the first configured bus.
+- `render_project_clips_to_bus_inputs()` connects decoded clip buffers to per-track sums, then reuses `mix_tracks()` for track gain, pan law, mute, and globally evaluated solo behavior before accumulating into bus direct inputs.
+- The new contract test verifies a two-track/two-bus arrangement, sample-exact left/right routing through the bus graph, schema round-trip, missing-bus rejection, and legacy-v1 compatibility.
+
+## Remaining limits
+
+This is an offline/control-thread bridge and allocates. It does not wire clip decoding into the realtime callback, and does not change the realtime graph's capture mapping. The caller must validate the project bus graph and supply decoded sources; real-time clip playback remains a separate gate.
+
+
+## Schema compatibility correction (2026-10-20)
+
+Persisted `Track::bus_id` is a schema-v2 field, not a schema-v1 extension. The reader accepts schema versions 1 and 2; schema-v1 files without track bus membership continue to load with an empty `bus_id` and use the documented legacy first-bus default. The writer omits `bus_id` for schema-v1 output and emits it only for schema v2 or later. A schema-v1 track object that explicitly contains `bus_id` is rejected with `track_bus_requires_schema_v2` rather than silently changing the meaning of a v1 file. Tests cover v2 round-trip, v1 omission/default behavior, and rejection of a v1 document carrying the v2 field.
