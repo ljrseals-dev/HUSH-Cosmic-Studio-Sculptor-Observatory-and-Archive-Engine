@@ -1,10 +1,13 @@
+#include "hush/autosave_controller.hpp"
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
+#include "hush/recovery_journal.hpp"
 #include "hush/realtime_track_mixer.hpp"
 #include "hush/track_mixer_command_bridge.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -15,11 +18,14 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSlider>
+#include <QStandardPaths>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <utility>
@@ -30,6 +36,11 @@
 #endif
 
 namespace {
+
+std::filesystem::path local_recovery_path() {
+    const auto directory = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    return std::filesystem::path(directory.toStdString()) / "recovery.journal";
+}
 
 #ifdef HUSH_GUI_HAS_ALSA
 // Optional, explicitly user-started ALSA monitor. All storage and mixer state are
@@ -169,7 +180,7 @@ private:
 
 class MixerWindow final : public QMainWindow {
 public:
-    MixerWindow() {
+    MixerWindow() : recovery_journal_(local_recovery_path()), autosave_(recovery_journal_) {
         setWindowTitle("HUSH Cosmic Studio — Mixer");
         resize(1100, 640);
         auto* root = new QWidget(this);
@@ -210,12 +221,15 @@ public:
         layout->addWidget(table_);
         setCentralWidget(root);
 
+        connect(&autosave_timer_, &QTimer::timeout, this, [this] { poll_autosave(); });
+        autosave_timer_.start(1000);
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             const std::string track_id = operation ? operation->entity_id : std::string{};
             if (log_.undo(project_)) {
+                dirty_ = true;
                 if (!sync_live_controls(track_id)) {
                     status_->setText("Undo applied; live command queue full — retry or stop audio");
                 } else {
@@ -228,6 +242,7 @@ public:
             const auto* operation = log_.operation_at(log_.cursor());
             const std::string track_id = operation ? operation->entity_id : std::string{};
             if (log_.redo(project_)) {
+                dirty_ = true;
                 if (!sync_live_controls(track_id)) {
                     status_->setText("Redo applied; live command queue full — retry or stop audio");
                 } else {
@@ -245,8 +260,10 @@ public:
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
                            {"track-2", "Input R", 0.8F, 1.0F, false, false}};
+        offer_recovery();
         refresh();
-        status_->setText("Demo session · unsaved · offline");
+        if (dirty_) status_->setText("Recovered local session · autosave enabled · offline");
+        else status_->setText("Demo session · unsaved · offline");
     }
 
     ~MixerWindow() override {
@@ -256,6 +273,10 @@ public:
     }
 
 private:
+    hush::RecoveryJournal recovery_journal_;
+    hush::AutosaveController autosave_;
+    QTimer autosave_timer_;
+    bool dirty_{false};
     hush::Project project_;
     hush::OperationLog log_;
     QTableWidget* table_{};
@@ -266,6 +287,62 @@ private:
     QTimer status_timer_;
     std::vector<std::string> pending_live_sync_;
 #endif
+
+    void offer_recovery() {
+        std::error_code exists_error;
+        if (!std::filesystem::exists(recovery_journal_.path(), exists_error) || exists_error) return;
+        hush::Project recovered;
+        hush::Error error;
+        if (!recovery_journal_.recover_latest(recovered, error)) return;
+        const auto choice = QMessageBox::question(
+            this, "Recover local session",
+            "A local recovery snapshot is available. Restore it? The snapshot stays on this device.",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+        if (choice == QMessageBox::Yes) {
+            project_ = std::move(recovered);
+            log_ = hush::OperationLog{};
+            autosave_.reset();
+            dirty_ = true;
+        }
+    }
+
+    void clear_recovery_journal() {
+        std::error_code ec;
+        std::filesystem::remove(recovery_journal_.path(), ec);
+        autosave_.reset();
+        if (ec) status_->setText("Saved project, but could not clear old recovery journal: " +
+                                 QString::fromStdString(ec.message()));
+    }
+
+    void poll_autosave() {
+        if (!dirty_) return;
+        hush::Error error;
+        const auto outcome = autosave_.poll(project_, hush::AutosaveController::Clock::now(), false, error);
+        if (outcome == hush::AutosaveController::Outcome::Saved) {
+            dirty_ = false;
+            status_->setText("Autosaved local recovery snapshot · no network used");
+        } else if (outcome == hush::AutosaveController::Outcome::Failed) {
+            status_->setText("Autosave failed: " + QString::fromStdString(error.message));
+        }
+    }
+
+    void closeEvent(QCloseEvent* event) override {
+        if (dirty_) {
+            hush::Error error;
+            const auto forced_time = hush::AutosaveController::Clock::now() + autosave_.interval();
+            const auto outcome = autosave_.poll(project_, forced_time, false, error);
+            if (outcome == hush::AutosaveController::Outcome::Failed) {
+                const auto answer = QMessageBox::warning(
+                    this, "Recovery snapshot failed",
+                    "Could not write a local recovery snapshot: " + QString::fromStdString(error.message) +
+                    "\nClose anyway and risk losing these edits?",
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+                if (answer != QMessageBox::Yes) { event->ignore(); return; }
+            }
+            dirty_ = false;
+        }
+        event->accept();
+    }
 
     void openProject() {
         const auto path = QFileDialog::getOpenFileName(this, "Open HUSH Project", {}, "HUSH Project (*.json)");
@@ -287,6 +364,8 @@ private:
         }
         project_ = std::move(candidate);
         log_ = hush::OperationLog{};
+        dirty_ = false;
+        clear_recovery_journal();
         refresh();
         status_->setText("Loaded · " + QFileInfo(path).fileName() + " · live audio stopped");
     }
@@ -304,6 +383,12 @@ private:
             QMessageBox::warning(this, "Save failed", file.errorString());
             return;
         }
+        if (!file.flush()) {
+            QMessageBox::warning(this, "Save failed", file.errorString());
+            return;
+        }
+        dirty_ = false;
+        clear_recovery_journal();
         status_->setText("Saved · " + QFileInfo(path).fileName());
     }
 
@@ -319,6 +404,7 @@ private:
         case hush::OperationKind::SetSolo: before = it->solo ? 1.0F : 0.0F; break;
         }
         if (before != after && log_.apply_and_append(project_, {id, kind, before, after})) {
+            dirty_ = true;
             if (!sync_live_controls(id)) {
                 status_->setText("Project edited; live command queue full — retry or stop audio");
             } else {
@@ -508,6 +594,8 @@ private:
 #ifndef HUSH_MIXER_GUI_NO_MAIN
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
+    app.setOrganizationName("HUSH");
+    app.setApplicationName("HUSH Cosmic Studio");
     MixerWindow window;
     window.show();
     return app.exec();
