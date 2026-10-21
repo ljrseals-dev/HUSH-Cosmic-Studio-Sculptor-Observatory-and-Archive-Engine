@@ -1,15 +1,76 @@
 #include "hush/realtime_project_audio_pipeline.hpp"
 
 #include "hush/project_runtime_graph.hpp"
+#include "hush/wav_reader.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <limits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace hush {
 
 bool RealtimeProjectAudioPipeline::configure(const Project& project,
+                                              std::size_t max_frames,
+                                              std::string& error) {
+    if (!project.clips.empty()) {
+        error = "project_clip_sources_not_loaded";
+        return false;
+    }
+    return configure(project, std::vector<DecodedMediaBuffer>{}, max_frames, error);
+}
+
+bool RealtimeProjectAudioPipeline::configure_from_project_directory(
+    const Project& project, const std::filesystem::path& project_directory,
+    std::size_t max_frames, std::string& error) {
+    if (project.clips.empty())
+        return configure(project, std::vector<DecodedMediaBuffer>{}, max_frames, error);
+    if (project_directory.empty()) {
+        error = "project_media_directory_missing";
+        return false;
+    }
+    try {
+        std::vector<DecodedMediaBuffer> decoded;
+        decoded.reserve(project.media_sources.size());
+        constexpr std::uint64_t kMaximumTotalDecodedBytes = 512ULL * 1024ULL * 1024ULL;
+        std::uint64_t total_bytes = 0U;
+        for (const auto& source : project.media_sources) {
+            WavAudioFile wav;
+            std::string read_error;
+            const auto source_path = project_directory / std::filesystem::path(source.relative_path);
+            if (!read_wav(source_path, wav, &read_error)) {
+                error = "media_source_read_failed: " + source.id + ": " + read_error;
+                return false;
+            }
+            if (wav.sample_rate != source.sample_rate || wav.channels != source.channels ||
+                wav.frame_count() < source.frame_count || wav.sample_rate != 48000U) {
+                error = "media_source_metadata_or_sample_rate_mismatch: " + source.id;
+                return false;
+            }
+            const auto sample_count = static_cast<std::uint64_t>(wav.interleaved_samples.size());
+            if (sample_count > kMaximumTotalDecodedBytes / sizeof(float) ||
+                total_bytes > kMaximumTotalDecodedBytes - sample_count * sizeof(float)) {
+                error = "project_decoded_media_memory_limit_exceeded";
+                return false;
+            }
+            total_bytes += sample_count * sizeof(float);
+            decoded.push_back({source.id, wav.channels, std::move(wav.interleaved_samples)});
+        }
+        return configure(project, std::move(decoded), max_frames, error);
+    } catch (const std::exception&) {
+        error = "project_media_decode_setup_failed";
+        return false;
+    } catch (...) {
+        error = "project_media_decode_setup_failed";
+        return false;
+    }
+}
+
+bool RealtimeProjectAudioPipeline::configure(const Project& project,
+                                              std::vector<DecodedMediaBuffer> decoded_sources,
                                               std::size_t max_frames,
                                               std::string& error) {
     if (configured_ || max_frames == 0U || project.tracks.empty()) {
@@ -23,6 +84,35 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         if (!configure_project_runtime_graph(project, runtime_graph, routing_error)) {
             error = routing_error.code + ": " + routing_error.message;
             return false;
+        }
+
+        std::vector<std::vector<float>> validation_audio;
+        ClipRenderError clip_error;
+        if (!project.clips.empty() &&
+            !render_project_clip_tracks(project, decoded_sources, 0U, validation_audio, clip_error)) {
+            error = clip_error.code + ": " + clip_error.message;
+            return false;
+        }
+        std::unordered_map<std::string, std::size_t> source_indices;
+        source_indices.reserve(decoded_sources.size());
+        for (std::size_t i = 0; i < decoded_sources.size(); ++i)
+            source_indices.emplace(decoded_sources[i].source_id, i);
+        std::unordered_map<std::string, std::size_t> track_indices;
+        track_indices.reserve(project.tracks.size());
+        for (std::size_t i = 0; i < project.tracks.size(); ++i)
+            track_indices.emplace(project.tracks[i].id, i);
+        std::vector<RuntimeClip> runtime_clips;
+        runtime_clips.reserve(project.clips.size());
+        for (const auto& clip : project.clips) {
+            const auto track = track_indices.find(clip.track_id);
+            const auto source = source_indices.find(clip.source_id);
+            if (track == track_indices.end() || source == source_indices.end()) {
+                error = "project_clip_source_or_track_unavailable: " + clip.id;
+                return false;
+            }
+            runtime_clips.push_back({track->second, source->second, clip.timeline_start_frame,
+                                     clip.source_start_frame, clip.frame_count, clip.gain,
+                                     clip.fade_in_frames, clip.fade_out_frames});
         }
 
         std::vector<std::size_t> track_bus_indices;
@@ -89,6 +179,10 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         track_pointers_.swap(pointers);
         output_left_.swap(left);
         output_right_.swap(right);
+        decoded_sources_.swap(decoded_sources);
+        runtime_clips_.swap(runtime_clips);
+        transport_frame_.store(0U, std::memory_order_relaxed);
+        transport_playing_.store(false, std::memory_order_relaxed);
         bus_input_meters_ = std::move(bus_meters);
         bus_meter_count_ = bus_meter_count;
         bus_ids_.swap(bus_ids);
@@ -199,6 +293,50 @@ bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
     if (track_buffers_.size() > 1U) {
         for (std::size_t frame = 0; frame < frames; ++frame)
             track_buffers_[1][frame] = interleaved_input[frame * 2U + 1U];
+    }
+
+    if (!runtime_clips_.empty() && transport_playing_.load(std::memory_order_acquire)) {
+        const std::uint64_t timeline_start = transport_frame_.fetch_add(
+            static_cast<std::uint64_t>(frames), std::memory_order_acq_rel);
+        for (const auto& clip : runtime_clips_) {
+            if (clip.track_index >= track_buffers_.size() ||
+                clip.source_index >= decoded_sources_.size()) continue;
+            const auto& source = decoded_sources_[clip.source_index];
+            if (source.channels == 0U) continue;
+            for (std::size_t frame = 0; frame < frames; ++frame) {
+                const auto timeline_frame = timeline_start + static_cast<std::uint64_t>(frame);
+                if (timeline_frame > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()))
+                    continue;
+                const auto signed_timeline = static_cast<std::int64_t>(timeline_frame);
+                if (signed_timeline < clip.timeline_start_frame) continue;
+                const auto relative_frame = static_cast<std::uint64_t>(
+                    signed_timeline - clip.timeline_start_frame);
+                if (relative_frame >= clip.frame_count) continue;
+                const auto source_frame = clip.source_start_frame + relative_frame;
+                const auto source_offset = source_frame * source.channels;
+                if (source_offset + source.channels > source.interleaved_samples.size()) continue;
+                float sample = 0.0F;
+                for (std::size_t channel = 0; channel < source.channels; ++channel)
+                    sample += source.interleaved_samples[static_cast<std::size_t>(source_offset + channel)];
+                sample /= static_cast<float>(source.channels);
+                float gain = clip.gain;
+                if (clip.fade_in_frames != 0U && relative_frame < clip.fade_in_frames) {
+                    const float ramp = clip.fade_in_frames <= 1U ? 1.0F :
+                        static_cast<float>(relative_frame) /
+                        static_cast<float>(clip.fade_in_frames - 1U);
+                    gain *= ramp;
+                }
+                if (clip.fade_out_frames != 0U &&
+                    relative_frame >= clip.frame_count - clip.fade_out_frames) {
+                    const auto remaining = clip.frame_count - relative_frame;
+                    const float ramp = clip.fade_out_frames <= 1U ? 0.0F :
+                        static_cast<float>(remaining - 1U) /
+                        static_cast<float>(clip.fade_out_frames - 1U);
+                    gain *= ramp;
+                }
+                track_buffers_[clip.track_index][frame] += sample * gain;
+            }
+        }
     }
 
     if (!track_router_.process(track_pointers_.data(), track_pointers_.size(), frames)) {
