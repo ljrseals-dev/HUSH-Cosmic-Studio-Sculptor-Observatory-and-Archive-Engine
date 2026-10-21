@@ -4,6 +4,7 @@
 #include "hush/recovery_journal.hpp"
 #include "hush/realtime_track_mixer.hpp"
 #include "hush/track_mixer_command_bridge.hpp"
+#include "hush/live_track_control_sink.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -47,7 +48,7 @@ std::filesystem::path local_recovery_path() {
 // prepared before start(); callback() performs no allocation, locking, logging or I/O.
 // Current ALSA adapter exposes one stereo capture stream: L/R feed tracks 0/1.
 // Further project tracks have no live source until track-source routing is implemented.
-class LiveMixer final {
+class LiveMixer final : public hush::LiveTrackControlSink {
 public:
     static constexpr std::size_t kMaxFrames = 4096;
 
@@ -95,7 +96,7 @@ public:
         track_pointers_.clear();
     }
 
-    [[nodiscard]] bool running() const noexcept { return backend_.running(); }
+    [[nodiscard]] bool running() const noexcept override { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t recovery_count() const noexcept { return backend_.recovery_count(); }
     [[nodiscard]] std::uint64_t short_transfer_count() const noexcept { return backend_.short_transfer_count(); }
@@ -112,7 +113,7 @@ public:
 
     // After startup, enqueue only the track touched by the operation. Sending the
     // whole project for every slider movement needlessly consumes the bounded queue.
-    bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept {
+    bool enqueue_track_control(const hush::Project& project, const std::string& track_id) noexcept override {
         return mixer_ && project.tracks.size() == track_buffers_.size() &&
                hush::TrackMixerCommandBridge::enqueue_track(project, *mixer_, track_id);
     }
@@ -120,7 +121,7 @@ public:
     // Preview gain/pan in the audio engine while the user drags. This command does
     // not mutate project state or add undo entries; slider release commits the edit.
     bool enqueue_track_preview(const hush::Project& project, const std::string& track_id,
-                               float gain, float pan) noexcept {
+                               float gain, float pan) noexcept override {
         return mixer_ && project.tracks.size() == track_buffers_.size() &&
                hush::TrackMixerCommandBridge::enqueue_preview(project, *mixer_, track_id, gain, pan);
     }
@@ -180,7 +181,9 @@ private:
 
 class MixerWindow final : public QMainWindow {
 public:
-    MixerWindow() : recovery_journal_(local_recovery_path()), autosave_(recovery_journal_) {
+    explicit MixerWindow(hush::LiveTrackControlSink* live_sink = nullptr)
+        : recovery_journal_(local_recovery_path()), autosave_(recovery_journal_) {
+        injected_live_sink_ = live_sink;
         setWindowTitle("HUSH Cosmic Studio — Mixer");
         resize(1100, 640);
         auto* root = new QWidget(this);
@@ -282,6 +285,7 @@ private:
     QTableWidget* table_{};
     QLabel* status_{};
     QPushButton* live_button_{};
+    hush::LiveTrackControlSink* injected_live_sink_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -413,38 +417,48 @@ private:
         }
     }
 
-    bool sync_live_controls(const std::string& track_id) {
+    hush::LiveTrackControlSink* active_live_sink() noexcept {
+        if (injected_live_sink_) return injected_live_sink_;
 #ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() && !live_.enqueue_track_control(project_, track_id)) {
-            // Preserve the latest committed model state for retry when the bounded
-            // SPSC queue is temporarily full. Only the GUI thread touches this list.
-            if (std::find(pending_live_sync_.begin(), pending_live_sync_.end(), track_id) ==
-                pending_live_sync_.end()) {
-                pending_live_sync_.push_back(track_id);
+        return &live_;
+#else
+        return nullptr;
+#endif
+    }
+
+    bool sync_live_controls(const std::string& track_id) {
+        auto* sink = active_live_sink();
+        if (sink && sink->running() && !sink->enqueue_track_control(project_, track_id)) {
+#ifdef HUSH_GUI_HAS_ALSA
+            // Preserve the latest committed model state for retry when the real
+            // backend queue is temporarily full. Injected test sinks report failure
+            // directly so the test can assert backpressure without ALSA.
+            if (sink == &live_) {
+                if (std::find(pending_live_sync_.begin(), pending_live_sync_.end(), track_id) ==
+                    pending_live_sync_.end()) {
+                    pending_live_sync_.push_back(track_id);
+                }
             }
+#endif
             return false;
         }
-        pending_live_sync_.erase(
-            std::remove(pending_live_sync_.begin(), pending_live_sync_.end(), track_id),
-            pending_live_sync_.end());
-#else
-        (void)track_id;
+#ifdef HUSH_GUI_HAS_ALSA
+        if (sink == &live_) {
+            pending_live_sync_.erase(
+                std::remove(pending_live_sync_.begin(), pending_live_sync_.end(), track_id),
+                pending_live_sync_.end());
+        }
 #endif
         return true;
     }
 
     bool preview_live_controls(const std::string& track_id, float gain, float pan) {
-#ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() &&
-            !live_.enqueue_track_preview(project_, track_id, gain, pan)) {
+        auto* sink = active_live_sink();
+        if (sink && sink->running() &&
+            !sink->enqueue_track_preview(project_, track_id, gain, pan)) {
             status_->setText("Live preview queue full — release slider or stop audio");
             return false;
         }
-#else
-        (void)track_id;
-        (void)gain;
-        (void)pan;
-#endif
         return true;
     }
 
