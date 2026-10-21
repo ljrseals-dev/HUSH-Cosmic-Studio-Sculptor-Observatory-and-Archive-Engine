@@ -95,6 +95,35 @@ int main(int argc, char** argv) {
     assert(window.test_project().tracks[0].solo);
     assert(window.test_history_cursor() == 4U);
 
+    // Bus controls use the same bounded live command path and undo history.
+    auto* bus_gain = slider(window, "gain-bus-capture");
+    assert(bus_gain != nullptr);
+    bus_gain->setValue(75);
+    assert(near(window.test_project().buses[0].gain, 1.0F));
+    assert(QMetaObject::invokeMethod(bus_gain, "sliderReleased", Qt::DirectConnection));
+    assert(near(window.test_project().buses[0].gain, 0.75F));
+    assert(window.test_history_cursor() == 5U);
+    undo->click();
+    assert(near(window.test_project().buses[0].gain, 1.0F));
+    assert(window.test_history_cursor() == 4U);
+    redo->click();
+    assert(near(window.test_project().buses[0].gain, 0.75F));
+    assert(window.test_history_cursor() == 5U);
+
+    auto* bus_mute = check_box(window, "mute-bus-capture");
+    assert(bus_mute != nullptr);
+    bus_mute->click();
+    assert(window.test_project().buses[0].mute);
+    assert(window.test_history_cursor() == 6U);
+    auto* bus_solo = check_box(window, "solo-bus-capture");
+    assert(bus_solo != nullptr);
+    bus_solo->click();
+    assert(window.test_project().buses[0].solo);
+    assert(window.test_history_cursor() == 7U);
+    undo->click();
+    assert(!window.test_project().buses[0].solo);
+    assert(window.test_history_cursor() == 6U);
+
     // Exercise the same production project-load/recovery path without a modal prompt.
     // Accepting recovery restores the latest snapshot, marks the session dirty, and
     // lets the normal GUI autosave poll persist a fresh recovery record off-callback.
