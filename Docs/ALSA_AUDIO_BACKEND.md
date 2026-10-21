@@ -27,6 +27,12 @@ The host's project-aware setup sequence is:
 
 The callback maps interleaved stereo capture to the first two mono source tracks, routes all source tracks through their assigned bus inputs, processes the bus graph, and copies master output back to interleaved stereo. Empty per-track bus IDs use the selected input bus. This is a live track-to-bus/master path for available source buffers, not yet a media-playback or recording engine. The lower-level `RealtimeBusEngineHostAudioAdapter` remains available for adapter-specific tests and applications that supply bus inputs directly.
 
+## Explicit stereo capture recording
+
+Pass `--record FILE.wav` to explicitly record the raw stereo ALSA input to a local IEEE-float WAV. The pipeline copies capture frames into a preallocated SPSC ring; a separate `RecordingSession` worker performs disk writes and finalizes the WAV header when recording stops. The CLI allocates five seconds of ring capacity and reports frames written and dropped on shutdown. If the writer fails, the host reports a recording persistence error rather than claiming a complete file.
+
+This records the input capture stream, not the processed master output. It is not multitrack recording: track arming, take/playlist management, punch, comping, crossfades, latency compensation, and zero-dropped-frame device qualification remain open.
+
 ## Callback contract
 
 The device callback runs on the backend worker thread. It must not allocate, lock, log, or perform I/O. Adapter buffers are allocated before the worker starts. `stop()` joins the worker before closing PCM handles.
