@@ -58,7 +58,7 @@ ctest --test-dir build-alsa --output-on-failure
 ./build-alsa/hush_alsa_realtime_host
 ```
 
-The minimal host uses ALSA default capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. Compilation and contract tests are not a substitute for testing a named physical audio device.
+The minimal host uses ALSA default capture/playback devices at 48 kHz and 128 frames per period. Press Ctrl-C to stop. To explicitly record the stereo input to a local IEEE-float WAV while running, pass `--record take.wav`. The recorder uses a bounded preallocated SPSC ring and a separate disk-writer thread; dropped frames are counted and reported at shutdown. Compilation and contract tests are not a substitute for testing a named physical audio device.
 
 ### Optional Qt mixer GUI
 
