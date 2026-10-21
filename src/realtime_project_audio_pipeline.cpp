@@ -305,13 +305,19 @@ bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
             if (source.channels == 0U) continue;
             for (std::size_t frame = 0; frame < frames; ++frame) {
                 const auto timeline_frame = timeline_start + static_cast<std::uint64_t>(frame);
-                if (timeline_frame > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()))
-                    continue;
-                const auto signed_timeline = static_cast<std::int64_t>(timeline_frame);
-                if (signed_timeline < clip.timeline_start_frame) continue;
-                const auto relative_frame = static_cast<std::uint64_t>(
-                    signed_timeline - clip.timeline_start_frame);
-                if (relative_frame >= clip.frame_count) continue;
+                std::uint64_t relative_frame = 0U;
+                if (clip.timeline_start_frame < 0) {
+                    const auto preroll = static_cast<std::uint64_t>(
+                        -(clip.timeline_start_frame + 1)) + 1U;
+                    if (preroll >= clip.frame_count ||
+                        timeline_frame >= clip.frame_count - preroll) continue;
+                    relative_frame = timeline_frame + preroll;
+                } else {
+                    const auto clip_start = static_cast<std::uint64_t>(clip.timeline_start_frame);
+                    if (timeline_frame < clip_start) continue;
+                    relative_frame = timeline_frame - clip_start;
+                    if (relative_frame >= clip.frame_count) continue;
+                }
                 const auto source_frame = clip.source_start_frame + relative_frame;
                 const auto source_offset = source_frame * source.channels;
                 if (source_offset + source.channels > source.interleaved_samples.size()) continue;
