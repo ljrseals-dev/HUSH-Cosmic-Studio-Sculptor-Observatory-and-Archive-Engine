@@ -22,10 +22,15 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 int main() {
     using namespace hush;
     Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false,"bus-music"},{"track-2","Pad",0.5F,-0.5F,false,false,"bus-master"}};
-    p.buses={{"bus-master","Master"},{"bus-music","Music"}};
+    p.buses={{"bus-master","Master",0.85F,false,true},{"bus-music","Music",0.65F,true,false}};
     p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    Project bad_bus_gain = p; bad_bus_gain.buses[0].gain = 17.0F;
+    assert(!from_json(to_json(bad_bus_gain),loaded,err)); assert(err.code=="bus_gain_invalid");
+    const std::string legacy_bus=R"({"schema_version":1,"id":"legacy-bus","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"master","name":"Master"}],"routes":[]})";
+    assert(from_json(legacy_bus,loaded,err)); assert(loaded.buses.size()==1);
+    assert(loaded.buses[0].gain==1.0F && !loaded.buses[0].mute && !loaded.buses[0].solo);
     Project bad_track_bus = p; bad_track_bus.tracks[0].bus_id = "missing-bus";
     assert(!from_json(to_json(bad_track_bus),loaded,err)); assert(err.code=="track_bus_unknown");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
