@@ -68,6 +68,16 @@ int main() {
     assert(near(pipeline.bus_output_meter(2U).peak_right, 0.0F));
     assert(!pipeline.enqueue_bus_control("missing-bus", 1.0F, false, false));
 
+    // Persisted inserts are activated by the project-aware live pipeline.
+    Project inserted_project = project;
+    inserted_project.inserts = {{"music-gain", "music", InsertKind::Gain, true, 0.5F}};
+    RealtimeProjectAudioPipeline inserted_pipeline;
+    assert(inserted_pipeline.configure(inserted_project, 8U, error));
+    assert(inserted_pipeline.process(input, output, 2U));
+    assert(near(output[0], 0.5F) && near(output[1], 0.125F));
+    assert(near(output[2], 0.25F) && near(output[3], 0.25F));
+    assert(near(inserted_pipeline.bus_output_meter(1U).peak_left, 0.5F));
+
     // Explicit track bus IDs must resolve to a bus in the validated project graph.
     Project invalid = project;
     invalid.tracks[1].bus_id = "not-a-bus";
