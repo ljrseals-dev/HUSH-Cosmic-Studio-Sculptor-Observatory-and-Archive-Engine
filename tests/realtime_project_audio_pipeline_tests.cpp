@@ -77,6 +77,17 @@ int main() {
     assert(near(output[0], 0.5F) && near(output[1], 0.125F));
     assert(near(output[2], 0.25F) && near(output[3], 0.25F));
     assert(near(inserted_pipeline.bus_output_meter(1U).peak_left, 0.5F));
+    Project edited_insert_project = inserted_project;
+    edited_insert_project.inserts[0].gain = 0.25F;
+    std::string processing_error;
+    assert(inserted_pipeline.replace_project_bus_processing(edited_insert_project, processing_error));
+    assert(inserted_pipeline.process(input, output, 2U));
+    assert(near(output[0], 0.25F) && near(output[1], 0.0625F));
+    Project invalid_insert_project = edited_insert_project;
+    invalid_insert_project.inserts[0].bus_id = "missing-bus";
+    assert(!inserted_pipeline.replace_project_bus_processing(invalid_insert_project, processing_error));
+    assert(inserted_pipeline.process(input, output, 2U));
+    assert(near(output[0], 0.25F) && near(output[1], 0.0625F));
 
     // Explicit track bus IDs must resolve to a bus in the validated project graph.
     Project invalid = project;
