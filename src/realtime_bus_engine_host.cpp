@@ -48,6 +48,13 @@ bool RealtimeBusEngineHost::enqueue_fader_change(std::size_t bus_index, float ga
     return snapshot != nullptr && snapshot->engine.enqueue_fader_change(bus_index, gain);
 }
 
+bool RealtimeBusEngineHost::enqueue_bus_control(std::size_t bus_index, float gain,
+                                                bool mute, bool solo) noexcept {
+    auto* snapshot = publisher_.active_for_control();
+    return snapshot != nullptr &&
+           snapshot->engine.enqueue_bus_control(bus_index, gain, mute, solo);
+}
+
 RealtimeProcessStatus RealtimeBusEngineHost::process_to_stereo(
     const BusAudioInputView* inputs, std::size_t input_count, std::size_t frames,
     float* output_left, float* output_right) noexcept {
