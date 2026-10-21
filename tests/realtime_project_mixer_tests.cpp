@@ -58,16 +58,23 @@ int main() {
     assert(near(left[0], 0.5F));
     assert(near(right[0], 0.0F));
 
-    // Mute wins over solo; a muted soloed vocal stays silent while the kick remains audible.
+    // A muted solo remains silent and still excludes non-solo tracks.
     assert(mixer.enqueue_track_control("kick", 1.0F, 0.0F, false, false));
     assert(mixer.enqueue_track_control("vocal", 0.5F, -1.0F, true, true));
     assert(mixer.process(tracks, 2, 4, left, right) == RealtimeProcessStatus::Ok);
-    assert(near(left[0], 0.70710678F));
-    assert(near(right[0], 0.70710678F));
+    assert(near(left[0], 0.0F));
+    assert(near(right[0], 0.0F));
 
-    // Invalid topology is rejected without replacing this already configured mixer.
-    assert(!mixer.configure(project, {"drums", "vocal-bus"}, "missing-master", 8, error));
-    assert(mixer.configured());
+    // An unmuted solo routes only the selected track.
+    assert(mixer.enqueue_track_control("vocal", 0.5F, -1.0F, false, true));
+    assert(mixer.process(tracks, 2, 4, left, right) == RealtimeProcessStatus::Ok);
+    assert(near(left[0], 0.5F));
+    assert(near(right[0], 0.0F));
+
+    // Invalid master selection is rejected before a separate mixer becomes usable.
+    RealtimeProjectMixer invalid_master;
+    assert(!invalid_master.configure(project, {"drums", "vocal-bus"}, "missing-master", 8, error));
+    assert(!invalid_master.configured());
     assert(mixer.process(tracks, 2, 4, left, right) == RealtimeProcessStatus::Ok);
 
     assert(mixer.process(tracks, 1, 4, left, right) == RealtimeProcessStatus::InvalidInputCount);
