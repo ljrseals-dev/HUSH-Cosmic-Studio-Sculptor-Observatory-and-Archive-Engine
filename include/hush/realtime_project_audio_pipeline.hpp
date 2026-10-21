@@ -1,11 +1,13 @@
 #pragma once
 
 #include "hush/project.hpp"
+#include "hush/recording_session.hpp"
 #include "hush/realtime_bus_engine_host.hpp"
 #include "hush/realtime_track_bus_router.hpp"
 
 #include <atomic>
 #include <cstddef>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -20,6 +22,9 @@ public:
     bool configure(const Project& project, std::size_t max_frames, std::string& error);
     [[nodiscard]] bool enqueue_track_control(std::size_t track_index, float gain,
                                              float pan, bool mute, bool solo) noexcept;
+    // Attach/detach on the control thread before/after the device runs. The capture
+    // ring is SPSC and the disk writer remains on its own non-realtime worker.
+    void set_recording_session(RecordingSession* session) noexcept { recording_ = session; }
     [[nodiscard]] bool process(const float* interleaved_input,
                                float* interleaved_output,
                                std::size_t frames) noexcept;
@@ -39,6 +44,7 @@ private:
     std::vector<const float*> track_pointers_;
     std::vector<float> output_left_;
     std::vector<float> output_right_;
+    RecordingSession* recording_{nullptr};
     std::string input_bus_id_;
     std::string master_bus_id_;
     std::size_t max_frames_{0};
