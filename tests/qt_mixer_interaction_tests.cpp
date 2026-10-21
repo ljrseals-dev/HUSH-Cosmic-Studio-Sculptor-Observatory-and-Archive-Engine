@@ -2,6 +2,7 @@
 #include "../src/mixer_gui.cpp"
 
 #include <QCheckBox>
+#include <QLabel>
 #include <QMetaObject>
 #include <QPushButton>
 #include <QSlider>
@@ -27,6 +28,9 @@ QPushButton* button(MixerWindow& window, const QString& name) {
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
     MixerWindow window;
+    auto* bus_meters = window.findChild<QLabel*>("busInputMeters");
+    assert(bus_meters != nullptr);
+    assert(bus_meters->text().contains("BUS INPUTS"));
 
     auto* gain = slider(window, "gain-track-1");
     assert(gain != nullptr);
