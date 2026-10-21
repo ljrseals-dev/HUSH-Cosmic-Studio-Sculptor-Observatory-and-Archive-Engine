@@ -12,7 +12,7 @@ Recording, MIDI, plugin hosting, voice control, and complete production-grade mu
 | Engine/core | Bus-graph validation, cycle detection, offline reference rendering, preallocated bus processing, bounded SPSC parameter queue | Full production mixer signal path is incomplete |
 | Audio adapters | Interleaved-stereo adapters; host adapter uses preallocated planar scratch and a callback guard | Hardware timing, xrun behavior, and stress qualification remain outstanding |
 | ALSA | Optional Linux ALSA host, explicitly started; project-aware preallocated pipeline routes capture source tracks through persisted track-to-bus assignments and the bus graph to master | Physical-device startup/shutdown, latency, and long-duration tests are not certified |
-| Qt mixer | Optional Qt 6 Widgets mixer shell; with GUI and ALSA enabled, Start Live ALSA connects supported controls to a bounded realtime track-mixer queue | Capture mapping is stereo input channels to tracks 1–2 only; complete track-to-bus/master routing, inserts, full mute/solo behavior, meters, and xrun counters are incomplete |
+| Qt mixer | Optional Qt 6 Widgets mixer shell; with GUI and ALSA enabled, Start Live ALSA connects supported controls to a bounded project-aware track-to-bus pipeline | Capture mapping is stereo input channels to tracks 1–2 only; additional tracks need a source; inserts, bus-level mute/solo, graph-wide meters, and integrated xrun counters remain incomplete |
 | Recovery | Recovery journal, process-restart and truncated-tail tests, autosave policy controller | Host lifecycle integration is incomplete; power-loss durability is not claimed |
 | Privacy | Privacy contract and source-level denylist regression check | Source scanning alone cannot prove zero runtime network activity |
 
