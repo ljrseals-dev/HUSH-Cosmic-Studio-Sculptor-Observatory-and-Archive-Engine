@@ -47,6 +47,10 @@ public:
     [[nodiscard]] float output_peak() const noexcept { return output_peak_.load(std::memory_order_relaxed); }
     [[nodiscard]] std::size_t bus_input_meter_count() const noexcept { return bus_meter_count_; }
     [[nodiscard]] BusInputMeterSnapshot bus_input_meter(std::size_t bus_index) const noexcept;
+    [[nodiscard]] std::size_t bus_output_meter_count() const noexcept { return bus_ids_.size(); }
+    [[nodiscard]] BusOutputMeterSnapshot bus_output_meter(std::size_t bus_index) const noexcept {
+        return engine_host_.bus_output_meter(bus_index);
+    }
     [[nodiscard]] const std::string& input_bus_id() const noexcept { return input_bus_id_; }
     [[nodiscard]] const std::string& master_bus_id() const noexcept { return master_bus_id_; }
     void reclaim_retired() noexcept { engine_host_.reclaim_retired(); }
