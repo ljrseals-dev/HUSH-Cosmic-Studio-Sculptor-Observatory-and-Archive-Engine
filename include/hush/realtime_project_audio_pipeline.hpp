@@ -8,10 +8,20 @@
 #include <atomic>
 #include <cstddef>
 #include <span>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace hush {
+
+// Last completed block's routed bus-input levels. Values are linear amplitude,
+// sampled before bus-graph processing; they are not post-insert/master-output meters.
+struct BusInputMeterSnapshot {
+    float peak_left{0.0F};
+    float peak_right{0.0F};
+    float rms_left{0.0F};
+    float rms_right{0.0F};
+};
 
 // Project-aware capture -> track controls -> track bus -> master pipeline.
 // Configure once on the control thread before starting audio. The process/callback
@@ -33,17 +43,28 @@ public:
 
     [[nodiscard]] float input_peak() const noexcept { return input_peak_.load(std::memory_order_relaxed); }
     [[nodiscard]] float output_peak() const noexcept { return output_peak_.load(std::memory_order_relaxed); }
+    [[nodiscard]] std::size_t bus_input_meter_count() const noexcept { return bus_meter_count_; }
+    [[nodiscard]] BusInputMeterSnapshot bus_input_meter(std::size_t bus_index) const noexcept;
     [[nodiscard]] const std::string& input_bus_id() const noexcept { return input_bus_id_; }
     [[nodiscard]] const std::string& master_bus_id() const noexcept { return master_bus_id_; }
     void reclaim_retired() noexcept { engine_host_.reclaim_retired(); }
 
 private:
+    struct AtomicBusInputMeter {
+        std::atomic<float> peak_left{0.0F};
+        std::atomic<float> peak_right{0.0F};
+        std::atomic<float> rms_left{0.0F};
+        std::atomic<float> rms_right{0.0F};
+    };
+
     RealtimeTrackBusRouter track_router_;
     RealtimeBusEngineHost engine_host_;
     std::vector<std::vector<float>> track_buffers_;
     std::vector<const float*> track_pointers_;
     std::vector<float> output_left_;
     std::vector<float> output_right_;
+    std::unique_ptr<AtomicBusInputMeter[]> bus_input_meters_;
+    std::size_t bus_meter_count_{0};
     RecordingSession* recording_{nullptr};
     std::string input_bus_id_;
     std::string master_bus_id_;
