@@ -1,5 +1,6 @@
 #include "hush/operation_log.hpp"
 #include "hush/project.hpp"
+#include "hush/live_track_control_sink.hpp"
 #include "hush/project_close_policy.hpp"
 #include "hush/realtime_track_mixer.hpp"
 
@@ -41,7 +42,7 @@ namespace {
 // prepared before start(); callback() performs no allocation, locking, logging or I/O.
 // Current ALSA adapter exposes one stereo capture stream: L/R feed tracks 0/1.
 // Further project tracks have no live source until track-source routing is implemented.
-class LiveMixer final {
+class LiveMixer final : public hush::LiveTrackControlSink {
 public:
     static constexpr std::size_t kMaxFrames = 4096;
 
@@ -89,7 +90,7 @@ public:
         track_pointers_.clear();
     }
 
-    [[nodiscard]] bool running() const noexcept { return backend_.running(); }
+    [[nodiscard]] bool running() const noexcept override { return backend_.running(); }
     [[nodiscard]] std::uint64_t xrun_count() const noexcept { return backend_.xrun_count(); }
     [[nodiscard]] std::uint64_t callback_count() const noexcept { return backend_.callback_count(); }
     [[nodiscard]] float input_peak() const noexcept { return input_peak_.load(std::memory_order_relaxed); }
@@ -107,7 +108,7 @@ public:
     // After startup, enqueue only the track touched by the operation. Sending the
     // whole project for every slider release needlessly consumes the bounded queue.
     bool enqueue_track_control_values(const hush::Project& project, const std::string& track_id,
-                                      float gain, float pan, bool mute, bool solo) noexcept {
+                                      float gain, float pan, bool mute, bool solo) noexcept override {
         if (!mixer_ || project.tracks.size() != track_buffers_.size()) return false;
         for (std::size_t i = 0; i < project.tracks.size(); ++i) {
             if (project.tracks[i].id == track_id)
@@ -191,7 +192,8 @@ private:
 
 class MixerWindow final : public QMainWindow {
 public:
-    MixerWindow() {
+    explicit MixerWindow(hush::LiveTrackControlSink* live_sink = nullptr) {
+        injected_live_sink_ = live_sink;
         setWindowTitle("HUSH Cosmic Studio — Mixer");
         resize(1100, 640);
         auto* root = new QWidget(this);
@@ -346,6 +348,7 @@ private:
     QProgressBar* input_meter_{};
     QProgressBar* output_meter_{};
     QPushButton* live_button_{};
+    hush::LiveTrackControlSink* injected_live_sink_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -455,15 +458,20 @@ private:
         }
     }
 
-    bool enqueue_live_control_values(const std::string& id, const LiveControlValues& values) {
+    hush::LiveTrackControlSink* active_live_sink() noexcept {
+        if (injected_live_sink_) return injected_live_sink_;
 #ifdef HUSH_GUI_HAS_ALSA
-        if (live_.running() &&
-            !live_.enqueue_track_control_values(project_, id, values.gain, values.pan,
-                                                values.mute, values.solo)) return false;
+        return &live_;
 #else
-        (void)id;
-        (void)values;
+        return nullptr;
 #endif
+    }
+
+    bool enqueue_live_control_values(const std::string& id, const LiveControlValues& values) {
+        auto* sink = active_live_sink();
+        if (sink && sink->running() &&
+            !sink->enqueue_track_control_values(project_, id, values.gain, values.pan,
+                                                values.mute, values.solo)) return false;
         return true;
     }
 
