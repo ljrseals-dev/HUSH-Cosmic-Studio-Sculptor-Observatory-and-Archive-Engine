@@ -39,7 +39,7 @@ See [PHASE_1_TO_7_EXECUTION.md](PHASE_1_TO_7_EXECUTION.md) for the seven-phase c
 | Gate | Evidence | Status |
 |---|---|---|
 | Preallocated capture ring | PR #75 adds SPSC interleaved-float ring and boundary/wrap/overflow tests; CI run [39408852666](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39408852666) | Pending while CI runs |
-| Off-thread streaming WAV writer and finalized file header | Explicit ALSA CLI `--record FILE.wav` uses the SPSC capture ring and background `RecordingSession`/`WavStreamWriter`; pipeline test checks final WAV header and frame count | Implemented in source; fresh CI and physical-device/dropped-frame qualification required |
+| Off-thread streaming WAV writer and finalized file header | Explicit ALSA CLI `--record FILE.wav` uses the SPSC capture ring and background `RecordingSession`/`WavStreamWriter`; pipeline test checks final WAV header and frame count | Source/test CI passed in [run 39549079073](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39549079073) and [run 39549079415](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39549079415); physical-device/dropped-frame qualification required |
 | Track arming, take IDs/playlists, punch, comping, crossfades | Not implemented in this slice | Open |
 | 8 tracks × 10 minutes, sample-accurate lengths, no dropped frames | No qualifying run | Open |
 | Punch accuracy ±1 sample, latency compensation/loopback | No device measurement | Open |
