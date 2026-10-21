@@ -274,7 +274,7 @@ public:
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
             if (is_insert_operation(operation->kind)) {
-                Project candidate = project_;
+                hush::Project candidate = project_;
                 hush::OperationLog candidate_log = log_;
                 if (!candidate_log.undo(candidate)) return;
                 std::string error;
@@ -322,7 +322,7 @@ public:
             const auto* operation = log_.operation_at(log_.cursor());
             if (!operation) return;
             if (is_insert_operation(operation->kind)) {
-                Project candidate = project_;
+                hush::Project candidate = project_;
                 hush::OperationLog candidate_log = log_;
                 if (!candidate_log.redo(candidate)) return;
                 std::string error;
