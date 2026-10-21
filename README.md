@@ -8,7 +8,7 @@ Recording, MIDI, plugin hosting, voice control, and complete production-grade mu
 
 | Area | Current documented scope | Remaining qualification |
 |---|---|---|
-| Project model | Schema-v1 model and JSON reader/writer | Schema-v2, migration, and broader session features are not claimed |
+| Project model | Schema-v1 model and JSON reader/writer, including optional per-track `bus_id` with backward-compatible empty-field fallback | Schema-v2, migration, and broader session features are not claimed |
 | Engine/core | Bus-graph validation, cycle detection, offline reference rendering, preallocated bus processing, bounded SPSC parameter queue | Full production mixer signal path is incomplete |
 | Audio adapters | Interleaved-stereo adapters; host adapter uses preallocated planar scratch and a callback guard | Hardware timing, xrun behavior, and stress qualification remain outstanding |
 | ALSA | Optional Linux ALSA host, explicitly started | Physical-device startup/shutdown, latency, and long-duration tests are not certified |
