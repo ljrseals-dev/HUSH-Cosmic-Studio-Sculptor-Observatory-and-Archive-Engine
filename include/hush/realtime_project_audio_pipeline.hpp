@@ -1,12 +1,15 @@
 #pragma once
 
 #include "hush/project.hpp"
+#include "hush/clip_renderer.hpp"
 #include "hush/recording_session.hpp"
 #include "hush/realtime_bus_engine_host.hpp"
 #include "hush/realtime_track_bus_router.hpp"
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
+#include <filesystem>
 #include <span>
 #include <memory>
 #include <string>
@@ -30,6 +33,23 @@ struct BusInputMeterSnapshot {
 class RealtimeProjectAudioPipeline {
 public:
     bool configure(const Project& project, std::size_t max_frames, std::string& error);
+    bool configure(const Project& project, std::vector<DecodedMediaBuffer> decoded_sources,
+                   std::size_t max_frames, std::string& error);
+    bool configure_from_project_directory(const Project& project,
+                                          const std::filesystem::path& project_directory,
+                                          std::size_t max_frames, std::string& error);
+    void set_transport_playing(bool playing) noexcept {
+        transport_playing_.store(playing, std::memory_order_release);
+    }
+    [[nodiscard]] bool transport_playing() const noexcept {
+        return transport_playing_.load(std::memory_order_acquire);
+    }
+    void seek_transport(std::uint64_t frame) noexcept {
+        transport_frame_.store(frame, std::memory_order_release);
+    }
+    [[nodiscard]] std::uint64_t transport_frame() const noexcept {
+        return transport_frame_.load(std::memory_order_acquire);
+    }
     [[nodiscard]] bool enqueue_track_control(std::size_t track_index, float gain,
                                              float pan, bool mute, bool solo) noexcept;
     [[nodiscard]] bool enqueue_bus_control(const std::string& bus_id, float gain,
@@ -60,6 +80,16 @@ public:
     void reclaim_retired() noexcept { engine_host_.reclaim_retired(); }
 
 private:
+    struct RuntimeClip {
+        std::size_t track_index{0};
+        std::size_t source_index{0};
+        std::int64_t timeline_start_frame{0};
+        std::uint64_t source_start_frame{0};
+        std::uint64_t frame_count{0};
+        float gain{1.0F};
+        std::uint64_t fade_in_frames{0};
+        std::uint64_t fade_out_frames{0};
+    };
     struct AtomicBusInputMeter {
         std::atomic<float> peak_left{0.0F};
         std::atomic<float> peak_right{0.0F};
@@ -73,6 +103,8 @@ private:
     std::vector<const float*> track_pointers_;
     std::vector<float> output_left_;
     std::vector<float> output_right_;
+    std::vector<DecodedMediaBuffer> decoded_sources_;
+    std::vector<RuntimeClip> runtime_clips_;
     std::unique_ptr<AtomicBusInputMeter[]> bus_input_meters_;
     std::size_t bus_meter_count_{0};
     RecordingSession* recording_{nullptr};
@@ -83,6 +115,8 @@ private:
     bool configured_{false};
     std::atomic<float> input_peak_{0.0F};
     std::atomic<float> output_peak_{0.0F};
+    std::atomic<bool> transport_playing_{false};
+    std::atomic<std::uint64_t> transport_frame_{0};
 };
 
 } // namespace hush
