@@ -31,7 +31,8 @@ public:
     // Control thread only. Fails without replacing the active engine if graph/master
     // validation or processor setup fails. All replacement allocations happen here.
     bool replace_graph(const BusGraph& graph, std::size_t max_frames,
-                       const std::string& master_bus_id, ProcessorSetupError& error);
+                       const std::string& master_bus_id, ProcessorSetupError& error,
+                       const std::vector<BusInsert>& inserts = {});
 
     // Control thread only; use stable bus IDs to map to indices in the active topology.
     // Returns false for an invalid value/index, absent engine, or full bounded queue.
