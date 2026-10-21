@@ -58,7 +58,7 @@ int main() {
     assert(near(left[0], 0.5F));
     assert(near(right[0], 0.0F));
 
-    // Mute wins over solo; solo of the vocal leaves only its routed bus audible.
+    // Mute wins over solo; a muted soloed vocal stays silent while the kick remains audible.
     assert(mixer.enqueue_track_control("kick", 1.0F, 0.0F, false, false));
     assert(mixer.enqueue_track_control("vocal", 0.5F, -1.0F, true, true));
     assert(mixer.process(tracks, 2, 4, left, right) == RealtimeProcessStatus::Ok);
@@ -71,6 +71,6 @@ int main() {
     assert(mixer.process(tracks, 2, 4, left, right) == RealtimeProcessStatus::Ok);
 
     assert(mixer.process(tracks, 1, 4, left, right) == RealtimeProcessStatus::InvalidInputCount);
-    assert(mixer.process(tracks, 2, 9, left, right) == RealtimeProcessStatus::FrameCountTooLarge);
+    assert(mixer.process(tracks, 2, 9, left, right) == RealtimeProcessStatus::FrameCountExceedsCapacity);
     return 0;
 }
