@@ -126,7 +126,7 @@ RealtimeProcessStatus RealtimeProjectMixer::process(const float* const* mono_tra
     if (frames > max_frames_) {
         std::fill_n(output_left, frames, 0.0F);
         std::fill_n(output_right, frames, 0.0F);
-        return RealtimeProcessStatus::FrameCountTooLarge;
+        return RealtimeProcessStatus::FrameCountExceedsCapacity;
     }
     if (!router_.process(mono_tracks, track_count, frames)) {
         std::fill_n(output_left, frames, 0.0F);
