@@ -2,6 +2,7 @@
 #include "hush/autosave_controller.hpp"
 #include "hush/bus_graph.hpp"
 #include "hush/project.hpp"
+#include "hush/project_runtime_graph.hpp"
 #include "hush/realtime_bus_engine_host.hpp"
 #include "hush/realtime_bus_engine_host_audio_adapter.hpp"
 
@@ -160,41 +161,16 @@ int main(int argc, char** argv) {
     std::signal(SIGTERM, handle_signal);
 
     RoutingError routing_error;
-    BusGraph graph;
-    std::vector<Bus> runtime_buses;
-    std::vector<BusRoute> runtime_routes;
-    std::string input_bus_id = "capture";
-    std::string master_bus_id = "master";
-    if (has_project && !project.buses.empty()) {
-        runtime_buses = project.buses;
-        runtime_routes = project.routes;
-        input_bus_id = runtime_buses.front().id;
-        master_bus_id = runtime_buses.back().id;
-        for (const auto& bus : runtime_buses) {
-            if (bus.id == "capture") input_bus_id = bus.id;
-            if (bus.id == "master") master_bus_id = bus.id;
-        }
-    } else {
-        runtime_buses = {{"capture", "Capture"}, {"master", "Master"}};
-        runtime_routes = {{"capture", "master", SendTap::PostFader, 1.0F}};
-    }
-    if (!graph.configure(std::move(runtime_buses), std::move(runtime_routes), routing_error)) {
+    ProjectRuntimeGraph runtime_graph;
+    if (!configure_project_runtime_graph(project, runtime_graph, routing_error)) {
         std::cerr << "Bus graph setup failed: " << routing_error.code
                   << ": " << routing_error.message << '\n';
         return 1;
     }
-
-    std::size_t input_bus_index = graph.buses().size();
-    for (std::size_t i = 0; i < graph.buses().size(); ++i) {
-        if (graph.buses()[i].id == input_bus_id) {
-            input_bus_index = i;
-            break;
-        }
-    }
-    if (input_bus_index == graph.buses().size()) {
-        std::cerr << "HUSH_INPUT_BUS_NOT_FOUND id=" << input_bus_id << '\n';
-        return 1;
-    }
+    const auto& graph = runtime_graph.graph;
+    const auto& input_bus_id = runtime_graph.input_bus_id;
+    const auto& master_bus_id = runtime_graph.master_bus_id;
+    const auto input_bus_index = runtime_graph.input_bus_index;
 
     constexpr std::size_t max_frames = 4096;
     RealtimeBusEngineHost engine_host;
