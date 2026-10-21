@@ -36,7 +36,8 @@ public:
     static constexpr std::size_t kParameterQueueCapacity = 1024;
 
     bool configure(const BusGraph& graph, std::size_t max_frames,
-                   ProcessorSetupError& error);
+                   ProcessorSetupError& error,
+                   const std::vector<BusInsert>& inserts = {});
 
     // Single control/UI producer. Returns false for invalid values or a full queue.
     [[nodiscard]] bool enqueue_fader_change(std::size_t bus_index, float gain) noexcept;
