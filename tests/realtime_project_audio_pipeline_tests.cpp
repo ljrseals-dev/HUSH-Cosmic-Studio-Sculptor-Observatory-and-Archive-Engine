@@ -52,6 +52,13 @@ int main() {
     assert(near(muted_music_meter.peak_left, 0.0F));
     assert(near(muted_music_meter.peak_right, 0.5F));
 
+    // Bus mute is routed through the same project-aware pipeline and applies at a block boundary.
+    assert(pipeline.enqueue_bus_control("music", 1.0F, true, false));
+    assert(pipeline.process(input, output, 2U));
+    assert(near(output[0], 0.0F) && near(output[1], 0.0F));
+    assert(near(output[2], 0.0F) && near(output[3], 0.0F));
+    assert(!pipeline.enqueue_bus_control("missing-bus", 1.0F, false, false));
+
     // Explicit track bus IDs must resolve to a bus in the validated project graph.
     Project invalid = project;
     invalid.tracks[1].bus_id = "not-a-bus";
