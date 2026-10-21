@@ -4,6 +4,8 @@
 #include "hush/recovery_journal.hpp"
 
 #include <QCheckBox>
+#include <QComboBox>
+#include <QTableWidget>
 #include <QFile>
 #include <QLabel>
 #include <QMetaObject>
@@ -123,6 +125,49 @@ int main(int argc, char** argv) {
     undo->click();
     assert(!window.test_project().buses[0].solo);
     assert(window.test_history_cursor() == 6U);
+
+    // Insert creation, parameters, bypass, type changes, removal, and history all
+    // use the same safe project-processing replacement path.
+    auto* add_insert = button(window, "addGainInsertButton");
+    assert(add_insert != nullptr);
+    add_insert->click();
+    assert(window.test_project().inserts.size() == 1U);
+    assert(window.test_project().inserts[0].bus_id == "capture");
+    assert(window.test_history_cursor() == 7U);
+    auto* insert_gain = slider(window, "gain-insert-capture-insert-1");
+    assert(insert_gain != nullptr);
+    insert_gain->setValue(50);
+    assert(QMetaObject::invokeMethod(insert_gain, "sliderReleased", Qt::DirectConnection));
+    assert(near(window.test_project().inserts[0].gain, 0.5F));
+    assert(window.test_history_cursor() == 8U);
+    auto* insert_enabled = check_box(window, "enabled-insert-capture-insert-1");
+    assert(insert_enabled != nullptr);
+    insert_enabled->click();
+    assert(!window.test_project().inserts[0].enabled);
+    assert(window.test_history_cursor() == 9U);
+    auto* insert_kind = window.findChild<QComboBox*>("kind-insert-capture-insert-1");
+    assert(insert_kind != nullptr);
+    insert_kind->setCurrentIndex(1);
+    assert(window.test_project().inserts[0].kind == hush::InsertKind::SoftClip);
+    assert(window.test_history_cursor() == 10U);
+    undo->click();
+    assert(window.test_project().inserts[0].kind == hush::InsertKind::Gain);
+    assert(window.test_history_cursor() == 9U);
+    redo->click();
+    assert(window.test_project().inserts[0].kind == hush::InsertKind::SoftClip);
+    assert(window.test_history_cursor() == 10U);
+    auto* insert_table = window.findChild<QTableWidget*>("insertTable");
+    assert(insert_table != nullptr);
+    insert_table->setCurrentCell(0, 0);
+    auto* remove_insert = button(window, "removeInsertButton");
+    assert(remove_insert != nullptr);
+    remove_insert->click();
+    assert(window.test_project().inserts.empty());
+    assert(window.test_history_cursor() == 11U);
+    undo->click();
+    assert(window.test_project().inserts.size() == 1U);
+    assert(window.test_project().inserts[0].kind == hush::InsertKind::SoftClip);
+    assert(window.test_history_cursor() == 10U);
 
     // Exercise the same production project-load/recovery path without a modal prompt.
     // Accepting recovery restores the latest snapshot, marks the session dirty, and
