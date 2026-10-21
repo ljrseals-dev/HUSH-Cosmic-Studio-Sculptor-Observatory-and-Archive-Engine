@@ -405,6 +405,16 @@ private:
                 if (choice == QMessageBox::Yes) {
                     candidate = std::move(recovered);
                     recovered_from_journal = true;
+                } else {
+                    // Respect an explicit refusal to recover this snapshot; otherwise
+                    // the same stale journal could be offered again on the next launch.
+                    std::error_code remove_error;
+                    std::filesystem::remove(journal_path, remove_error);
+                    if (remove_error) {
+                        QMessageBox::warning(this, "Recovery journal",
+                            "Could not discard the declined recovery snapshot: " +
+                            QString::fromStdString(remove_error.message()));
+                    }
                 }
             }
         }
