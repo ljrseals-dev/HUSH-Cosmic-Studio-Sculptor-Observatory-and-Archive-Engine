@@ -119,6 +119,12 @@ public:
         return false;
     }
 
+    bool enqueue_bus_control_values(const hush::Project& project, const std::string& bus_id,
+                                    float gain, bool mute, bool solo) noexcept {
+        if (!pipeline_) return false;
+        return pipeline_->enqueue_bus_control(bus_id, gain, mute, solo);
+    }
+
     // Pipeline buffers are allocated in start(), before the ALSA callback begins.
     bool prepare_output() const noexcept { return true; }
 
@@ -173,6 +179,15 @@ public:
         table_->verticalHeader()->hide();
         table_->setAlternatingRowColors(true);
         layout->addWidget(table_);
+
+        bus_table_ = new QTableWidget(0, 5, root);
+        bus_table_->setObjectName("busTable");
+        bus_table_->setHorizontalHeaderLabels({"Bus", "Gain", "Mute", "Solo", "Stable ID"});
+        bus_table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        bus_table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
+        bus_table_->verticalHeader()->hide();
+        bus_table_->setMaximumHeight(180);
+        layout->addWidget(bus_table_);
 
         // Channel Light: meters are refreshed on the GUI thread from atomic peaks
         // measured in the actual ALSA callback. The callback never touches Qt.
@@ -230,6 +245,21 @@ public:
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
+            if (is_bus_operation(operation->kind)) {
+                auto values = bus_control_values(operation->entity_id);
+                if (!values) return;
+                apply_value_to_bus_controls(*operation, operation->before_value, *values);
+                if (!enqueue_live_bus_control_values(operation->entity_id, *values)) {
+                    status_->setText("Undo not applied: live bus command queue full; retry after audio drains");
+                    return;
+                }
+                if (log_.undo(project_)) {
+                    autosave_dirty_ = true;
+                    status_->setText("Undo applied");
+                    refresh();
+                }
+                return;
+            }
             auto values = live_control_values(operation->entity_id);
             if (!values) return;
             apply_value_to_controls(*operation, operation->before_value, *values);
@@ -246,6 +276,21 @@ public:
         connect(redo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.operation_at(log_.cursor());
             if (!operation) return;
+            if (is_bus_operation(operation->kind)) {
+                auto values = bus_control_values(operation->entity_id);
+                if (!values) return;
+                apply_value_to_bus_controls(*operation, operation->after_value, *values);
+                if (!enqueue_live_bus_control_values(operation->entity_id, *values)) {
+                    status_->setText("Redo not applied: live bus command queue full; retry after audio drains");
+                    return;
+                }
+                if (log_.redo(project_)) {
+                    autosave_dirty_ = true;
+                    status_->setText("Redo applied");
+                    refresh();
+                }
+                return;
+            }
             auto values = live_control_values(operation->entity_id);
             if (!values) return;
             apply_value_to_controls(*operation, operation->after_value, *values);
@@ -271,6 +316,8 @@ public:
         project_.id = "hush-demo";
         project_.tracks = {{"track-1", "Input L", 1.0F, -1.0F, false, false},
                            {"track-2", "Input R", 0.8F, 1.0F, false, false}};
+        project_.buses = {{"capture", "Capture"}, {"master", "Master"}};
+        project_.routes = {{"capture", "master", hush::SendTap::PostFader, 1.0F}};
         log_.mark_dirty(); // The demo project has not been written to disk yet.
         refresh();
         status_->setText("Demo session · unsaved · offline");
@@ -304,6 +351,7 @@ private:
     bool autosave_dirty_{false};
     std::optional<hush::AutosaveController::Clock::time_point> autosave_retry_after_;
     QTableWidget* table_{};
+    QTableWidget* bus_table_{};
     QLabel* status_{};
     QLabel* input_light_{};
     QLabel* process_light_{};
@@ -481,6 +529,119 @@ private:
         bool mute{false};
         bool solo{false};
     };
+
+    struct BusControlValues {
+        float gain{1.0F};
+        bool mute{false};
+        bool solo{false};
+    };
+
+    static bool is_bus_operation(hush::OperationKind kind) noexcept {
+        return kind == hush::OperationKind::SetBusGain ||
+               kind == hush::OperationKind::SetBusMute ||
+               kind == hush::OperationKind::SetBusSolo;
+    }
+
+    std::optional<BusControlValues> bus_control_values(const std::string& id) const {
+        const auto it = std::find_if(project_.buses.begin(), project_.buses.end(),
+                                     [&](const hush::Bus& bus) { return bus.id == id; });
+        if (it == project_.buses.end()) return std::nullopt;
+        return BusControlValues{it->gain, it->mute, it->solo};
+    }
+
+    static void apply_value_to_bus_controls(const hush::Operation& operation, float value,
+                                            BusControlValues& controls) {
+        switch (operation.kind) {
+        case hush::OperationKind::SetBusGain: controls.gain = value; break;
+        case hush::OperationKind::SetBusMute: controls.mute = value != 0.0F; break;
+        case hush::OperationKind::SetBusSolo: controls.solo = value != 0.0F; break;
+        default: break;
+        }
+    }
+
+    bool enqueue_live_bus_control_values(const std::string& id, const BusControlValues& values) {
+#ifdef HUSH_GUI_HAS_ALSA
+        if (live_.running() &&
+            !live_.enqueue_bus_control_values(project_, id, values.gain, values.mute, values.solo))
+            return false;
+#else
+        (void)id;
+        (void)values;
+#endif
+        return true;
+    }
+
+    void preview_live_bus_gain(const std::string& id, float gain) {
+        auto values = bus_control_values(id);
+        if (!values) return;
+        values->gain = gain;
+        if (!enqueue_live_bus_control_values(id, *values))
+            status_->setText("Live bus preview queue full — release slider or stop audio");
+    }
+
+    void change_bus(const std::string& id, hush::OperationKind kind, float after) {
+        const auto it = std::find_if(project_.buses.begin(), project_.buses.end(),
+                                     [&](const hush::Bus& bus) { return bus.id == id; });
+        if (it == project_.buses.end()) return;
+        float before = 0.0F;
+        switch (kind) {
+        case hush::OperationKind::SetBusGain: before = it->gain; break;
+        case hush::OperationKind::SetBusMute: before = it->mute ? 1.0F : 0.0F; break;
+        case hush::OperationKind::SetBusSolo: before = it->solo ? 1.0F : 0.0F; break;
+        default: return;
+        }
+        if (before == after) return;
+        BusControlValues values{it->gain, it->mute, it->solo};
+        const hush::Operation operation{id, kind, before, after};
+        apply_value_to_bus_controls(operation, after, values);
+        if (!enqueue_live_bus_control_values(id, values)) {
+            status_->setText("Bus edit not applied: live command queue full; retry after audio drains");
+            QTimer::singleShot(0, this, [this] { refresh_bus_table(); });
+            return;
+        }
+        if (log_.apply_and_append(project_, operation)) {
+            autosave_dirty_ = true;
+            status_->setText("Bus edited · undo history " + QString::number(log_.cursor()));
+            refresh_bus_table();
+        }
+    }
+
+    void refresh_bus_table() {
+        bus_table_->setRowCount(static_cast<int>(project_.buses.size()));
+        for (std::size_t i = 0; i < project_.buses.size(); ++i) {
+            const auto& bus = project_.buses[i];
+            const int row = static_cast<int>(i);
+            auto* name = new QTableWidgetItem(QString::fromStdString(bus.name));
+            name->setFlags(name->flags() & ~Qt::ItemIsEditable);
+            bus_table_->setItem(row, 0, name);
+            auto* gain = new QSlider(Qt::Horizontal);
+            gain->setObjectName(QString("gain-bus-%1").arg(QString::fromStdString(bus.id)));
+            gain->setRange(0, 1600);
+            gain->setValue(static_cast<int>(bus.gain * 100.0F));
+            gain->setToolTip("Bus gain 0.00–16.00");
+            bus_table_->setCellWidget(row, 1, gain);
+            auto* mute = new QCheckBox("Mute");
+            mute->setObjectName(QString("mute-bus-%1").arg(QString::fromStdString(bus.id)));
+            mute->setChecked(bus.mute);
+            bus_table_->setCellWidget(row, 2, mute);
+            auto* solo = new QCheckBox("Solo");
+            solo->setObjectName(QString("solo-bus-%1").arg(QString::fromStdString(bus.id)));
+            solo->setChecked(bus.solo);
+            bus_table_->setCellWidget(row, 3, solo);
+            auto* id = new QTableWidgetItem(QString::fromStdString(bus.id));
+            id->setFlags(id->flags() & ~Qt::ItemIsEditable);
+            bus_table_->setItem(row, 4, id);
+            const auto bus_id = bus.id;
+            connect(gain, &QSlider::valueChanged, this,
+                    [this, gain, bus_id](int) { preview_live_bus_gain(bus_id, gain->value() / 100.0F); });
+            connect(gain, &QSlider::sliderReleased, this,
+                    [this, gain, bus_id] { change_bus(bus_id, hush::OperationKind::SetBusGain, gain->value() / 100.0F); });
+            connect(mute, &QCheckBox::clicked, this,
+                    [this, mute, bus_id] { change_bus(bus_id, hush::OperationKind::SetBusMute, mute->isChecked() ? 1.0F : 0.0F); });
+            connect(solo, &QCheckBox::clicked, this,
+                    [this, solo, bus_id] { change_bus(bus_id, hush::OperationKind::SetBusSolo, solo->isChecked() ? 1.0F : 0.0F); });
+        }
+    }
 
     std::optional<LiveControlValues> live_control_values(const std::string& id) const {
         const auto it = std::find_if(project_.tracks.begin(), project_.tracks.end(),
@@ -737,6 +898,7 @@ private:
             }
 #endif
         }
+        refresh_bus_table();
     }
 protected:
     void closeEvent(QCloseEvent* event) override {
