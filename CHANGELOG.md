@@ -1,3 +1,10 @@
+## Unreleased — Qt widget-to-live-engine command-path proof
+
+- Added the `LiveTrackControlSink` control-thread seam so the real Qt mixer can be tested against a deterministic live sink without opening an ALSA device.
+- Extended the offscreen Qt interaction test to assert that gain/pan preview and commit, undo/redo, mute, and solo commands change the next synthetic `RealtimeTrackMixer` block, not only the project model/history.
+- Both CI workflows passed on commit `8b20a8c93218eb5468410121bde46713749153ff`: [HUSH 0.2 headless contracts](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39695020348) and [HUSH 0.4a recording foundation](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39695020483).
+- This proves deterministic widget-to-command-queue-to-next-block behavior; it does not prove physical ALSA loopback, hardware latency, zero xruns, or full track-to-bus routing.
+
 ## Unreleased — Phase 3 runtime track-to-bus routing stage
 
 - Added `RealtimeTrackBusRouter` to aggregate configured mono track inputs into preallocated stereo bus-input buffers.
