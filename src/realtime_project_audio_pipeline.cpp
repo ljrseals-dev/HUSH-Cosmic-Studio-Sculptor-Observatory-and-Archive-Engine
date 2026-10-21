@@ -26,7 +26,10 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         }
 
         std::vector<std::size_t> track_bus_indices;
+        std::vector<std::string> bus_ids;
         track_bus_indices.reserve(project.tracks.size());
+        bus_ids.reserve(runtime_graph.graph.buses().size());
+        for (const auto& bus : runtime_graph.graph.buses()) bus_ids.push_back(bus.id);
         for (const auto& track : project.tracks) {
             const std::string& bus_id = track.bus_id.empty()
                 ? runtime_graph.input_bus_id : track.bus_id;
@@ -88,6 +91,7 @@ bool RealtimeProjectAudioPipeline::configure(const Project& project,
         output_right_.swap(right);
         bus_input_meters_ = std::move(bus_meters);
         bus_meter_count_ = bus_meter_count;
+        bus_ids_.swap(bus_ids);
         input_bus_id_ = std::move(runtime_graph.input_bus_id);
         master_bus_id_ = std::move(runtime_graph.master_bus_id);
         max_frames_ = max_frames;
@@ -107,6 +111,16 @@ bool RealtimeProjectAudioPipeline::enqueue_track_control(
     std::size_t track_index, float gain, float pan, bool mute, bool solo) noexcept {
     return configured_ &&
            track_router_.enqueue_track_control(track_index, gain, pan, mute, solo);
+}
+
+bool RealtimeProjectAudioPipeline::enqueue_bus_control(const std::string& bus_id, float gain,
+                                                        bool mute, bool solo) noexcept {
+    if (!configured_) return false;
+    for (std::size_t i = 0; i < bus_ids_.size(); ++i) {
+        if (bus_ids_[i] == bus_id)
+            return engine_host_.enqueue_bus_control(i, gain, mute, solo);
+    }
+    return false;
 }
 
 bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
