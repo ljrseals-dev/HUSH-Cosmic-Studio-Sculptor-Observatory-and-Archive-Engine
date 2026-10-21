@@ -69,6 +69,40 @@ int main() {
     assert(!pipeline.enqueue_bus_control("missing-bus", 1.0F, false, false));
 
     // Persisted inserts are activated by the project-aware live pipeline.
+    // Decoded clip sources are prepared on the control thread, then consumed
+    // sample-accurately by the realtime pipeline only while transport is playing.
+    Project clip_project;
+    clip_project.id = "live-clip";
+    clip_project.tracks = {{"clip-track", "Clip", 1.0F, -1.0F, false, false}};
+    clip_project.buses = {{"capture", "Capture"}, {"master", "Master"}};
+    clip_project.routes = {{"capture", "master", SendTap::PostFader, 1.0F}};
+    clip_project.media_sources = {{"tone", "tone.wav", 48000U, 1U, 4U}};
+    clip_project.clips = {{"clip-1", "clip-track", "tone", 0, 0U, 4U, 1.0F, 0U, 0U}};
+    RealtimeProjectAudioPipeline clip_pipeline;
+    assert(!clip_pipeline.configure(clip_project, 4U, error));
+    const std::vector<DecodedMediaBuffer> decoded_clip{{"tone", 1U, {1.0F, 0.5F, 0.25F, 0.125F}}};
+    assert(clip_pipeline.configure(clip_project, decoded_clip, 4U, error));
+    const float silent_input[] = {0.0F, 0.0F, 0.0F, 0.0F};
+    float clip_output[4]{};
+    assert(clip_pipeline.process(silent_input, clip_output, 2U));
+    assert(near(clip_output[0], 0.0F) && near(clip_output[1], 0.0F));
+    clip_pipeline.set_transport_playing(true);
+    assert(clip_pipeline.process(silent_input, clip_output, 2U));
+    assert(near(clip_output[0], 1.0F) && near(clip_output[1], 0.0F));
+    assert(near(clip_output[2], 0.5F) && near(clip_output[3], 0.0F));
+    assert(clip_pipeline.transport_frame() == 2U);
+    assert(clip_pipeline.process(silent_input, clip_output, 2U));
+    assert(near(clip_output[0], 0.25F) && near(clip_output[2], 0.125F));
+    assert(clip_pipeline.transport_frame() == 4U);
+    clip_pipeline.set_transport_playing(false);
+    assert(clip_pipeline.process(silent_input, clip_output, 2U));
+    assert(near(clip_output[0], 0.0F) && near(clip_output[2], 0.0F));
+    assert(clip_pipeline.transport_frame() == 4U);
+    clip_pipeline.seek_transport(1U);
+    clip_pipeline.set_transport_playing(true);
+    assert(clip_pipeline.process(silent_input, clip_output, 2U));
+    assert(near(clip_output[0], 0.5F) && near(clip_output[2], 0.25F));
+
     Project inserted_project = project;
     inserted_project.inserts = {{"music-gain", "music", InsertKind::Gain, true, 0.5F}};
     RealtimeProjectAudioPipeline inserted_pipeline;
