@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -126,6 +127,10 @@ public:
         return pipeline_->enqueue_bus_control(bus_id, gain, mute, solo);
     }
 
+    bool replace_bus_processing(const hush::Project& project, std::string& error) {
+        return pipeline_ && pipeline_->replace_project_bus_processing(project, error);
+    }
+
     // Pipeline buffers are allocated in start(), before the ALSA callback begins.
     bool prepare_output() const noexcept { return true; }
 
@@ -190,6 +195,25 @@ public:
         bus_table_->setMaximumHeight(180);
         layout->addWidget(bus_table_);
 
+        insert_table_ = new QTableWidget(0, 5, root);
+        insert_table_->setObjectName("insertTable");
+        insert_table_->setHorizontalHeaderLabels({"Insert", "Bus", "Type", "Enabled", "Gain"});
+        insert_table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        insert_table_->setMaximumHeight(160);
+        layout->addWidget(insert_table_);
+        auto* insert_buttons = new QHBoxLayout;
+        auto* add_gain_insert = new QPushButton("Add Gain Insert");
+        add_gain_insert->setObjectName("addGainInsertButton");
+        auto* add_soft_clip_insert = new QPushButton("Add Soft Clip Insert");
+        add_soft_clip_insert->setObjectName("addSoftClipInsertButton");
+        auto* remove_insert = new QPushButton("Remove Insert");
+        remove_insert->setObjectName("removeInsertButton");
+        insert_buttons->addWidget(add_gain_insert);
+        insert_buttons->addWidget(add_soft_clip_insert);
+        insert_buttons->addWidget(remove_insert);
+        insert_buttons->addStretch();
+        layout->addLayout(insert_buttons);
+
         // Channel Light: meters are refreshed on the GUI thread from atomic peaks
         // measured in the actual ALSA callback. The callback never touches Qt.
         auto* light_panel = new QWidget(root);
@@ -243,9 +267,29 @@ public:
 
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
+        connect(add_gain_insert, &QPushButton::clicked, this, [this] { add_insert(hush::InsertKind::Gain); });
+        connect(add_soft_clip_insert, &QPushButton::clicked, this, [this] { add_insert(hush::InsertKind::SoftClip); });
+        connect(remove_insert, &QPushButton::clicked, this, [this] { remove_selected_insert(); });
         connect(undo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.cursor() > 0 ? log_.operation_at(log_.cursor() - 1) : nullptr;
             if (!operation) return;
+            if (is_insert_operation(operation->kind)) {
+                Project candidate = project_;
+                hush::OperationLog candidate_log = log_;
+                if (!candidate_log.undo(candidate)) return;
+                std::string error;
+                if (!replace_live_bus_processing(candidate, error)) {
+                    status_->setText("Undo not applied: bus insert graph replacement failed: " +
+                                     QString::fromStdString(error));
+                    return;
+                }
+                project_ = std::move(candidate);
+                log_ = std::move(candidate_log);
+                autosave_dirty_ = true;
+                status_->setText("Undo applied");
+                refresh();
+                return;
+            }
             if (is_bus_operation(operation->kind)) {
                 auto values = bus_control_values(operation->entity_id);
                 if (!values) return;
@@ -277,6 +321,23 @@ public:
         connect(redo, &QPushButton::clicked, this, [this] {
             const auto* operation = log_.operation_at(log_.cursor());
             if (!operation) return;
+            if (is_insert_operation(operation->kind)) {
+                Project candidate = project_;
+                hush::OperationLog candidate_log = log_;
+                if (!candidate_log.redo(candidate)) return;
+                std::string error;
+                if (!replace_live_bus_processing(candidate, error)) {
+                    status_->setText("Redo not applied: bus insert graph replacement failed: " +
+                                     QString::fromStdString(error));
+                    return;
+                }
+                project_ = std::move(candidate);
+                log_ = std::move(candidate_log);
+                autosave_dirty_ = true;
+                status_->setText("Redo applied");
+                refresh();
+                return;
+            }
             if (is_bus_operation(operation->kind)) {
                 auto values = bus_control_values(operation->entity_id);
                 if (!values) return;
@@ -353,6 +414,7 @@ private:
     std::optional<hush::AutosaveController::Clock::time_point> autosave_retry_after_;
     QTableWidget* table_{};
     QTableWidget* bus_table_{};
+    QTableWidget* insert_table_{};
     QLabel* status_{};
     QLabel* input_light_{};
     QLabel* process_light_{};
@@ -541,6 +603,140 @@ private:
         return kind == hush::OperationKind::SetBusGain ||
                kind == hush::OperationKind::SetBusMute ||
                kind == hush::OperationKind::SetBusSolo;
+    }
+
+    static bool is_insert_operation(hush::OperationKind kind) noexcept {
+        return kind == hush::OperationKind::AddBusInsert ||
+               kind == hush::OperationKind::RemoveBusInsert ||
+               kind == hush::OperationKind::SetInsertGain ||
+               kind == hush::OperationKind::SetInsertEnabled ||
+               kind == hush::OperationKind::SetInsertKind;
+    }
+
+    bool replace_live_bus_processing(const hush::Project& candidate, std::string& error) {
+#ifdef HUSH_GUI_HAS_ALSA
+        if (live_.running() && !live_.replace_bus_processing(candidate, error)) return false;
+#else
+        (void)candidate;
+        error.clear();
+#endif
+        return true;
+    }
+
+    bool commit_insert_operation(hush::Operation operation, hush::Project candidate,
+                                 bool refresh_table) {
+        hush::OperationLog candidate_log = log_;
+        if (!candidate_log.apply_and_append(candidate, operation)) return false;
+        std::string error;
+        if (!replace_live_bus_processing(candidate, error)) {
+            status_->setText("Insert edit not applied: graph replacement failed: " +
+                             QString::fromStdString(error));
+            return false;
+        }
+        project_ = std::move(candidate);
+        log_ = std::move(candidate_log);
+        autosave_dirty_ = true;
+        status_->setText("Insert edited · undo history " + QString::number(log_.cursor()));
+        if (refresh_table) refresh_insert_table();
+        return true;
+    }
+
+    void add_insert(hush::InsertKind kind) {
+        if (project_.buses.empty()) {
+            status_->setText("Add a project bus before adding an insert");
+            return;
+        }
+        int row = bus_table_->currentRow();
+        if (row < 0 || static_cast<std::size_t>(row) >= project_.buses.size()) row = 0;
+        const auto& bus_id = project_.buses[static_cast<std::size_t>(row)].id;
+        std::size_t suffix = 1U;
+        std::string id;
+        do {
+            id = bus_id + "-insert-" + std::to_string(suffix++);
+        } while (std::any_of(project_.inserts.begin(), project_.inserts.end(),
+                             [&](const hush::BusInsert& item) { return item.id == id; }));
+        hush::BusInsert insert{id, bus_id, kind, true, 1.0F};
+        hush::Operation operation{id, hush::OperationKind::AddBusInsert, 0.0F, 1.0F};
+        operation.after_insert = insert;
+        operation.after_index = project_.inserts.size();
+        (void)commit_insert_operation(std::move(operation), project_, true);
+    }
+
+    void remove_selected_insert() {
+        const int row = insert_table_->currentRow();
+        if (row < 0 || static_cast<std::size_t>(row) >= project_.inserts.size()) {
+            status_->setText("Select an insert to remove");
+            return;
+        }
+        const auto& insert = project_.inserts[static_cast<std::size_t>(row)];
+        hush::Operation operation{insert.id, hush::OperationKind::RemoveBusInsert, 1.0F, 0.0F};
+        operation.before_insert = insert;
+        operation.before_index = static_cast<std::size_t>(row);
+        (void)commit_insert_operation(std::move(operation), project_, true);
+    }
+
+    void change_insert(const std::string& id, hush::OperationKind kind, float after) {
+        const auto it = std::find_if(project_.inserts.begin(), project_.inserts.end(),
+                                     [&](const hush::BusInsert& insert) { return insert.id == id; });
+        if (it == project_.inserts.end()) return;
+        float before = 0.0F;
+        switch (kind) {
+        case hush::OperationKind::SetInsertGain: before = it->gain; break;
+        case hush::OperationKind::SetInsertEnabled: before = it->enabled ? 1.0F : 0.0F; break;
+        case hush::OperationKind::SetInsertKind:
+            before = it->kind == hush::InsertKind::SoftClip ? 1.0F : 0.0F;
+            break;
+        default: return;
+        }
+        if (before == after) return;
+        hush::Operation operation{id, kind, before, after};
+        (void)commit_insert_operation(std::move(operation), project_, false);
+    }
+
+    void refresh_insert_table() {
+        insert_table_->setRowCount(static_cast<int>(project_.inserts.size()));
+        for (std::size_t i = 0; i < project_.inserts.size(); ++i) {
+            const auto& insert = project_.inserts[i];
+            const int row = static_cast<int>(i);
+            auto* id = new QTableWidgetItem(QString::fromStdString(insert.id));
+            id->setFlags(id->flags() & ~Qt::ItemIsEditable);
+            insert_table_->setItem(row, 0, id);
+            auto* bus = new QTableWidgetItem(QString::fromStdString(insert.bus_id));
+            bus->setFlags(bus->flags() & ~Qt::ItemIsEditable);
+            insert_table_->setItem(row, 1, bus);
+            auto* kind = new QComboBox;
+            kind->setObjectName(QString("kind-insert-%1").arg(QString::fromStdString(insert.id)));
+            kind->addItem("Gain");
+            kind->addItem("Soft Clip");
+            kind->setCurrentIndex(insert.kind == hush::InsertKind::SoftClip ? 1 : 0);
+            insert_table_->setCellWidget(row, 2, kind);
+            auto* enabled = new QCheckBox("Enabled");
+            enabled->setObjectName(QString("enabled-insert-%1").arg(QString::fromStdString(insert.id)));
+            enabled->setChecked(insert.enabled);
+            insert_table_->setCellWidget(row, 3, enabled);
+            auto* gain = new QSlider(Qt::Horizontal);
+            gain->setObjectName(QString("gain-insert-%1").arg(QString::fromStdString(insert.id)));
+            gain->setRange(0, 1600);
+            gain->setValue(static_cast<int>(insert.gain * 100.0F));
+            gain->setToolTip("Insert gain 0.00–16.00 (used by Gain insert)");
+            insert_table_->setCellWidget(row, 4, gain);
+            const auto insert_id = insert.id;
+            connect(kind, qOverload<int>(&QComboBox::currentIndexChanged), this,
+                    [this, insert_id](int index) {
+                        change_insert(insert_id, hush::OperationKind::SetInsertKind,
+                                      index == 0 ? 0.0F : 1.0F);
+                    });
+            connect(enabled, &QCheckBox::clicked, this,
+                    [this, enabled, insert_id] {
+                        change_insert(insert_id, hush::OperationKind::SetInsertEnabled,
+                                      enabled->isChecked() ? 1.0F : 0.0F);
+                    });
+            connect(gain, &QSlider::sliderReleased, this,
+                    [this, gain, insert_id] {
+                        change_insert(insert_id, hush::OperationKind::SetInsertGain,
+                                      gain->value() / 100.0F);
+                    });
+        }
     }
 
     std::optional<BusControlValues> bus_control_values(const std::string& id) const {
@@ -901,6 +1097,7 @@ private:
 #endif
         }
         refresh_bus_table();
+        refresh_insert_table();
     }
 protected:
     void closeEvent(QCloseEvent* event) override {
