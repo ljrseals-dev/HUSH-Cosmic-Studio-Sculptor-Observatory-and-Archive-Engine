@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 namespace hush {
-enum class OperationKind { SetGain, SetPan, SetMute, SetSolo };
+enum class OperationKind { SetGain, SetPan, SetMute, SetSolo, SetBusGain, SetBusMute, SetBusSolo };
 struct Operation { std::string entity_id; OperationKind kind{}; float before_value{}; float after_value{}; };
 class OperationLog {
 public:
