@@ -15,6 +15,7 @@ int main() {
  assert(!graph.configure(buses,{{"drums","missing",SendTap::PostFader,1.0F}},error) && error.code=="bus_route_unknown_bus");
  assert(!graph.configure(buses,{{"drums","master",SendTap::PostFader,-1.0F}},error) && error.code=="bus_route_gain_invalid");
  assert(!graph.configure({{"dup","One"},{"dup","Two"}},{},error) && error.code=="bus_id_duplicate");
+ assert(!graph.configure({{"gain","Invalid",17.0F,false,false}},{},error) && error.code=="bus_gain_invalid");
  assert(!graph.configure(buses,{{"master","master",SendTap::PostFader,1.0F}},error) && error.code=="bus_route_self_cycle");
 
  // The host uses the persisted bus graph and deterministic input/master IDs.
