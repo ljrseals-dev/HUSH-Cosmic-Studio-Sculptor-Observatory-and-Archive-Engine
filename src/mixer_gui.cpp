@@ -657,6 +657,7 @@ private:
         case hush::OperationKind::SetPan: controls.pan = value; break;
         case hush::OperationKind::SetMute: controls.mute = value != 0.0F; break;
         case hush::OperationKind::SetSolo: controls.solo = value != 0.0F; break;
+        default: break;
         }
     }
 
