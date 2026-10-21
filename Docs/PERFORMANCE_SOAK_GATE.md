@@ -31,3 +31,8 @@ The output contains start/end RSS, positive drift, snapshot count, rejected upda
 ## CI coverage versus qualification
 
 CTest smoke-runs both harnesses at short duration to catch launch, JSON/status, and journal-write regressions. Smoke tests do not replace the full 500-track run or the 28,800-second soak. A qualifying run must preserve JSON output and record the commit SHA, OS/kernel, CPU, command, duration, configured threshold, and result. Do not claim either long gate passed until the corresponding full-duration report exists.
+
+
+## CI 500-track report artifact
+
+The Linux C++20 job now runs a 10-second, 500-track synthetic benchmark with the documented 2,666.667 µs p99 block budget and uploads `hush-500-track-performance-<run-id>` as a workflow artifact. The JSON includes the tested commit SHA, UTC timestamp, runner OS/kernel/CPU, exact command, benchmark result, and an explicit software-only qualification note. The job fails if the benchmark exits nonzero. This improves repeatable CI evidence and catches gross regressions, but shared-runner timing is noisy and is **not** a substitute for a qualifying report from the target machine. The eight-hour soak remains a separate required run.

@@ -54,6 +54,57 @@ jobs:
           ./build/hush_headless_soak 1 /tmp/hush-soak-smoke.journal | tee /tmp/hush-headless-soak.json
           python3 -c 'import json; [json.load(open(p)) for p in ("/tmp/hush-routing-benchmark.json", "/tmp/hush-headless-soak.json")]'
           rm -f /tmp/hush-soak-smoke.journal
+      - name: Run 500-track software performance gate and capture report
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts
+          set +e
+          ./build/hush_routing_benchmark 500 10 2666.667 > artifacts/hush-routing-500-ci.json
+          benchmark_exit=$?
+          set -e
+          python3 - "$GITHUB_SHA" "$benchmark_exit" <<'PY'
+          import datetime, json, os, platform, subprocess, sys
+          path = "artifacts/hush-routing-500-ci.json"
+          try:
+              with open(path, encoding="utf-8") as stream:
+                  report = json.load(stream)
+          except (OSError, json.JSONDecodeError):
+              report = {"status": "not_run", "reason": "benchmark did not emit valid JSON"}
+          cpu = platform.processor() or "unknown"
+          try:
+              with open("/proc/cpuinfo", encoding="utf-8") as stream:
+                  for line in stream:
+                      if line.lower().startswith("model name"):
+                          cpu = line.split(":", 1)[1].strip()
+                          break
+          except OSError:
+              pass
+          report.update({
+              "report_kind": "github_actions_synthetic_software_benchmark",
+              "tested_commit_sha": sys.argv[1],
+              "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "os": platform.platform(),
+              "kernel": platform.release(),
+              "cpu": cpu,
+              "command": "./build/hush_routing_benchmark 500 10 2666.667",
+              "benchmark_exit_code": int(sys.argv[2]),
+              "qualification_note": "CI runner timing is software-only evidence; not a target-machine, ALSA, latency-loopback, or zero-xrun qualification.",
+              "hardware_audio_test": False,
+          })
+          with open(path, "w", encoding="utf-8") as stream:
+              json.dump(report, stream, indent=2, sort_keys=True)
+              stream.write("\n")
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+          exit "$benchmark_exit"
+      - name: Upload 500-track performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hush-500-track-performance-${{ github.run_id }}
+          path: artifacts/hush-routing-500-ci.json
+          if-no-files-found: ignore
 
   linux-alsa-enabled:
     runs-on: ubuntu-latest
