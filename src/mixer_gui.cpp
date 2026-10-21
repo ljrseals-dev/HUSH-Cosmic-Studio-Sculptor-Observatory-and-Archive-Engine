@@ -121,6 +121,7 @@ public:
 
     bool enqueue_bus_control_values(const hush::Project& project, const std::string& bus_id,
                                     float gain, bool mute, bool solo) noexcept {
+        (void)project;
         if (!pipeline_) return false;
         return pipeline_->enqueue_bus_control(bus_id, gain, mute, solo);
     }
@@ -694,6 +695,7 @@ private:
         case hush::OperationKind::SetPan: before = it->pan; break;
         case hush::OperationKind::SetMute: before = it->mute ? 1.0F : 0.0F; break;
         case hush::OperationKind::SetSolo: before = it->solo ? 1.0F : 0.0F; break;
+        default: return;
         }
         if (before == after) return;
         auto values = LiveControlValues{it->gain, it->pan, it->mute, it->solo};
