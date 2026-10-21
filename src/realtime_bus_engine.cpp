@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include <utility>
+#include <unordered_map>
 
 namespace hush {
 
@@ -22,13 +23,30 @@ bool RealtimeBusEngine::configure(const BusGraph& graph, std::size_t max_frames,
     std::vector<float> new_fader_gains;
     std::vector<bool> new_muted;
     std::vector<bool> new_soloed;
+    std::vector<bool> new_solo_audible(graph.buses().size(), false);
+    std::vector<std::pair<std::size_t, std::size_t>> new_route_edges;
+    new_route_edges.reserve(graph.routes().size());
     new_fader_gains.reserve(graph.buses().size());
     new_muted.reserve(graph.buses().size());
     new_soloed.reserve(graph.buses().size());
-    for (const auto& bus : graph.buses()) {
+    std::unordered_map<std::string, std::size_t> bus_indices;
+    bus_indices.reserve(graph.buses().size());
+    for (std::size_t i = 0; i < graph.buses().size(); ++i) {
+        const auto& bus = graph.buses()[i];
+        bus_indices.emplace(bus.id, i);
         new_fader_gains.push_back(bus.gain);
         new_muted.push_back(bus.mute);
         new_soloed.push_back(bus.solo);
+    }
+    for (const auto& route : graph.routes()) {
+        const auto source = bus_indices.find(route.source_bus_id);
+        const auto destination = bus_indices.find(route.destination_bus_id);
+        if (source == bus_indices.end() || destination == bus_indices.end()) {
+            error = {"bus_route_unknown_bus", route.source_bus_id,
+                     "Validated graph unexpectedly references an unknown bus"};
+            return false;
+        }
+        new_route_edges.emplace_back(source->second, destination->second);
     }
     if (!processor_.configure(graph, max_frames, error)) return false;
 
@@ -36,6 +54,8 @@ bool RealtimeBusEngine::configure(const BusGraph& graph, std::size_t max_frames,
     fader_gains_.swap(new_fader_gains);
     muted_.swap(new_muted);
     soloed_.swap(new_soloed);
+    solo_audible_.swap(new_solo_audible);
+    route_edges_.swap(new_route_edges);
     configured_ = true;
     error = {};
     return true;
@@ -91,9 +111,29 @@ RealtimeProcessStatus RealtimeBusEngine::process(const BusAudioInputView* inputs
     }
 
     bool any_solo = false;
-    for (const bool solo : soloed_) any_solo = any_solo || solo;
+    std::fill(solo_audible_.begin(), solo_audible_.end(), false);
+    for (std::size_t i = 0; i < soloed_.size(); ++i) {
+        if (soloed_[i]) {
+            any_solo = true;
+            solo_audible_[i] = true;
+        }
+    }
+    // Solo keeps every downstream bus on the path to the master audible. The
+    // bounded fixed-point walk uses only preallocated storage and cannot allocate.
+    if (any_solo) {
+        for (std::size_t pass = 0; pass < soloed_.size(); ++pass) {
+            bool changed = false;
+            for (const auto& edge : route_edges_) {
+                if (solo_audible_[edge.first] && !solo_audible_[edge.second]) {
+                    solo_audible_[edge.second] = true;
+                    changed = true;
+                }
+            }
+            if (!changed) break;
+        }
+    }
     for (std::size_t i = 0; i < input_count; ++i) {
-        const bool suppressed = muted_[i] || (any_solo && !soloed_[i]);
+        const bool suppressed = muted_[i] || (any_solo && !solo_audible_[i]);
         const float effective_gain = suppressed ? 0.0F : fader_gains_[i];
         input_scratch_[i] = {inputs[i].left, inputs[i].right, effective_gain};
     }
