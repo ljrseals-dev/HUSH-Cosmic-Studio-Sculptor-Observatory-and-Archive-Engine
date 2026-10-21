@@ -1,7 +1,10 @@
 #include "hush/realtime_project_audio_pipeline.hpp"
+#include "hush/recording_session.hpp"
 
 #include <cassert>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace {
@@ -57,5 +60,26 @@ int main() {
     assert(fallback.process(mono_input, fallback_output, 1U));
     assert(near(fallback_output[0], std::sqrt(0.5F)));
     assert(near(fallback_output[1], std::sqrt(0.5F)));
+
+    // Explicit capture recording uses the SPSC ring and finalizes a float WAV off-thread.
+    const auto wav_path = std::filesystem::temp_directory_path() / "hush-pipeline-recording-test.wav";
+    std::error_code cleanup_error;
+    std::filesystem::remove(wav_path, cleanup_error);
+    RecordingSession recording;
+    assert(recording.start(wav_path, 48000U, 2U, 32U, 4U, &error));
+    fallback.set_recording_session(&recording);
+    assert(fallback.process(mono_input, fallback_output, 1U));
+    assert(fallback.process(mono_input, fallback_output, 1U));
+    fallback.set_recording_session(nullptr);
+    assert(recording.stop(&error));
+    assert(recording.frames_written() == 2U);
+    assert(recording.dropped_frames() == 0U);
+    std::ifstream wav(wav_path, std::ios::binary);
+    assert(wav.good());
+    char header[4]{};
+    wav.read(header, 4);
+    assert(header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F');
+    wav.close();
+    std::filesystem::remove(wav_path, cleanup_error);
     return 0;
 }
