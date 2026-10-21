@@ -127,16 +127,12 @@ RealtimeProcessStatus RealtimeProjectMixer::process(const float* const* mono_tra
                                                     float* output_left,
                                                     float* output_right) noexcept {
     if (output_left == nullptr || output_right == nullptr) return RealtimeProcessStatus::NullChannel;
-    if (!configured_) {
-        std::fill_n(output_left, frames, 0.0F);
-        std::fill_n(output_right, frames, 0.0F);
-        return RealtimeProcessStatus::NotConfigured;
-    }
-    if (frames > max_frames_) {
-        std::fill_n(output_left, frames, 0.0F);
-        std::fill_n(output_right, frames, 0.0F);
-        return RealtimeProcessStatus::FrameCountExceedsCapacity;
-    }
+    // Output capacity is defined by the caller's frame count, while this
+    // processor only owns scratch for max_frames_. On an unconfigured/oversized
+    // call, do not touch output memory whose valid extent cannot be inferred.
+    // Device adapters must explicitly silence their full device buffer on failure.
+    if (!configured_) return RealtimeProcessStatus::NotConfigured;
+    if (frames > max_frames_) return RealtimeProcessStatus::FrameCountExceedsCapacity;
     if (!router_.process(mono_tracks, track_count, frames)) {
         std::fill_n(output_left, frames, 0.0F);
         std::fill_n(output_right, frames, 0.0F);
