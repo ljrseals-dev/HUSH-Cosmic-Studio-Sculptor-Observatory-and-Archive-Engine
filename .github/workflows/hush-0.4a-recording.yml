@@ -1,0 +1,39 @@
+name: HUSH 0.4a recording foundation
+on:
+  push:
+    branches:
+      - work/prompt-4-0.4a-recording-completion
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Configure offline core build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DHUSH_BUILD_TESTS=ON -DHUSH_ENABLE_ALSA=OFF -DHUSH_BUILD_GUI=OFF
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Create source archive and checksum
+        shell: bash
+        run: |
+          mkdir -p dist
+          git archive --format=zip --prefix=HUSH-Cosmic-Studio-0.4a/ HEAD > dist/HUSH-Cosmic-Studio-0.4a-source.zip
+          sha256sum dist/HUSH-Cosmic-Studio-0.4a-source.zip > dist/HUSH-Cosmic-Studio-0.4a-source.zip.sha256
+          unzip -t dist/HUSH-Cosmic-Studio-0.4a-source.zip
+      - name: Upload verified source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: HUSH-Cosmic-Studio-0.4a-source
+          path: |
+            dist/HUSH-Cosmic-Studio-0.4a-source.zip
+            dist/HUSH-Cosmic-Studio-0.4a-source.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
