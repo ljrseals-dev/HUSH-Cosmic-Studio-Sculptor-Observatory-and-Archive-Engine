@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace hush {
@@ -69,6 +70,8 @@ private:
     std::vector<float> fader_gains_;
     std::vector<bool> muted_;
     std::vector<bool> soloed_;
+    std::vector<bool> solo_audible_;
+    std::vector<std::pair<std::size_t, std::size_t>> route_edges_;
     bool configured_{false};
 };
 
