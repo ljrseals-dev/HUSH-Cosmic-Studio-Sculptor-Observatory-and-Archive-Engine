@@ -28,7 +28,7 @@ const auto status = mixer.process(track_buffers, track_count, frames,
                                   output_left, output_right);
 ```
 
-The processing method is preallocated and does not allocate, lock, log, or perform I/O. `enqueue_track_control()` is a single-producer control-thread API; commands are applied at the next block boundary. `reclaim_retired()` must only be called from the serialized control thread. Stop/join the audio reader before destroying the mixer or changing topology.
+The processing method is preallocated and does not allocate, lock, log, or perform I/O. `enqueue_track_control()` is a single-producer control-thread API; commands are applied at the next block boundary. `reclaim_retired()` must only be called from the serialized control thread. Stop/join the audio reader before destroying the mixer or changing topology. If `process()` returns `NotConfigured` or `FrameCountExceedsCapacity`, it leaves output memory untouched because its valid extent cannot be inferred; a device adapter must silence its complete output buffer on any failed processing status.
 
 ## Evidence and limits
 
