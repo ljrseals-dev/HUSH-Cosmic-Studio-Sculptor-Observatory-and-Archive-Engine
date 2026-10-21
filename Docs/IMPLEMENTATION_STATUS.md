@@ -30,7 +30,7 @@
 - [ ] 500-track performance report with configurable budget.
 - [ ] 8-hour soak report with an explicit memory-growth bound.
 - [ ] Power-loss durability: explicitly not claimed. Current coverage is process-restart recovery of completed records and truncated-tail handling.
-- [ ] Autosave controller integrated into an application lifecycle with save-failure surfacing.
+- [x] Qt mixer lifecycle now polls the existing autosave controller on the GUI thread, writes snapshots only to the local application-data recovery journal, offers an explicit startup recovery choice, flushes and clears the recovery journal after a successful manual project save/load, and attempts a final recovery snapshot on close. Autosave write failures are surfaced in the status bar; close-time failure asks before exiting. This is source integration, not power-loss durability, and fresh CI for this commit is pending.
 - [ ] Review the contents and intended disposition of the committed `hush-daw-codex-hush-processor-integration-starter (1).zip`; do not delete or relocate it before review.
 - [ ] Optional JACK/PipeWire backends and preservation of historical 0.1.0 tests are not present in this source archive.
 
