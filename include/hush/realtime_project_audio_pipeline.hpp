@@ -32,6 +32,8 @@ public:
     bool configure(const Project& project, std::size_t max_frames, std::string& error);
     [[nodiscard]] bool enqueue_track_control(std::size_t track_index, float gain,
                                              float pan, bool mute, bool solo) noexcept;
+    [[nodiscard]] bool enqueue_bus_control(const std::string& bus_id, float gain,
+                                           bool mute, bool solo) noexcept;
     // Attach/detach on the control thread before/after the device runs. The capture
     // ring is SPSC and the disk writer remains on its own non-realtime worker.
     void set_recording_session(RecordingSession* session) noexcept { recording_ = session; }
@@ -66,6 +68,7 @@ private:
     std::unique_ptr<AtomicBusInputMeter[]> bus_input_meters_;
     std::size_t bus_meter_count_{0};
     RecordingSession* recording_{nullptr};
+    std::vector<std::string> bus_ids_;
     std::string input_bus_id_;
     std::string master_bus_id_;
     std::size_t max_frames_{0};
