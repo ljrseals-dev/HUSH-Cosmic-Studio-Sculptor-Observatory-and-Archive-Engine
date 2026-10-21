@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QComboBox>
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -49,7 +50,8 @@ class LiveMixer final {
 public:
     static constexpr std::size_t kMaxFrames = 4096;
 
-    bool start(const hush::Project& project, std::string& error) {
+    bool start(const hush::Project& project, const std::filesystem::path& project_directory,
+               std::string& error) {
         stop();
         if (project.tracks.empty()) {
             error = "The project has no tracks.";
@@ -57,9 +59,10 @@ public:
         }
 
         auto pipeline = std::make_unique<hush::RealtimeProjectAudioPipeline>();
-        if (!pipeline->configure(project, kMaxFrames, error)) {
-            return false;
-        }
+        const bool configured = project.clips.empty()
+            ? pipeline->configure(project, kMaxFrames, error)
+            : pipeline->configure_from_project_directory(project, project_directory, kMaxFrames, error);
+        if (!configured) return false;
         pipeline_ = std::move(pipeline);
 
         hush::AlsaAudioBackend::Config config;
@@ -131,6 +134,16 @@ public:
         return pipeline_ && pipeline_->replace_project_bus_processing(project, error);
     }
 
+    void set_transport_playing(bool playing) noexcept {
+        if (pipeline_) pipeline_->set_transport_playing(playing);
+    }
+    [[nodiscard]] bool transport_playing() const noexcept {
+        return pipeline_ && pipeline_->transport_playing();
+    }
+    void seek_transport(std::uint64_t frame) noexcept {
+        if (pipeline_) pipeline_->seek_transport(frame);
+    }
+
     // Pipeline buffers are allocated in start(), before the ALSA callback begins.
     bool prepare_output() const noexcept { return true; }
 
@@ -173,6 +186,13 @@ public:
         bar->addWidget(undo);
         bar->addWidget(redo);
         bar->addWidget(live_button_);
+        transport_button_ = new QPushButton("Play Timeline");
+        transport_button_->setObjectName("playTimelineButton");
+#ifndef HUSH_GUI_HAS_ALSA
+        transport_button_->setEnabled(false);
+        transport_button_->setToolTip("Configure with -DHUSH_ENABLE_ALSA=ON to play local project clips.");
+#endif
+        bar->addWidget(transport_button_);
         bar->addStretch();
         bar->addWidget(status_);
         layout->addLayout(bar);
@@ -368,6 +388,7 @@ public:
         });
 #ifdef HUSH_GUI_HAS_ALSA
         connect(live_button_, &QPushButton::clicked, this, [this] { toggle_live(); });
+        connect(transport_button_, &QPushButton::clicked, this, [this] { toggle_transport(); });
         connect(&status_timer_, &QTimer::timeout, this, [this] { poll_live_status(); poll_channel_light(); });
         status_timer_.start(250);
 #endif
@@ -425,6 +446,7 @@ private:
     QLabel* bus_input_meter_label_{};
     QLabel* bus_output_meter_label_{};
     QPushButton* live_button_{};
+    QPushButton* transport_button_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
@@ -978,6 +1000,17 @@ private:
         }
     }
 
+    void toggle_transport() {
+        if (!live_.running() || project_.clips.empty()) {
+            status_->setText("Start Live ALSA with a project containing clips before timeline playback");
+            return;
+        }
+        const bool playing = !live_.transport_playing();
+        live_.set_transport_playing(playing);
+        transport_button_->setText(playing ? "Pause Timeline" : "Play Timeline");
+        status_->setText(playing ? "Timeline playback active" : "Timeline playback paused");
+    }
+
     void toggle_live() {
         if (live_.running()) {
             live_.stop();
@@ -991,7 +1024,10 @@ private:
             return;
         }
         std::string error;
-        if (!live_.start(project_, error)) {
+        const auto project_directory = project_path_.isEmpty()
+            ? std::filesystem::path{}
+            : std::filesystem::path(QFileInfo(project_path_).absolutePath().toStdString());
+        if (!live_.start(project_, project_directory, error)) {
             status_->setText("ALSA start failed: " + QString::fromStdString(error));
             return;
         }
@@ -1098,6 +1134,13 @@ private:
         }
         refresh_bus_table();
         refresh_insert_table();
+#ifdef HUSH_GUI_HAS_ALSA
+        const bool can_play_timeline = live_.running() && !project_.clips.empty();
+        transport_button_->setEnabled(can_play_timeline);
+        transport_button_->setText(live_.transport_playing() ? "Pause Timeline" : "Play Timeline");
+#else
+        transport_button_->setEnabled(false);
+#endif
     }
 protected:
     void closeEvent(QCloseEvent* event) override {
