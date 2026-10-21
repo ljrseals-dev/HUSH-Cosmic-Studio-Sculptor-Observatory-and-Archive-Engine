@@ -123,6 +123,49 @@ bool RealtimeProjectAudioPipeline::enqueue_bus_control(const std::string& bus_id
     return false;
 }
 
+bool RealtimeProjectAudioPipeline::replace_project_bus_processing(
+    const Project& project, std::string& error) {
+    if (!configured_) {
+        error = "project_pipeline_not_configured";
+        return false;
+    }
+    try {
+        ProjectRuntimeGraph runtime_graph;
+        RoutingError routing_error;
+        if (!configure_project_runtime_graph(project, runtime_graph, routing_error)) {
+            error = routing_error.code + ": " + routing_error.message;
+            return false;
+        }
+        if (runtime_graph.graph.buses().size() != bus_ids_.size()) {
+            error = "bus_processing_edit_cannot_change_topology";
+            return false;
+        }
+        for (std::size_t i = 0; i < bus_ids_.size(); ++i) {
+            if (runtime_graph.graph.buses()[i].id != bus_ids_[i]) {
+                error = "bus_processing_edit_cannot_change_topology";
+                return false;
+            }
+        }
+        ProcessorSetupError setup_error;
+        if (!engine_host_.replace_graph(runtime_graph.graph, max_frames_,
+                                        runtime_graph.master_bus_id, setup_error,
+                                        project.inserts)) {
+            error = setup_error.code + ": " + setup_error.message;
+            return false;
+        }
+        input_bus_id_ = std::move(runtime_graph.input_bus_id);
+        master_bus_id_ = std::move(runtime_graph.master_bus_id);
+        error.clear();
+        return true;
+    } catch (const std::exception&) {
+        error = "project_bus_processing_replacement_failed";
+        return false;
+    } catch (...) {
+        error = "project_bus_processing_replacement_failed";
+        return false;
+    }
+}
+
 bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
                                            float* interleaved_output,
                                            std::size_t frames) noexcept {
