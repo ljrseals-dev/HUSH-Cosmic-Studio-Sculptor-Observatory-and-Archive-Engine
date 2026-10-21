@@ -44,7 +44,7 @@ public:
     std::array<const float*, 2> inputs{};
     std::array<float, 1> output_left{};
     std::array<float, 1> output_right{};
-}
+};
 
 QSlider* slider(MixerWindow& window, const QString& name) {
     return window.findChild<QSlider*>(name);
