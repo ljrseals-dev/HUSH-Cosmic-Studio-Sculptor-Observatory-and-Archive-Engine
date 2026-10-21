@@ -29,6 +29,9 @@ std::string law_name(PanLaw law) {
 std::string tap_name(SendTap tap) {
     return tap == SendTap::PreFader ? "pre_fader" : "post_fader";
 }
+std::string insert_kind_name(InsertKind kind) {
+    return kind == InsertKind::SoftClip ? "soft_clip" : "gain";
+}
 bool extract_array(const std::string& s, const std::string& key, std::string& body, bool required, Error& e) {
     const auto key_pos=s.find("\"" + key + "\"");
     if (key_pos==std::string::npos) {
@@ -88,6 +91,16 @@ std::string to_json(const Project& p) {
           << "\", \"tap\": \"" << tap_name(r.tap) << "\", \"gain\": " << r.gain << "}";
     }
     if (!p.routes.empty()) o << "\n  ";
+    o << "],\n  \"inserts\": [";
+    for (std::size_t i=0;i<p.inserts.size();++i) {
+        const auto& insert=p.inserts[i];
+        o << (i ? ",\n" : "\n") << "    {\"id\": \"" << escape_json(insert.id)
+          << "\", \"bus_id\": \"" << escape_json(insert.bus_id)
+          << "\", \"kind\": \"" << insert_kind_name(insert.kind)
+          << "\", \"enabled\": " << (insert.enabled ? "true" : "false")
+          << ", \"gain\": " << insert.gain << "}";
+    }
+    if (!p.inserts.empty()) o << "\n  ";
     o << "],\n  \"media_sources\": [";
     for (std::size_t i=0;i<p.media_sources.size();++i) {
         const auto& source=p.media_sources[i];
@@ -209,6 +222,32 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         if (!graph.configure(p.buses,p.routes,routing_error)) {
             e={routing_error.code,routing_error.entity_id,routing_error.message,"error"}; return false;
         }
+    }
+
+    if (!extract_array(s,"inserts",body,false,e)) return false;
+    const std::regex insert_re(R"json(\{\s*"id"\s*:\s*"([^"]*)"\s*,\s*"bus_id"\s*:\s*"([^"]*)"\s*,\s*"kind"\s*:\s*"(gain|soft_clip)"\s*,\s*"enabled"\s*:\s*(true|false)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
+    begin=std::sregex_iterator(body.begin(),body.end(),insert_re);
+    std::unordered_set<std::string> insert_ids;
+    for (auto it=begin;it!=end;++it) {
+        const auto& x=*it;
+        try {
+            BusInsert insert;
+            insert.id=x[1].str(); insert.bus_id=x[2].str();
+            insert.kind=x[3].str()=="soft_clip" ? InsertKind::SoftClip : InsertKind::Gain;
+            insert.enabled=x[4].str()=="true";
+            insert.gain=std::stof(x[5].str());
+            const auto bus=std::find_if(p.buses.begin(),p.buses.end(),
+                [&](const Bus& candidate){ return candidate.id==insert.bus_id; });
+            if (insert.id.empty() || insert.bus_id.empty() || !insert_ids.insert(insert.id).second ||
+                bus==p.buses.end() || !std::isfinite(insert.gain) ||
+                insert.gain<0.0F || insert.gain>16.0F) {
+                e={"bus_insert_invalid",insert.id,"Insert ID, bus reference, or gain is invalid","error"}; return false;
+            }
+            p.inserts.push_back(std::move(insert));
+        } catch (...) { e={"bus_insert_gain_invalid",x[1].str(),"Insert gain is invalid","error"}; return false; }
+    }
+    if (body.find('{')!=std::string::npos && p.inserts.empty()) {
+        e={"bus_insert_parse_failed","","Insert object did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"media_sources",body,false,e)) return false;
