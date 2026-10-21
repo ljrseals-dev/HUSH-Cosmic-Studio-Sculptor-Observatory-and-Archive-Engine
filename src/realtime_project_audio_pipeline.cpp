@@ -116,6 +116,12 @@ bool RealtimeProjectAudioPipeline::process(const float* interleaved_input,
     }
     if (frames == 0U) return true;
 
+    if (recording_ != nullptr) {
+        // Capture the raw stereo input into the preallocated SPSC ring. Disk I/O is
+        // performed only by RecordingSession's worker thread.
+        (void)recording_->capture(std::span<const float>(interleaved_input, frames * 2U));
+    }
+
     float input_peak = 0.0F;
     for (std::size_t i = 0; i < frames * 2U; ++i)
         input_peak = std::max(input_peak, std::abs(interleaved_input[i]));
