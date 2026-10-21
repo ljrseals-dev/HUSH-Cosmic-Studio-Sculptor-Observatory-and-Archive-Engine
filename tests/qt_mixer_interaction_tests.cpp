@@ -1,13 +1,18 @@
 #define HUSH_GUI_TESTING 1
 #include "../src/mixer_gui.cpp"
 
+#include "hush/recovery_journal.hpp"
+
 #include <QCheckBox>
+#include <QFile>
 #include <QLabel>
 #include <QMetaObject>
 #include <QPushButton>
 #include <QSlider>
+#include <QTemporaryDir>
 #include <cassert>
 #include <cmath>
+#include <filesystem>
 
 namespace {
 bool near(float actual, float expected) {
@@ -22,6 +27,15 @@ QCheckBox* check_box(MixerWindow& window, const QString& name) {
 }
 QPushButton* button(MixerWindow& window, const QString& name) {
     return window.findChild<QPushButton*>(name);
+}
+
+bool write_project_file(const QString& path, const hush::Project& project) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
+    const auto json = hush::to_json(project);
+    return file.write(json.data(), static_cast<qint64>(json.size())) ==
+               static_cast<qint64>(json.size()) &&
+           file.flush();
 }
 } // namespace
 
@@ -77,5 +91,48 @@ int main(int argc, char** argv) {
     solo->click();
     assert(window.test_project().tracks[0].solo);
     assert(window.test_history_cursor() == 4U);
+
+    // Exercise the same production project-load/recovery path without a modal prompt.
+    // Accepting recovery restores the latest snapshot, marks the session dirty, and
+    // lets the normal GUI autosave poll persist a fresh recovery record off-callback.
+    QTemporaryDir temp;
+    assert(temp.isValid());
+    const QString accepted_path = temp.filePath("accepted.json");
+    hush::Project saved;
+    saved.id = "recovery-accepted";
+    saved.tracks.push_back({"track-a", "Saved", 1.0F, 0.0F, false, false});
+    assert(write_project_file(accepted_path, saved));
+    auto recovered = saved;
+    recovered.tracks[0].gain = 0.37F;
+    const std::filesystem::path accepted_journal(
+        (accepted_path + ".hush-recovery.journal").toStdString());
+    hush::Error journal_error;
+    assert(hush::RecoveryJournal(accepted_journal).append_snapshot(recovered, journal_error));
+
+    assert(window.test_load_project_from_path(accepted_path, true));
+    assert(near(window.test_project().tracks[0].gain, 0.37F));
+    assert(window.test_status_text().contains("Recovered journal snapshot"));
+    assert(std::filesystem::exists(accepted_journal));
+    window.test_poll_autosave();
+    hush::Project latest;
+    assert(hush::RecoveryJournal(accepted_journal).recover_latest(latest, journal_error));
+    assert(near(latest.tracks[0].gain, 0.37F));
+
+    // Declining recovery must load the saved project and remove the declined journal
+    // so the same stale recovery is not offered on the next launch.
+    const QString declined_path = temp.filePath("declined.json");
+    saved.id = "recovery-declined";
+    saved.tracks[0].gain = 0.81F;
+    assert(write_project_file(declined_path, saved));
+    recovered = saved;
+    recovered.tracks[0].gain = 0.22F;
+    const std::filesystem::path declined_journal(
+        (declined_path + ".hush-recovery.journal").toStdString());
+    assert(hush::RecoveryJournal(declined_journal).append_snapshot(recovered, journal_error));
+    assert(window.test_load_project_from_path(declined_path, false));
+    assert(near(window.test_project().tracks[0].gain, 0.81F));
+    assert(!std::filesystem::exists(declined_journal));
+    assert(window.test_status_text().contains("Loaded"));
+
     return 0;
 }
