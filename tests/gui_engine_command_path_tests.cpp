@@ -91,6 +91,21 @@ int main() {
     expect_near(out_l[0], 0.25F);
     expect_near(out_r[0], 1.0F);
 
+    // Pan drag preview changes the next block without mutating the project or
+    // creating history until the user releases the slider.
+    assert(enqueue_preview(project, engine, "track-left", 0.25F, 0.0F));
+    assert(project.tracks[0].pan == -1.0F);
+    assert(history.size() == 0);
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F * 0.70710678F);
+    expect_near(out_r[0], 1.0F + 0.25F * 0.70710678F);
+
+    // Restore the preview state before exercising the committed gain edit.
+    assert(enqueue_preview(project, engine, "track-left", 0.25F, -1.0F));
+    assert(engine.process(inputs, 2, out_l, out_r, 2));
+    expect_near(out_l[0], 0.25F);
+    expect_near(out_r[0], 1.0F);
+
     // Slider release commits one undoable operation through the same queue.
     assert(commit_live_gain(project, history, engine, "track-left", 0.25F));
     assert(engine.process(inputs, 2, out_l, out_r, 2));
