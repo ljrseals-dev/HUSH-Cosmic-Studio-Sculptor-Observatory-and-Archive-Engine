@@ -23,6 +23,7 @@ add_library(hush_core
     src/preallocated_bus_processor.cpp
     src/realtime_bus_engine.cpp
     src/realtime_track_mixer.cpp
+    src/realtime_track_bus_router.cpp
     src/realtime_bus_audio_adapter.cpp
     src/published_realtime_bus_audio_adapter.cpp
     src/recovery_journal.cpp
@@ -143,6 +144,10 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_realtime_track_mixer_tests tests/realtime_track_mixer_tests.cpp)
   target_link_libraries(hush_realtime_track_mixer_tests PRIVATE hush_core)
   add_test(NAME hush_realtime_track_mixer_tests COMMAND hush_realtime_track_mixer_tests)
+
+  add_executable(hush_realtime_track_bus_router_tests tests/realtime_track_bus_router_tests.cpp)
+  target_link_libraries(hush_realtime_track_bus_router_tests PRIVATE hush_core)
+  add_test(NAME hush_realtime_track_bus_router_tests COMMAND hush_realtime_track_bus_router_tests)
 
   add_executable(hush_gui_engine_command_path_tests tests/gui_engine_command_path_tests.cpp)
   target_link_libraries(hush_gui_engine_command_path_tests PRIVATE hush_core)
