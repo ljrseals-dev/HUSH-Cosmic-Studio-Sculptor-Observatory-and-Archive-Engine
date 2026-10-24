@@ -12,7 +12,8 @@ This roadmap tracks the 0.2 foundation toward a release. A milestone is not comp
 - [x] Wire GUI fader/pan/mute/solo and undo/redo to bounded realtime commands through an explicitly started ALSA live monitor (source mapping limited to capture L/R → tracks 1–2).
 - [ ] Add Qt interaction/loopback tests and GUI/CLI parity; run combined Qt + ALSA CI and target-device checks.
 - [x] Implement safe graph replacement and deferred reclamation primitive; integrate guarded published-engine processing into the standalone ALSA host (fresh CI still required).
-- [ ] Complete track-to-bus/master routing, insert placement, end-to-end mute/solo, meters, and xrun counters.
+- [x] Add a configure-once/preallocated track-to-bus routing core stage with block-boundary gain/pan/mute/solo commands and deterministic tests (runtime mapping only; schema v1 unchanged).
+- [ ] Integrate the track router into the published bus engine and Qt/ALSA path; complete persisted routing semantics, insert placement, end-to-end mute/solo, meters, and xrun counters.
 - [ ] Validate ALSA startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting on target hardware.
 - [ ] Commit 60-minute zero-xrun, loopback-latency, and underrun-injection evidence.
 - [ ] Run `hush_routing_benchmark 500 <seconds>` and commit its JSON output with a documented real-time budget threshold.
