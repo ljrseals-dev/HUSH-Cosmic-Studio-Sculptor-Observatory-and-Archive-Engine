@@ -10,6 +10,7 @@
 - [x] Bus graph validation, send tap metadata, deterministic offline/reference rendering.
 - [x] Fixed-capacity SPSC parameter queue and preallocated bus processor.
 - [x] RealtimeBusEngine applies queued fader changes at processing-block boundaries.
+- [x] Added `RealtimeTrackBusRouter`: preallocated mono-track-to-bus summing with bounded block-boundary gain/pan/mute/solo commands and deterministic tests. Runtime mapping is explicit because schema v1 does not persist a per-track output bus; live Qt/ALSA integration remains open.
 - [x] Interleaved-stereo audio adapter with preallocated scratch.
 - [x] Optional ALSA backend/host compiles and contract tests run in CI; this is not hardware validation.
 - [x] Optional Qt 6 mixer shell and combined Qt + ALSA target are implemented in source; the live monitor is explicitly started by the user and GUI edits/undo/redo enqueue bounded realtime track-mixer commands. All seven jobs passed in [GitHub Actions run 39255426377](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/39255426377) on the tested revision; later commits require a fresh run. Hardware validation is not implied.
