@@ -11,6 +11,10 @@ Notable repository changes. This is a development changelog, not a claim of a fi
 - Added CI for default C++20, ALSA-enabled, Qt 6 GUI, combined Qt + ALSA live-mixer build, ASan, and TSan configurations.
 - Added release-gate ledger and documented unverified hardware/performance/durability gates.
 
+## Unreleased — Phase 3 routing slice
+
+- Added `RealtimeTrackBusRouter`, a configure-once/preallocated mono-track-to-bus stage with bounded block-boundary gain/pan/mute/solo commands and deterministic routing tests. Track-to-bus assignment is runtime-only because schema v1 has no persisted track output-bus field. This is a core primitive; Qt/ALSA end-to-end routing and hardware evidence remain open.
+
 ## Unreleased — Phase 1–7 execution tooling
 
 - Added configurable synthetic routing benchmark and headless mixer/recovery-journal soak executables with JSON output.
