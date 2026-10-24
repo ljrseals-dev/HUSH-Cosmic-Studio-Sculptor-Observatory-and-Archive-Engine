@@ -79,7 +79,8 @@ Every item below is **unverified/incomplete** until its evidence is committed. *
 
 - **GUI-to-live-engine automated interaction test and GUI/CLI parity:** the optional Qt + ALSA path now queues GUI edits and undo/redo to the live callback; automated Qt interaction/loopback coverage and target-device validation remain outstanding.
 - **Safe graph replacement/deferred reclamation:** no graph swap implementation or reclamation stress test; requires ASan/TSan and a target Linux build.
-- **Full track-to-bus-to-master routing, inserts, end-to-end mute/solo, meters, and xrun counters:** not implemented as a complete live mixer; requires unit/integration tests and target audio-device tests.
+- **Track-to-bus routing:** a tested preallocated `RealtimeTrackBusRouter` core stage now sums mono tracks into configured bus inputs with block-boundary gain/pan/mute/solo commands. Track assignments are runtime-only because schema v1 has no per-track output-bus field. This primitive is not yet connected to the published bus engine or Qt/ALSA live path.
+- **Complete track-to-bus-to-master routing, inserts, end-to-end semantics, meters, and xrun counters:** not implemented as a complete live mixer; requires end-to-end tests and target audio-device tests.
 - **ALSA real-device startup/shutdown, callback timing, atomic lock-free suitability, and xrun reporting:** unverified; requires a named Linux kernel/CPU/ALSA/device configuration and captured logs.
 - **60-minute zero-xrun test, loopback latency, and underrun injection:** no completed report; requires a physical/reference ALSA machine and machine-labelled results.
 - **500-track performance budget and 8-hour soak/memory-drift report:** no completed report; requires a named machine, reproducible harness, and committed results.
