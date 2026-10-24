@@ -39,7 +39,7 @@ int main() {
     near(buses[0].right[0], 0.70710678F);
 
     // Solo is global across tracks, independent of their destination bus.
-    assert(router.enqueue_control(1, 1.0F, 0.0F, false, true));
+    assert(router.enqueue_control(1, 1.0F, -1.0F, false, true));
     assert(router.process(tracks, 3, 2));
     buses = router.bus_inputs();
     near(buses[0].left[0], 0.0F);
