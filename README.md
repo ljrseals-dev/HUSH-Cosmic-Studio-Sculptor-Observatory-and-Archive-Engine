@@ -1,3 +1,8 @@
+Copyright © 2026 Lewis James Seals Jr. All rights reserved.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT.
 # HUSH Cosmic Studio — Engine Foundation and Optional Mixer GUI
 
 HUSH is an offline-first C++20 audio-engine foundation with an optional Qt 6 mixer shell and optional Linux ALSA host. **It is not yet a finished DAW or a release-qualified live-audio system.** The current source tree includes project persistence, bus-graph validation, an offline reference renderer, preallocated bus processing, a bounded SPSC parameter queue, stereo audio adapters, recovery/operation-log primitives, and optional host/UI components.
