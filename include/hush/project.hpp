@@ -19,6 +19,8 @@ struct Track {
     float pan{0.0F};
     bool mute{false};
     bool solo{false};
+    // Empty preserves legacy behavior: the first configured bus is the destination.
+    std::string bus_id;
     bool operator==(const Track&) const = default;
 };
 

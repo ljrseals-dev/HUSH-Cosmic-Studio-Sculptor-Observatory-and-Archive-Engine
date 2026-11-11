@@ -17,6 +17,7 @@ add_library(hush_core
     src/bus_graph.cpp
     src/bus_renderer.cpp
     src/clip_renderer.cpp
+    src/clip_bus_renderer.cpp
     src/preallocated_bus_processor.cpp
     src/realtime_bus_engine.cpp
     src/realtime_bus_engine_host.cpp
@@ -145,6 +146,10 @@ if(HUSH_BUILD_TESTS)
   add_executable(hush_clip_renderer_tests tests/clip_renderer_tests.cpp)
   target_link_libraries(hush_clip_renderer_tests PRIVATE hush_core)
   add_test(NAME hush_clip_renderer_tests COMMAND hush_clip_renderer_tests)
+
+  add_executable(hush_clip_bus_renderer_tests tests/clip_bus_renderer_tests.cpp)
+  target_link_libraries(hush_clip_bus_renderer_tests PRIVATE hush_core)
+  add_test(NAME hush_clip_bus_renderer_tests COMMAND hush_clip_bus_renderer_tests)
 
   add_executable(hush_preallocated_bus_processor_tests tests/preallocated_bus_processor_tests.cpp)
   target_link_libraries(hush_preallocated_bus_processor_tests PRIVATE hush_core)
