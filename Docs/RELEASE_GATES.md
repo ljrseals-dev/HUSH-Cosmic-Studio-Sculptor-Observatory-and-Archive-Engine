@@ -20,7 +20,7 @@ This ledger distinguishes source/CI evidence from tests that require a real targ
 | ALSA hardware startup/shutdown and callback timing | No target-device artifact attached | Open |
 | 60-minute zero-xrun run | No target-device artifact attached | Open |
 | Loopback latency and underrun injection | No measurement report | Open |
-| 500-track performance budget | `tools/hush_routing_benchmark.cpp` now samples mixer process timing, reports p95/p99/max and fails when p99 exceeds the configurable budget (default 2666.667 µs); a 500-track CTest smoke test is registered | Harness gate implemented; fresh CI and qualifying full-duration report still required |
+| 500-track performance budget | `tools/hush_routing_benchmark.cpp` reports p95/p99/max and enforces a 2666.667 µs default budget; CTest smoke test plus a 10-second 500-track CI job uploads a metadata-rich JSON artifact | CI regression evidence added; shared-runner report is not target-machine qualification; full-duration target report still required |
 | 8-hour soak and memory-drift bound | `tools/hush_headless_soak.cpp` now enforces a configurable positive RSS-drift threshold (default 64 MiB); CTest smoke test checks JSON status and journal write | Threshold enforcement implemented; fresh CI and 28,800-second report still required |
 | Process-crash recovery | Completed-record restart and truncated-tail behavior have existing coverage | Partial; power-loss durability not claimed |
 | Partial-write fault injection | `tests/recovery_partial_write_tests.cpp` includes interrupted-header and truncated-payload cases; CI passed these in run 39255426377 | Pass on tested revision; power-loss durability not claimed |
