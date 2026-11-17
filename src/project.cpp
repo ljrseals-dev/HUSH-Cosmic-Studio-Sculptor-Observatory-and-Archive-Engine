@@ -315,9 +315,9 @@ std::string to_json(const Project& p) {
           << ", \"frame_count\": " << clip.frame_count
           << ", \"gain\": " << clip.gain
           << ", \"fade_in_frames\": " << clip.fade_in_frames
-          << ", \\"fade_out_frames\\": " << clip.fade_out_frames
-          << ", \\"take_id\\": \\"" << escape_json(clip.take_id)
-          << "\\", \\"take_number\\": " << clip.take_number << "}";
+          << ", \"fade_out_frames\": " << clip.fade_out_frames
+          << ", \"take_id\": \"" << escape_json(clip.take_id)
+          << "\", \"take_number\": " << clip.take_number << "}";
     }
     if (!p.clips.empty()) o << "\n  ";
     o << "]\n}\n";
@@ -520,6 +520,3 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     out=std::move(p); e={}; return true;
 }
 }
-          << ", \"fade_out_frames\": " << clip.fade_out_frames
-          << ", \"take_id\": \"" << escape_json(clip.take_id)
-          << "\", \"take_number\": " << clip.take_number << "}";
