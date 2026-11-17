@@ -143,10 +143,10 @@ int main(int argc, char** argv) {
     auto* mute_action = window.test_action("track.mute.toggle");
     auto* solo_action = window.test_action("track.solo.toggle");
     auto* palette_action = window.test_action("command.palette");
-    assert(open_action && open_action->shortcut() == QKeySequence::Open);
-    assert(save_action && save_action->shortcut() == QKeySequence::Save);
-    assert(undo_action && undo_action->shortcut() == QKeySequence::Undo);
-    assert(redo_action && redo_action->shortcut() == QKeySequence::Redo);
+    assert(open_action && open_action->shortcut() == QKeySequence(QKeySequence::Open));
+    assert(save_action && save_action->shortcut() == QKeySequence(QKeySequence::Save));
+    assert(undo_action && undo_action->shortcut() == QKeySequence(QKeySequence::Undo));
+    assert(redo_action && redo_action->shortcut() == QKeySequence(QKeySequence::Redo));
     assert(mute_action && mute_action->shortcut() == QKeySequence(Qt::Key_M));
     assert(solo_action && solo_action->shortcut() == QKeySequence(Qt::SHIFT | Qt::Key_S));
     assert(palette_action && palette_action->shortcut() == QKeySequence("Ctrl+K"));
