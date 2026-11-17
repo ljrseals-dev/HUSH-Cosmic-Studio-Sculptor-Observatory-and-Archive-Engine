@@ -1,3 +1,8 @@
+## Unreleased — project parser completeness checks
+
+- Reject duplicate stable track IDs and incomplete/malformed array entries instead of silently dropping unrecognized records when other valid entries are present.
+- Add regression coverage for duplicate track IDs and mixed valid/invalid track arrays.
+
 ## Unreleased — project JSON, recovery scan, and realtime test hardening
 
 - Preserve quotes, backslashes, standard JSON escapes, and control characters across project IDs, track/bus names, route IDs, media paths, and clip IDs during schema-v1 round trips.
