@@ -65,6 +65,21 @@ The reference baseline is Pro Tools Studio with selected Ultimate/post workflows
 | Post/spatial | Timecode, video, ADR/reconform, surround/Atmos, immersive | Missing | Timebase/timecode, video abstraction, channel-layout model, multichannel processing/rendering |
 | Workflow | Search, shortcuts, batch commands, templates, workspaces | Missing on main | Central command registry, searchable palette, keymap profiles, macros, workspace presets |
 
+## Current Pro Tools 2026.11 delta
+
+The latest official Avid release documentation available for this review is Pro Tools 2026.11 (released November 3, 2026). It adds several parity targets that must be explicitly represented rather than relying on older Studio feature matrices:
+
+| Pro Tools 2026.11 capability | HUSH status in reviewed main | HUSH integration target |
+|---|---|---|
+| Pro Tools Extensions: session-wide and no-session tools, third-party integrations and organized side-panel tabs | Missing | Define a HUSH extension contract only after process isolation, capability permissions, versioned API and offline package verification exist; never load arbitrary code in the host/audio callback |
+| Pro Tools Stem Separator: local AI separation into Vocals, Drums, Bass, Guitar, Keys and Other, with preview and track creation | Missing | Optional preinstalled local model, explicit offline job, progress/cancel, preview, generated-media provenance and transactional import; model inference stays out of realtime |
+| MIDI Polyphonic Expression (MPE): per-note pitch, timbre and pressure/amplitude expression | Missing | Per-note expression event model, channel allocation, editor lanes, device input/output, persistence, undo and deterministic scheduler |
+| Alternate-take auto-coloring | Missing | Stable take/playlist identity and deterministic palette assignment; color is metadata and must not change take ordering or comp ranges |
+| Focus switching between pinned and non-pinned track panes | Missing | Add focus navigation commands to the same command registry and keymap; preserve accessible focus and selected-track context |
+| Import/export and UI customization enhancements | Partial | Complete import/export job queue and user-persisted workspace/keymap profiles with conflict handling |
+
+These are confirmed release capabilities, not forum speculation. The official release notes also document local processing for Stem Separator; HUSH should preserve the same offline privacy boundary rather than assuming cloud inference. `Pro Tools Extensions` is a useful extensibility concept, but HUSH should not adopt a plugin/extension loader until sandboxing, signing/provenance, permissions, ABI stability and crash recovery are implemented. [Avid 2026.11 release notes](https://kb.avid.com/pkb/articles/en_US/Knowledge/Pro-Tools-2026-11-Release-Notes) · [What's New 2026.11](https://resources.avid.com/SupportFiles/PT/Whats_New_in_Pro_Tools_2026.11.pdf).
+
 ## User-request research and recommended integrations
 
 Research sources reviewed include the Pro Tools 2026.11 reference guide and feature comparison, the September–November 2026 VI-CONTROL “Your Pro Tools 2027 Wish List” discussion (pages 1–6), Reddit's “PT Wishlist Features/Changes” thread, and Production Expert's 2026 missing-features article. Forum requests are qualitative signals, not a statistically representative survey. Items that already exist in Pro Tools are not represented as missing Pro Tools features; they are considered only as possible HUSH workflows.
