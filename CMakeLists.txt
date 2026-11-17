@@ -253,6 +253,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_recording_session_tests PRIVATE hush_core Threads::Threads)
   add_test(NAME hush_recording_session_tests COMMAND hush_recording_session_tests)
 
+  add_executable(hush_take_coordinator_tests tests/take_coordinator_tests.cpp)
+  target_link_libraries(hush_take_coordinator_tests PRIVATE hush_core)
+  add_test(NAME hush_take_coordinator_tests COMMAND hush_take_coordinator_tests)
+
   if(HUSH_ENABLE_ALSA)
     add_test(NAME hush_alsa_host_help COMMAND hush_alsa_realtime_host --help)
     add_test(NAME hush_alsa_host_journal_requires_project
