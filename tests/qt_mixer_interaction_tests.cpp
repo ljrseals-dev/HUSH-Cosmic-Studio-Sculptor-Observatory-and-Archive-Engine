@@ -5,6 +5,10 @@
 #include <QMetaObject>
 #include <QPushButton>
 #include <QSlider>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QTableWidget>
+#include <QTimer>
 #include <cassert>
 #include <cmath>
 #include <array>
@@ -154,8 +158,18 @@ int main(int argc, char** argv) {
     assert(!mute_action->isEnabled() && !solo_action->isEnabled());
     assert(palette_action && palette_action->shortcut() == QKeySequence("Ctrl+K"));
 
+    // The palette searches project objects as well as registered commands.
+    // Selecting a track result navigates to that row without mutating the project.
     auto* track_table = window.findChild<QTableWidget*>("trackTable");
     assert(track_table != nullptr);
+    QTimer::singleShot(0, [&window] {
+        auto* search = window.findChild<QLineEdit*>("commandPaletteSearch");
+        assert(search != nullptr);
+        search->setText("Input R");
+        assert(QMetaObject::invokeMethod(search, "returnPressed", Qt::DirectConnection));
+    });
+    palette_action->trigger();
+    assert(track_table->currentRow() == 1);
     track_table->setCurrentCell(0, 0);
     assert(mute_action->isEnabled() && solo_action->isEnabled());
     mute_action->trigger();
