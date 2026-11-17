@@ -10,6 +10,7 @@
 #include <locale>
 #include <system_error>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace hush {
 namespace {
@@ -314,7 +315,9 @@ std::string to_json(const Project& p) {
           << ", \"frame_count\": " << clip.frame_count
           << ", \"gain\": " << clip.gain
           << ", \"fade_in_frames\": " << clip.fade_in_frames
-          << ", \"fade_out_frames\": " << clip.fade_out_frames << "}";
+          << ", \\"fade_out_frames\\": " << clip.fade_out_frames
+          << ", \\"take_id\\": \\"" << escape_json(clip.take_id)
+          << "\\", \\"take_number\\": " << clip.take_number << "}";
     }
     if (!p.clips.empty()) o << "\n  ";
     o << "]\n}\n";
