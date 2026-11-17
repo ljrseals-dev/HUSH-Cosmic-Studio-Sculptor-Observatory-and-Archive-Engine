@@ -6,9 +6,14 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <locale>
 #include <string>
 
 namespace {
+class CommaDecimal final : public std::numpunct<char> {
+protected:
+    char do_decimal_point() const override { return ','; }
+};
 bool injected_failure = false;
 bool injected_writer(const std::filesystem::path& path, const hush::Project& project, hush::Error& error) {
     if (injected_failure) {
@@ -21,11 +26,30 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 
 int main() {
     using namespace hush;
-    Project p; p.id="session-A"; p.tracks={{"track-1","Lead",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
-    p.buses={{"bus-master","Master"},{"bus-music","Music"}};
-    p.routes={{"bus-music","bus-master",SendTap::PostFader,0.8F}};
+    Project p; p.id="session-\"A\"\\folder\n\"tracks\":[{\"id\":\"decoy\"}],\"pan_law\":\"legacy_minus_4_5_db\"";
+    p.tracks={{"track-1","Lead \"main\"\\take\t",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
+    p.buses={{"bus-\"master\"\\out","Master \"bus\""},{"bus-music","Music"}};
+    p.routes={{"bus-music","bus-\"master\"\\out",SendTap::PostFader,0.8F}};
+    p.media_sources={{"source-1","audio\\take\"one\".wav",48000U,2U,1000U}};
+    p.clips={{"clip-\"one\"\\v1","track-1","source-1",0,0U,128U,1.0F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    const auto previous_locale = std::locale();
+    std::locale::global(std::locale(previous_locale, new CommaDecimal));
+    const auto locale_json = to_json(p);
+    std::locale::global(previous_locale);
+    assert(locale_json.find("\"gain\": 0.75") != std::string::npos);
+    assert(from_json(locale_json,loaded,err)); assert(loaded==p);
+    const std::string malformed_track_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":0.5.7,"pan":0,"mute":false,"solo":false}]})";
+    assert(!from_json(malformed_track_number,loaded,err)); assert(err.code=="track_number_invalid");
+    const std::string malformed_route_number=R"({"schema_version":1,"id":"bad-route","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"a","name":"A"},{"id":"b","name":"B"}],"routes":[{"source_bus_id":"a","destination_bus_id":"b","tap":"post_fader","gain":0.5.7}]})";
+    assert(!from_json(malformed_route_number,loaded,err)); assert(err.code=="route_gain_invalid");
+    const std::string malformed_clip_number=R"({"schema_version":1,"id":"bad-clip","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":1,"pan":0,"mute":false,"solo":false}],"media_sources":[{"id":"s","relative_path":"a.wav","sample_rate":48000,"channels":2,"frame_count":128}],"clips":[{"id":"c","track_id":"t","source_id":"s","timeline_start_frame":0,"source_start_frame":0,"frame_count":64,"gain":0.5.7}]})";
+    assert(!from_json(malformed_clip_number,loaded,err)); assert(err.code=="audio_clip_number_invalid");
+    const std::string duplicate_track_ids=R"({"schema_version":1,"id":"duplicate-track","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"one","gain":1,"pan":0,"mute":false,"solo":false},{"id":"t","name":"two","gain":1,"pan":0,"mute":false,"solo":false}]})";
+    assert(!from_json(duplicate_track_ids,loaded,err)); assert(err.code=="track_id_duplicate");
+    const std::string partly_malformed_tracks=R"({"schema_version":1,"id":"partial-track-parse","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t1","name":"one","gain":1,"pan":0,"mute":false,"solo":false},{"id":"t2","name":"two","gain":1,"pan":0,"mute":false}]})";
+    assert(!from_json(partly_malformed_tracks,loaded,err)); assert(err.code=="track_parse_failed");
     Project bad; assert(!from_json(R"({"schema_version":2})",bad,err)); assert(err.code=="schema_version_unsupported");
 
     const std::string legacy=R"({"schema_version":1,"id":"old","pan_law":"equal_power_minus_3_db","tracks":[]})";

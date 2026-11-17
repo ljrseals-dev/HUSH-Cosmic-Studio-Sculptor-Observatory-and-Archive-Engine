@@ -83,7 +83,10 @@ bool RecoveryJournal::recover_latest(Project& out, Error& error) const {
         if (!file.get(terminator) || terminator!='\n') break;
         Project candidate;
         Error parse_error;
-        if (!from_json(payload,candidate,parse_error)) break;
+        // Framing is trustworthy after the declared payload length and newline have
+        // been consumed. Skip a schema-invalid complete record and keep searching;
+        // only framing failures make subsequent record boundaries unsafe.
+        if (!from_json(payload,candidate,parse_error)) continue;
         latest=std::move(candidate);
         found=true;
     }

@@ -1,3 +1,27 @@
+## Unreleased — root-level JSON member parsing
+
+- Locate schema-v1 fields only as root-object members, not key-like text embedded inside escaped project IDs or other string values.
+- Require array fields to be actual JSON arrays before scanning their records.
+- Extend the round-trip regression with key-like JSON text inside the project ID.
+
+## Unreleased — locale-independent project JSON numbers
+
+- Serialize project floating-point fields with the classic JSON locale and parse them with std::from_chars, so a user's decimal-comma locale cannot corrupt project files or make valid values unreadable.
+- Add a regression test that switches the global C++ locale to a comma decimal facet and verifies schema-v1 round-trip fidelity.
+
+## Unreleased — project parser completeness checks
+
+- Reject duplicate stable track IDs and incomplete/malformed array entries instead of silently dropping unrecognized records when other valid entries are present.
+- Add regression coverage for duplicate track IDs and mixed valid/invalid track arrays.
+
+## Unreleased — project JSON, recovery scan, and realtime test hardening
+
+- Preserve quotes, backslashes, standard JSON escapes, and control characters across project IDs, track/bus names, route IDs, media paths, and clip IDs during schema-v1 round trips.
+- Reject partially parsed floating-point tokens in track gain/pan, route gain, and clip gain instead of silently accepting malformed values such as `0.5.7`.
+- Continue recovery after a complete, correctly framed journal record has an invalid project payload; stop only when record framing is no longer trustworthy.
+- Synchronize the graph-publication stress test with the audio reader's first processing attempt so scheduler timing cannot cause a false failure.
+- Added regression tests for escaped project data, malformed numeric tokens, later valid recovery snapshots, and deterministic concurrent-test startup. CI validation is required; no local build or test pass is claimed.
+
 ## Unreleased — Qt widget-to-live-engine command-path proof
 
 - Added the `LiveTrackControlSink` control-thread seam so the real Qt mixer can be tested against a deterministic live sink without opening an ALSA device.
