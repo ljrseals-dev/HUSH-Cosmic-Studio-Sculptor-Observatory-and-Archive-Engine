@@ -6,9 +6,14 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <locale>
 #include <string>
 
 namespace {
+class CommaDecimal final : public std::numpunct<char> {
+protected:
+    char do_decimal_point() const override { return ','; }
+};
 bool injected_failure = false;
 bool injected_writer(const std::filesystem::path& path, const hush::Project& project, hush::Error& error) {
     if (injected_failure) {
@@ -29,6 +34,12 @@ int main() {
     p.clips={{"clip-\"one\"\\v1","track-1","source-1",0,0U,128U,1.0F}};
     const auto json=to_json(p); Project loaded; Error err;
     assert(from_json(json,loaded,err)); assert(loaded==p);
+    const auto previous_locale = std::locale();
+    std::locale::global(std::locale(previous_locale, new CommaDecimal));
+    const auto locale_json = to_json(p);
+    std::locale::global(previous_locale);
+    assert(locale_json.find("\"gain\": 0.75") != std::string::npos);
+    assert(from_json(locale_json,loaded,err)); assert(loaded==p);
     const std::string malformed_track_number=R"({"schema_version":1,"id":"bad-number","pan_law":"equal_power_minus_3_db","tracks":[{"id":"t","name":"T","gain":0.5.7,"pan":0,"mute":false,"solo":false}]})";
     assert(!from_json(malformed_track_number,loaded,err)); assert(err.code=="track_number_invalid");
     const std::string malformed_route_number=R"({"schema_version":1,"id":"bad-route","pan_law":"equal_power_minus_3_db","tracks":[],"buses":[{"id":"a","name":"A"},{"id":"b","name":"B"}],"routes":[{"source_bus_id":"a","destination_bus_id":"b","tap":"post_fader","gain":0.5.7}]})";
