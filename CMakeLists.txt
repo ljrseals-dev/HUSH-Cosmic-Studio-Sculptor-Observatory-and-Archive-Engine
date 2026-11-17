@@ -25,6 +25,7 @@ add_library(hush_core
     src/transport_engine.cpp
     src/automation_lane.cpp
     src/midi_learn.cpp
+    src/mpe_expression.cpp
     src/studio_03a.cpp
     src/realtime_bus_audio_adapter.cpp
     src/realtime_bus_engine_host_audio_adapter.cpp
@@ -195,6 +196,10 @@ if(HUSH_BUILD_TESTS)
   target_link_libraries(hush_midi_learn_tests PRIVATE hush_core)
   add_test(NAME hush_midi_learn_tests COMMAND hush_midi_learn_tests)
 
+  add_executable(hush_mpe_expression_tests tests/mpe_expression_tests.cpp)
+  target_link_libraries(hush_mpe_expression_tests PRIVATE hush_core)
+  add_test(NAME hush_mpe_expression_tests COMMAND hush_mpe_expression_tests)
+
   add_executable(hush_realtime_graph_publisher_tests tests/realtime_graph_publisher_tests.cpp)
   target_include_directories(hush_realtime_graph_publisher_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_compile_features(hush_realtime_graph_publisher_tests PRIVATE cxx_std_20)
@@ -289,6 +294,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_transport_automation_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_studio_03a_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_midi_learn_tests PRIVATE /UNDEBUG)
+    target_compile_options(hush_mpe_expression_tests PRIVATE /UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE /UNDEBUG)
   else()
     target_compile_options(hush_pan_law_tests PRIVATE -UNDEBUG)
@@ -319,6 +325,7 @@ if(HUSH_BUILD_TESTS)
     target_compile_options(hush_transport_automation_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_studio_03a_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_midi_learn_tests PRIVATE -UNDEBUG)
+    target_compile_options(hush_mpe_expression_tests PRIVATE -UNDEBUG)
     target_compile_options(hush_realtime_graph_publisher_tests PRIVATE -UNDEBUG)
   endif()
 endif()
