@@ -5,6 +5,8 @@
 #include "hush/realtime_track_mixer.hpp"
 
 #include <QApplication>
+#include <QAction>
+#include <QDialog>
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QFile>
@@ -13,6 +15,10 @@
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPushButton>
@@ -25,6 +31,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -196,6 +203,11 @@ public:
         injected_live_sink_ = live_sink;
         setWindowTitle("HUSH Cosmic Studio — Mixer");
         resize(1100, 640);
+        auto* file_menu = menuBar()->addMenu("&File");
+        auto* edit_menu = menuBar()->addMenu("&Edit");
+        auto* track_menu = menuBar()->addMenu("&Track");
+        auto* audio_menu = menuBar()->addMenu("&Audio");
+        commands_menu_ = menuBar()->addMenu("&Commands");
         auto* root = new QWidget(this);
         auto* layout = new QVBoxLayout(root);
         auto* bar = new QHBoxLayout;
@@ -233,6 +245,8 @@ public:
         table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
         table_->verticalHeader()->hide();
         table_->setAlternatingRowColors(true);
+        table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+        table_->setSelectionMode(QAbstractItemView::SingleSelection);
         layout->addWidget(table_);
 
         // Channel Light: meters are refreshed on the GUI thread from atomic peaks
@@ -277,6 +291,28 @@ public:
             "QProgressBar { background:#20283A; border:1px solid #35415B; border-radius:4px; height:12px; }"
             "QProgressBar::chunk { background:#48D9FF; border-radius:3px; }");
         setCentralWidget(root);
+
+        // Every currently implemented user command is registered once. The same
+        // QAction powers its menu entry, keyboard shortcut, and searchable palette.
+        register_command(file_menu, "file.open", "Open Project…", QKeySequence::Open,
+                         [open] { open->click(); });
+        register_command(file_menu, "file.save", "Save Project", QKeySequence::Save,
+                         [save] { save->click(); });
+        register_command(edit_menu, "edit.undo", "Undo", QKeySequence::Undo,
+                         [undo] { undo->click(); });
+        register_command(edit_menu, "edit.redo", "Redo", QKeySequence::Redo,
+                         [redo] { redo->click(); });
+        register_command(track_menu, "track.mute.toggle", "Toggle Mute on Selected Track",
+                         QKeySequence(Qt::Key_M),
+                         [this] { toggle_selected_track(hush::OperationKind::SetMute); });
+        register_command(track_menu, "track.solo.toggle", "Toggle Solo on Selected Track",
+                         QKeySequence(Qt::SHIFT | Qt::Key_S),
+                         [this] { toggle_selected_track(hush::OperationKind::SetSolo); });
+        register_command(audio_menu, "audio.live.toggle", "Start / Stop Live ALSA",
+                         QKeySequence("Ctrl+Alt+L"), [live = live_button_] { live->click(); },
+                         live_button_->isEnabled());
+        register_command(commands_menu_, "command.palette", "Search Commands…",
+                         QKeySequence("Ctrl+K"), [this] { show_command_palette(); });
 
         connect(open, &QPushButton::clicked, this, [this] { openProject(); });
         connect(save, &QPushButton::clicked, this, [this] { saveProject(); });
@@ -327,6 +363,9 @@ public:
 #ifdef HUSH_GUI_TESTING
     [[nodiscard]] const hush::Project& test_project() const noexcept { return project_; }
     [[nodiscard]] std::size_t test_history_cursor() const noexcept { return log_.cursor(); }
+    [[nodiscard]] QAction* test_action(const QString& id) const {
+        return findChild<QAction*>(id);
+    }
 #endif
 
     ~MixerWindow() override {
@@ -348,11 +387,105 @@ private:
     QProgressBar* input_meter_{};
     QProgressBar* output_meter_{};
     QPushButton* live_button_{};
+    QMenu* commands_menu_{};
+    std::vector<QAction*> command_actions_;
     hush::LiveTrackControlSink* injected_live_sink_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
     QTimer status_timer_;
 #endif
+
+    QAction* register_command(QMenu* menu, const QString& id, const QString& label,
+                               const QKeySequence& shortcut,
+                               std::function<void()> callback, bool enabled = true) {
+        auto* action = new QAction(label, this);
+        action->setObjectName(id);
+        action->setShortcut(shortcut);
+        action->setShortcutContext(Qt::WindowShortcut);
+        action->setEnabled(enabled);
+        connect(action, &QAction::triggered, this,
+                [callback = std::move(callback)] { callback(); });
+        addAction(action);
+        if (menu) menu->addAction(action);
+        if (commands_menu_ && menu != commands_menu_) commands_menu_->addAction(action);
+        command_actions_.push_back(action);
+        return action;
+    }
+
+    void show_command_palette() {
+        QDialog dialog(this);
+        dialog.setWindowTitle("HUSH Command Palette");
+        dialog.resize(520, 420);
+        auto* layout = new QVBoxLayout(&dialog);
+        auto* search = new QLineEdit(&dialog);
+        search->setObjectName("commandPaletteSearch");
+        search->setPlaceholderText("Search every available HUSH command…");
+        auto* list = new QListWidget(&dialog);
+        list->setObjectName("commandPaletteResults");
+        layout->addWidget(search);
+        layout->addWidget(list);
+
+        for (const auto* action : command_actions_) {
+            if (!action->isEnabled() || action->objectName() == "command.palette") continue;
+            auto* item = new QListWidgetItem(action->text(), list);
+            const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
+            if (!shortcut.isEmpty()) item->setText(item->text() + "    [" + shortcut + "]");
+            item->setData(Qt::UserRole, action->objectName());
+        }
+
+        const auto filter = [list](const QString& query) {
+            for (int row = 0; row < list->count(); ++row) {
+                auto* item = list->item(row);
+                item->setHidden(!item->text().contains(query, Qt::CaseInsensitive));
+            }
+            for (int row = 0; row < list->count(); ++row) {
+                if (!list->item(row)->isHidden()) {
+                    list->setCurrentRow(row);
+                    break;
+                }
+            }
+        };
+        connect(search, &QLineEdit::textChanged, &dialog, filter);
+        const auto invoke_item = [this, &dialog](QListWidgetItem* item) {
+            if (!item) return;
+            const auto id = item->data(Qt::UserRole).toString();
+            for (auto* action : command_actions_) {
+                if (action->objectName() == id) {
+                    dialog.accept();
+                    action->trigger();
+                    return;
+                }
+            }
+        };
+        connect(list, &QListWidget::itemActivated, &dialog, invoke_item);
+        connect(search, &QLineEdit::returnPressed, &dialog, [&] {
+            for (int row = 0; row < list->count(); ++row) {
+                auto* item = list->item(row);
+                if (!item->isHidden()) {
+                    invoke_item(item);
+                    return;
+                }
+            }
+        });
+        if (list->count() > 0) list->setCurrentRow(0);
+        search->setFocus();
+        dialog.exec();
+    }
+
+    void toggle_selected_track(hush::OperationKind kind) {
+        const int row = table_->currentRow();
+        if (row < 0 || static_cast<std::size_t>(row) >= project_.tracks.size()) {
+            status_->setText("Select a track first");
+            return;
+        }
+        const auto& track = project_.tracks[static_cast<std::size_t>(row)];
+        float next = 0.0F;
+        if (kind == hush::OperationKind::SetMute) next = track.mute ? 0.0F : 1.0F;
+        else if (kind == hush::OperationKind::SetSolo) next = track.solo ? 0.0F : 1.0F;
+        else return;
+        change(track.id, kind, next);
+        refresh();
+    }
 
     void openProject() {
         if (!confirmProjectReplacement()) return;
