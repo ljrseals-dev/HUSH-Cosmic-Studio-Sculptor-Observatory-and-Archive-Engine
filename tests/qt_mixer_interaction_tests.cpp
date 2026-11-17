@@ -149,11 +149,15 @@ int main(int argc, char** argv) {
     assert(redo_action && redo_action->shortcut() == QKeySequence(QKeySequence::Redo));
     assert(mute_action && mute_action->shortcut() == QKeySequence(Qt::Key_M));
     assert(solo_action && solo_action->shortcut() == QKeySequence(Qt::SHIFT | Qt::Key_S));
+    assert(mute_action->shortcutContext() == Qt::WidgetShortcut);
+    assert(solo_action->shortcutContext() == Qt::WidgetShortcut);
+    assert(!mute_action->isEnabled() && !solo_action->isEnabled());
     assert(palette_action && palette_action->shortcut() == QKeySequence("Ctrl+K"));
 
     auto* track_table = window.findChild<QTableWidget*>("trackTable");
     assert(track_table != nullptr);
     track_table->setCurrentCell(0, 0);
+    assert(mute_action->isEnabled() && solo_action->isEnabled());
     mute_action->trigger();
     assert(window.test_project().tracks[0].mute);
     assert(window.test_history_cursor() == 3U);
