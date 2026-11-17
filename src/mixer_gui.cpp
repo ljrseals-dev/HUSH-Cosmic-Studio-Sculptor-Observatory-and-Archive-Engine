@@ -304,12 +304,20 @@ public:
                          [undo] { undo->click(); });
         register_command(edit_menu, "edit.redo", "Redo", QKeySequence::Redo,
                          [redo] { redo->click(); });
-        register_command(track_menu, "track.mute.toggle", "Toggle Mute on Selected Track",
+        mute_action_ = register_command(track_menu, "track.mute.toggle", "Toggle Mute on Selected Track",
                          QKeySequence(Qt::Key_M),
-                         [this] { toggle_selected_track(hush::OperationKind::SetMute); });
-        register_command(track_menu, "track.solo.toggle", "Toggle Solo on Selected Track",
+                         [this] { toggle_selected_track(hush::OperationKind::SetMute); }, false);
+        solo_action_ = register_command(track_menu, "track.solo.toggle", "Toggle Solo on Selected Track",
                          QKeySequence(Qt::SHIFT | Qt::Key_S),
-                         [this] { toggle_selected_track(hush::OperationKind::SetSolo); });
+                         [this] { toggle_selected_track(hush::OperationKind::SetSolo); }, false);
+        // Track-edit keys belong to the track table only. A window-scoped M/S
+        // shortcut steals ordinary typing from line edits and dialogs.
+        for (auto* action : {mute_action_, solo_action_}) {
+            action->setShortcutContext(Qt::WidgetShortcut);
+            table_->addAction(action);
+        }
+        connect(table_, &QTableWidget::currentCellChanged, this,
+                [this](int row, int, int, int) { update_track_command_state(row); });
         register_command(audio_menu, "audio.live.toggle", "Start / Stop Live ALSA",
                          QKeySequence("Ctrl+Alt+L"), [live = live_button_] { live->click(); },
                          live_button_->isEnabled());
@@ -391,6 +399,8 @@ private:
     QPushButton* live_button_{};
     QMenu* commands_menu_{};
     std::vector<QAction*> command_actions_;
+    QAction* mute_action_{};
+    QAction* solo_action_{};
     hush::LiveTrackControlSink* injected_live_sink_{};
 #ifdef HUSH_GUI_HAS_ALSA
     LiveMixer live_;
@@ -472,6 +482,12 @@ private:
         if (list->count() > 0) list->setCurrentRow(0);
         search->setFocus();
         dialog.exec();
+    }
+
+    void update_track_command_state(int row) {
+        const bool selected = row >= 0 && static_cast<std::size_t>(row) < project_.tracks.size();
+        if (mute_action_) mute_action_->setEnabled(selected);
+        if (solo_action_) solo_action_->setEnabled(selected);
     }
 
     void toggle_selected_track(hush::OperationKind kind) {
@@ -712,6 +728,7 @@ private:
 
     void refresh() {
         table_->setRowCount(static_cast<int>(project_.tracks.size()));
+        update_track_command_state(table_->currentRow());
         for (std::size_t i = 0; i < project_.tracks.size(); ++i) {
             const auto& t = project_.tracks[i];
             const int row = static_cast<int>(i);
