@@ -134,5 +134,46 @@ int main(int argc, char** argv) {
     assert(!window.test_project().tracks[0].solo);
     assert(live_sink.process_one_block());
     assert(live_sink.output_left[0] > 0.5F * 0.70710678F);
+
+    // The menu, shortcut, and searchable palette expose the same registered commands.
+    auto* open_action = window.test_action("file.open");
+    auto* save_action = window.test_action("file.save");
+    auto* undo_action = window.test_action("edit.undo");
+    auto* redo_action = window.test_action("edit.redo");
+    auto* mute_action = window.test_action("track.mute.toggle");
+    auto* solo_action = window.test_action("track.solo.toggle");
+    auto* palette_action = window.test_action("command.palette");
+    assert(open_action && open_action->shortcut() == QKeySequence(QKeySequence::Open));
+    assert(save_action && save_action->shortcut() == QKeySequence(QKeySequence::Save));
+    assert(undo_action && undo_action->shortcut() == QKeySequence(QKeySequence::Undo));
+    assert(redo_action && redo_action->shortcut() == QKeySequence(QKeySequence::Redo));
+    assert(mute_action && mute_action->shortcut() == QKeySequence(Qt::Key_M));
+    assert(solo_action && solo_action->shortcut() == QKeySequence(Qt::SHIFT | Qt::Key_S));
+    assert(mute_action->shortcutContext() == Qt::WidgetShortcut);
+    assert(solo_action->shortcutContext() == Qt::WidgetShortcut);
+    assert(!mute_action->isEnabled() && !solo_action->isEnabled());
+    assert(palette_action && palette_action->shortcut() == QKeySequence("Ctrl+K"));
+
+    auto* track_table = window.findChild<QTableWidget*>("trackTable");
+    assert(track_table != nullptr);
+    track_table->setCurrentCell(0, 0);
+    assert(mute_action->isEnabled() && solo_action->isEnabled());
+    mute_action->trigger();
+    assert(window.test_project().tracks[0].mute);
+    assert(window.test_history_cursor() == 3U);
+    assert(live_sink.process_one_block());
+    assert(near(live_sink.output_left[0], 0.0F));
+
+    undo_action->trigger();
+    assert(!window.test_project().tracks[0].mute);
+    assert(window.test_history_cursor() == 2U);
+    assert(live_sink.process_one_block());
+    assert(live_sink.output_left[0] > 0.5F * 0.70710678F);
+
+    redo_action->trigger();
+    assert(window.test_project().tracks[0].mute);
+    assert(window.test_history_cursor() == 3U);
+    assert(live_sink.process_one_block());
+    assert(near(live_sink.output_left[0], 0.0F));
     return 0;
 }
