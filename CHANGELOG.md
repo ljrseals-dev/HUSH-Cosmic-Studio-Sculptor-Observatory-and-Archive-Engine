@@ -1,3 +1,11 @@
+## Unreleased — professional DAW workflow and command discoverability
+
+- Added a stable QAction registry for the Qt mixer shell so menu entries, keyboard shortcuts and the searchable Ctrl+K command palette invoke the same command handlers.
+- Added standard Open/Save/Undo/Redo shortcuts plus selected-track Mute/Solo and an explicitly enabled ALSA live toggle.
+- Added offscreen Qt assertions for command IDs, shortcut bindings, selected-track command behavior and live-engine/undo integration.
+- Added a professional DAW feature-parity audit, evidence-based baseline score, cross-component transition contract and prioritized integration roadmap.
+- This is a mixer-shell workflow slice, not a complete shortcut editor, macro system or finished DAW. Fresh CI is required; no local build or physical-device validation is claimed.
+
 ## Unreleased — Qt widget-to-live-engine command-path proof
 
 - Added the `LiveTrackControlSink` control-thread seam so the real Qt mixer can be tested against a deterministic live sink without opening an ALSA device.

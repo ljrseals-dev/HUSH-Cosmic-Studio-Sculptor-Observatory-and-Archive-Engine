@@ -2,6 +2,18 @@
 
 This roadmap tracks the 0.2 foundation toward a release. A milestone is not complete merely because its source compiles; required tests and target-machine evidence must be recorded.
 
+## Professional DAW feature-parity workstream
+
+The main-branch baseline at 8e4b16af1e4fd9bd18f7b2c1c55e664b8dbfaa43 scored 30/100 for end-to-end professional-DAW feature coverage. This is a workflow coverage score, not a code-quality grade. The detailed comparison against Pro Tools Studio-class workflows, community requests, open PR integration hazards and prioritized work is in [Docs/PRO_DAW_FEATURE_PARITY_AUDIT_2026-11.md](Docs/PRO_DAW_FEATURE_PARITY_AUDIT_2026-11.md).
+
+- [ ] Stabilize project-aware routing, recording, recovery, meters and performance gates before expanding production workflows.
+- [ ] Add the central command registry, searchable command palette and keyboard shortcuts; the first Qt mixer slice is on the feature branch and awaits CI.
+- [ ] Build arrangement/editing, folders, marker lanes, playlists/takes and comping on the canonical project model.
+- [ ] Complete persisted automation and MIDI event workflows, including controller lanes, MPE and expression maps.
+- [ ] Gate plugin hosting on SDK provenance, process isolation, crash recovery and delay compensation.
+- [ ] Add batch stem export, session interchange, Control Room and post/spatial capabilities as separate acceptance milestones.
+
+
 ## Current baseline — 0.2.0 / optional 0.3a GUI shell
 
 - [x] Headless C++20 project model, schema-v1 persistence, bus graph validation, offline renderer, preallocated bus processor, SPSC parameter queue.
