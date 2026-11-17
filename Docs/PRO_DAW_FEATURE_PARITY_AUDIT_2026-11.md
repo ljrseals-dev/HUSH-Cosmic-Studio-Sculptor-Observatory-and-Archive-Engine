@@ -230,3 +230,36 @@ Recommended integration order:
 - Reddit, What's Still Missing In Pro Tools?: https://www.reddit.com/r/protools/comments/f5v29m/
 - Reddit, Why is there no insert undo feature?: https://www.reddit.com/r/protools/comments/1n9ndr3/
 - Production Expert, 3 Pro Tools Features Still Missing In 2026: https://www.production-expert.com/production-expert-1/3-pro-tools-features-still-missing-in-2026
+
+
+## Forensic refresh — 2026-11-17 12:05 UTC
+
+This refresh re-checked the live repository after the initial audit. The default branch remains `main` at `8e4b16af1e4fd9bd18f7b2c1c55e664b8dbfaa43`; therefore the main-branch score above remains **30/100**. The repository's latest push is to a feature branch, not a change to main.
+
+### Exact branch and validation state
+
+| PR | Head | Main comparison | Current state | Disposition |
+|---|---|---:|---|---|
+| #98 persistence/recovery hardening | `7c3861805fe5e2e95acd06fb9d27ae21c96a1bc1` | 17 ahead / 0 behind | Open; 8/8 checks successful | Review and merge first; includes strict project JSON parsing/recovery fixes |
+| #99 DAW parity / command palette | `8b9bad2101a701fb187809f04642efabf9610582` | 12 ahead / 0 behind | Draft open; 8/8 check runs successful | Keep draft until command behavior and integration scope are reviewed |
+| #94 project-aware mixer/autosave/recording | `58da43d619df6af21378c07fc328dbea6ddce6ae` | 175 ahead / 10 behind | Open; GitHub reports `dirty` | Do not merge as-is; broad 28-file integration branch conflicts with current main |
+| #95 project-integrated realtime mixer | `f1e2e0f81fcfebf9b5e2397a898c7e6d413ca576` | 17 ahead / 10 behind | Draft open; GitHub reports `dirty` | Do not merge as-is; extract/reconcile its runtime composition with #94 and current main |
+
+For #99, the current exact head has eight successful check runs: seven jobs in Actions run [44079263421](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/44079263421) and the package job in [44079263362](https://github.com/ljrseals-dev/HUSH-Cosmic-Studio-Sculptor-Observatory-and-Archive-Engine/actions/runs/44079263362). The earlier PR-body statement that workflows did not trigger on this docs-only head is stale and must be corrected. These are CI results, not physical ALSA, latency, xrun, long-duration soak, or release-readiness evidence.
+
+### Source-level integration facts reconfirmed on main
+
+- `Track` in `include/hush/project.hpp` has identity/name/gain/pan/mute/solo but no persisted bus assignment. The project has bus and route arrays, so the missing track-to-bus edge prevents the stored graph from fully describing the live track routing topology.
+- The ALSA Qt `LiveMixer` in `src/mixer_gui.cpp` maps the input's left/right channels only to source tracks 0 and 1; remaining tracks are zero-filled. This is a monitor/mixer test path, not full multichannel media playback or project recording.
+- `OperationLog` supports only SetGain, SetPan, SetMute and SetSolo. It cannot undo track/clip deletion, route/insert edits, recording takes, automation, or session-wide snapshots as a single project transaction.
+- `AutomationLane` is a standalone Step/Linear evaluator; no persisted automation entity or complete parameter-delivery path is represented in the main project schema.
+- `MidiLearnMap` maps CC events to numeric parameter IDs but explicitly does not enumerate/open devices or apply parameters; it is not a MIDI track/event engine or MPE implementation.
+- The command palette branch now has a real shared QAction/menu/shortcut/palette path and offscreen Qt assertions. It still does not provide editable keymaps, macros, timeline/MIDI/transport command coverage, or project-wide transactional undo. Do not award the full command-system category.
+
+### Damage / merge-risk conclusion
+
+No default-branch mutation was observed. The principal damage risk is integration by cherry-picking or merging overlapping stale branches without reconciling their changes to `project.hpp`, `project.cpp`, `operation_log.*`, `mixer_gui.cpp`, `CMakeLists.txt`, and shared test/acceptance documents. #94 and #95 both touch the project mixer/runtime boundary; #94 is the broader implementation candidate, while #95 is a smaller isolated runtime composition candidate. They must be compared at the code-hunk and contract level before either is integrated. #98 is the current-base safety fix and should precede feature integration.
+
+Recommended order is #98 first; then create one current-main project-mixer integration branch that reconciles the best validated pieces of #94/#95, persists track-to-bus assignment, wires the same pipeline into Qt and ALSA, and proves model → transaction/undo → persistence/recovery → bounded realtime publication → meter observation. Only after that should recording/takes, automation/MIDI, plugin hosting/PDC, and post/delivery be layered on.
+
+The grade remains main-only and evidence-bound. A feature in an open PR, a protocol document, or a passing synthetic unit test does not count as shipped end-to-end functionality.
