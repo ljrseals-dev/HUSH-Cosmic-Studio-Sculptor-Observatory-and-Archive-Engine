@@ -32,8 +32,9 @@ The live-audio action is disabled in builds without ALSA and is not shown among 
 ## Palette behavior
 
 - Ctrl+K opens a local, searchable list of enabled commands.
-- Search is case-insensitive and filters the visible command labels/shortcuts.
-- Enter or activation invokes the selected command.
+- Search is case-insensitive and filters registered command labels/shortcuts and the names/IDs of project tracks.
+- Track results navigate to and select the corresponding track row; command results invoke the shared QAction.
+- Enter or activation invokes the selected command or navigates to the selected track.
 - Commands that are disabled in the current build are not advertised as available.
 - The palette performs no network access, telemetry, indexing service or background process.
 
@@ -54,7 +55,7 @@ These future commands are not implemented merely because they appear in this lis
 
 ## Keymap evolution
 
-The initial implementation provides safe defaults, not a complete shortcut editor. Follow-on work should add:
+The current palette indexes implemented commands and project tracks. Clips, memory locations, groups, buses, and other session objects are not indexed until HUSH has corresponding navigation views. The initial implementation provides safe defaults, not a complete shortcut editor. Follow-on work should add:
 - User-editable key bindings with per-platform defaults.
 - Conflict detection and clear/restore defaults.
 - Context scopes (global, timeline, mixer, MIDI editor, text field).

@@ -443,6 +443,16 @@ private:
             const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
             if (!shortcut.isEmpty()) item->setText(item->text() + "    [" + shortcut + "]");
             item->setData(Qt::UserRole, action->objectName());
+            item->setData(Qt::UserRole + 1, "command");
+        }
+        // Pro Tools Search also finds session objects, not only commands. HUSH
+        // exposes the objects it can actually navigate today: project tracks.
+        for (const auto& track : project_.tracks) {
+            auto* item = new QListWidgetItem(
+                "Track · " + QString::fromStdString(track.name) +
+                "    [" + QString::fromStdString(track.id) + "]", list);
+            item->setData(Qt::UserRole, QString::fromStdString(track.id));
+            item->setData(Qt::UserRole + 1, "track");
         }
 
         const auto filter = [list](const QString& query) {
@@ -461,6 +471,17 @@ private:
         const auto invoke_item = [this, &dialog](QListWidgetItem* item) {
             if (!item) return;
             const auto id = item->data(Qt::UserRole).toString();
+            const auto kind = item->data(Qt::UserRole + 1).toString();
+            if (kind == "track") {
+                const auto found = std::find_if(project_.tracks.begin(), project_.tracks.end(),
+                    [&](const hush::Track& track) { return QString::fromStdString(track.id) == id; });
+                if (found == project_.tracks.end()) return;
+                const auto row = static_cast<int>(std::distance(project_.tracks.begin(), found));
+                dialog.accept();
+                table_->setCurrentCell(row, 0);
+                table_->scrollToItem(table_->item(row, 0));
+                return;
+            }
             for (auto* action : command_actions_) {
                 if (action->objectName() == id) {
                     dialog.accept();
