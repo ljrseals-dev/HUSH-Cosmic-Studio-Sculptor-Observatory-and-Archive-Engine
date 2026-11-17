@@ -1,11 +1,13 @@
 #include "hush/project.hpp"
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cctype>
 #include <iomanip>
 #include <regex>
 #include <sstream>
 #include <limits>
+#include <locale>
 #include <unordered_set>
 
 namespace hush {
@@ -114,15 +116,12 @@ bool unescape_json(const std::string& text, std::string& out) {
 }
 
 bool parse_float_token(const std::string& text, float& value) {
-    try {
-        std::size_t consumed = 0U;
-        const float parsed = std::stof(text, &consumed);
-        if (consumed != text.size()) return false;
-        value = parsed;
-        return true;
-    } catch (...) {
-        return false;
-    }
+    float parsed = 0.0F;
+    const auto result = std::from_chars(text.data(), text.data() + text.size(),
+                                         parsed, std::chars_format::general);
+    if (result.ec != std::errc{} || result.ptr != text.data() + text.size()) return false;
+    value = parsed;
+    return true;
 }
 
 std::string law_name(PanLaw law) {
@@ -202,6 +201,7 @@ bool count_object_array_items(const std::string& body, std::size_t& count) {
 }
 std::string to_json(const Project& p) {
     std::ostringstream o;
+    o.imbue(std::locale::classic());
     o << std::setprecision(9);
     o << "{\n  \"schema_version\": " << p.schema_version
       << ",\n  \"id\": \"" << escape_json(p.id) << "\""
