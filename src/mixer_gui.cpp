@@ -5,6 +5,7 @@
 #include "hush/realtime_track_mixer.hpp"
 
 #include <QApplication>
+#include <QAbstractItemView>
 #include <QAction>
 #include <QDialog>
 #include <QCheckBox>
@@ -19,6 +20,7 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
+#include <QKeySequence>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPushButton>
