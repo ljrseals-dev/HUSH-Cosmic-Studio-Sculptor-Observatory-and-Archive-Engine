@@ -46,6 +46,9 @@ struct AudioClip {
     // Linear fades measured in clip-relative source frames. Zero disables a fade.
     std::uint64_t fade_in_frames{0};
     std::uint64_t fade_out_frames{0};
+    // Stable recording-take identity shared by clips recorded simultaneously across tracks.
+    std::string take_id;
+    std::uint32_t take_number{0};
     bool operator==(const AudioClip&) const = default;
 };
 struct Project {
@@ -61,6 +64,11 @@ struct Project {
     std::vector<AudioClip> clips;
     bool operator==(const Project&) const = default;
 };
+[[nodiscard]] inline std::uint8_t take_color_index(const std::string& take_id) noexcept {
+    std::uint32_t hash = 2166136261U;
+    for (const unsigned char c : take_id) { hash ^= c; hash *= 16777619U; }
+    return static_cast<std::uint8_t>(hash % 12U);
+}
 std::string to_json(const Project& project);
 bool from_json(const std::string& json, Project& out, Error& error);
 }

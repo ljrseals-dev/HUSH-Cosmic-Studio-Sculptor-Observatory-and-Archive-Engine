@@ -10,14 +10,21 @@ int main() {
     project.tracks.push_back({"track-vox", "Vocals", 0.8F, 0.0F, false, false});
     project.media_sources.push_back({"source-take-1", "Media/take-1.wav", 48000U, 2U, 96000U});
     project.clips.push_back({"clip-vox-1", "track-vox", "source-take-1",
-                             24000, 1200U, 48000U, 0.75F, 120U, 240U});
+                             24000, 1200U, 48000U, 0.75F, 120U, 240U, "take-session-001", 1U});
+    project.tracks.push_back({"track-guitar", "Guitar", 1.0F, 0.0F, false, false});
+    project.clips.push_back({"clip-guitar-1", "track-guitar", "source-take-1",
+                             24000, 1200U, 48000U, 1.0F, 0U, 0U, "take-session-001", 1U});
 
     const auto json = to_json(project);
     Project restored;
     Error error;
     assert(from_json(json, restored, error));
     assert(restored == project);
-    assert(restored.clips.size() == 1U);
+    assert(restored.clips.size() == 2U);
+    assert(restored.clips[0].take_id == "take-session-001");
+    assert(restored.clips[0].take_number == 1U);
+    assert(restored.clips[1].take_id == "take-session-001");
+    assert(take_color_index(restored.clips[0].take_id) == take_color_index(restored.clips[1].take_id));
     assert(restored.clips[0].timeline_start_frame == 24000U);
     assert(restored.clips[0].source_start_frame == 1200U);
     assert(restored.clips[0].frame_count == 48000U);
@@ -52,6 +59,16 @@ int main() {
     invalid.media_sources[0].sample_rate = 0U;
     assert(!from_json(to_json(invalid), restored, error));
     assert(error.code == "media_source_invalid");
+
+    invalid = project;
+    invalid.clips[1].take_number = 2U;
+    assert(!from_json(to_json(invalid), restored, error));
+    assert(error.code == "audio_clip_take_number_conflict");
+
+    invalid = project;
+    invalid.clips[0].take_id.clear();
+    assert(!from_json(to_json(invalid), restored, error));
+    assert(error.code == "audio_clip_invalid");
 
     invalid = project;
     invalid.clips[0].gain = -1.0F;

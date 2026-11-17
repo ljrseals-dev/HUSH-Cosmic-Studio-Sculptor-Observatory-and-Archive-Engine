@@ -10,6 +10,7 @@
 #include <locale>
 #include <system_error>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace hush {
 namespace {
@@ -314,7 +315,9 @@ std::string to_json(const Project& p) {
           << ", \"frame_count\": " << clip.frame_count
           << ", \"gain\": " << clip.gain
           << ", \"fade_in_frames\": " << clip.fade_in_frames
-          << ", \"fade_out_frames\": " << clip.fade_out_frames << "}";
+          << ", \"fade_out_frames\": " << clip.fade_out_frames
+          << ", \"take_id\": \"" << escape_json(clip.take_id)
+          << "\", \"take_number\": " << clip.take_number << "}";
     }
     if (!p.clips.empty()) o << "\n  ";
     o << "]\n}\n";
@@ -462,9 +465,10 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     if (!count_object_array_items(body, expected_objects)) {
         e={"audio_clip_array_invalid","","Clip array must contain complete JSON objects","error"}; return false;
     }
-    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"track_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"source_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"timeline_start_frame"\s*:\s*(-?\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?\s*\})json");
+    const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"track_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"source_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"timeline_start_frame"\s*:\s*(-?\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?(?:\s*,\s*"take_id"\s*:\s*"((?:\\.|[^"\\])*)")?(?:\s*,\s*"take_number"\s*:\s*(\d+))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
     std::unordered_set<std::string> clip_ids;
+    std::unordered_map<std::string, std::uint32_t> take_numbers;
     for (auto it=begin;it!=end;++it) {
         const auto& x=*it;
         try {
@@ -481,6 +485,10 @@ bool from_json(const std::string& s, Project& out, Error& e) {
             }
             clip.fade_in_frames = x[8].matched ? std::stoull(x[8].str()) : 0U;
             clip.fade_out_frames = x[9].matched ? std::stoull(x[9].str()) : 0U;
+            if (x[10].matched && !unescape_json(x[10].str(), clip.take_id)) {
+                e={"audio_clip_take_id_invalid",clip.id,"Take ID contains an invalid JSON escape","error"}; return false;
+            }
+            clip.take_number = x[11].matched ? static_cast<std::uint32_t>(std::stoul(x[11].str())) : 0U;
             const auto track=std::find_if(p.tracks.begin(),p.tracks.end(),
                 [&](const Track& t){ return t.id==clip.track_id; });
             const auto source=std::find_if(p.media_sources.begin(),p.media_sources.end(),
@@ -490,11 +498,18 @@ bool from_json(const std::string& s, Project& out, Error& e) {
                 source==p.media_sources.end() || clip.frame_count==0U ||
                 !std::isfinite(clip.gain) || clip.gain<0.0F ||
                 clip.fade_in_frames > clip.frame_count || clip.fade_out_frames > clip.frame_count ||
+                (clip.take_id.empty() != (clip.take_number == 0U)) ||
                 clip.source_start_frame>source->frame_count ||
                 clip.frame_count>source->frame_count-clip.source_start_frame ||
                 clip.frame_count > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ||
                 clip.timeline_start_frame > std::numeric_limits<std::int64_t>::max() - static_cast<std::int64_t>(clip.frame_count)) {
                 e={"audio_clip_invalid",clip.id,"Clip IDs, references, gain, or frame bounds are invalid","error"}; return false;
+            }
+            if (!clip.take_id.empty()) {
+                const auto inserted = take_numbers.emplace(clip.take_id, clip.take_number);
+                if (!inserted.second && inserted.first->second != clip.take_number) {
+                    e={"audio_clip_take_number_conflict",clip.take_id,"Clips sharing a take ID must share one take number","error"}; return false;
+                }
             }
             p.clips.push_back(std::move(clip));
         } catch (...) { e={"audio_clip_number_invalid",x[1].str(),"Clip frame positions or gain are invalid","error"}; return false; }
