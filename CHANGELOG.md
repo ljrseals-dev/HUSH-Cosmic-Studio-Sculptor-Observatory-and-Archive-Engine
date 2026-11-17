@@ -1,3 +1,9 @@
+## Unreleased — root-level JSON member parsing
+
+- Locate schema-v1 fields only as root-object members, not key-like text embedded inside escaped project IDs or other string values.
+- Require array fields to be actual JSON arrays before scanning their records.
+- Extend the round-trip regression with key-like JSON text inside the project ID.
+
 ## Unreleased — locale-independent project JSON numbers
 
 - Serialize project floating-point fields with the classic JSON locale and parse them with std::from_chars, so a user's decimal-comma locale cannot corrupt project files or make valid values unreadable.
