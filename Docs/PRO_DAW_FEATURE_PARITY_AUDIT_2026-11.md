@@ -304,3 +304,12 @@ The current PR #99 command palette is a useful first slice, not a complete comma
 10. Tests exercise menu, shortcut, palette and protocol invocation against the same domain transaction.
 
 External control protocols should be introduced in layers: first an internal command bus and event/result schema, then OSC/MIDI control-surface adapters with explicit capability maps and feedback, then optional transport synchronization (MIDI Clock, MTC/LTC) only after the timebase and transport state machine are stable. Do not add protocol labels to menus without implementing transport, feedback, lifecycle, authorization and failure semantics.
+
+
+## Integration checkpoint — 2026-11-17
+
+The audit's original source baseline above is retained for reproducibility. The current `main` now includes PR #98, merged as `2bbc9bc77c23e1ba678223f9b58a8ab0b38cdb2e`, which hardens project JSON parsing, numeric conversion, duplicate-ID rejection, recovery-journal continuation, and a realtime graph test handshake. Those correctness improvements do not by themselves close the DAW workflow gaps or change the feature-coverage score.
+
+The current integration branch is based on that updated `main` and carries the command-registry implementation and Qt interaction tests previously developed in PR #99. This is a clean current-main integration attempt, not a claim that PR #99 or its command features are already shipped. PR #94 and #95 remain separate, overlapping, conflicted integration candidates; do not merge their entire stale branch histories blindly. Reconcile their project-aware mixer, recording, bus insert, meter and recovery changes by feature and test, then run CI on the combined current-main result.
+
+The command registry in this branch remains a mixer-shell command layer. Editable keymap profiles, conflict detection, project-wide structural undo, macros, arrangement editing, MIDI/MPE, complete recording/comping and batch export remain unimplemented until their domain transitions are connected and tested.
