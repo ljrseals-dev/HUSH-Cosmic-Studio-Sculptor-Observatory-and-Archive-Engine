@@ -78,6 +78,8 @@ ctest --test-dir build-gui --output-on-failure
 
 For the optional live ALSA GUI path, enable both `HUSH_BUILD_GUI=ON` and `HUSH_ENABLE_ALSA=ON` in the same build directory. The live action is explicit; it is not a background capture feature.
 
+The mixer shell provides a searchable command palette (Ctrl+K) and keyboard commands for Open (Ctrl+O), Save (Ctrl+S), Undo, Redo, selected-track Mute (M), selected-track Solo (Shift+S), and the optional live ALSA toggle (Ctrl+Alt+L). The palette exposes only commands enabled in the current build. This is a discoverability/shortcut foundation, not yet a user-editable keymap or macro system. See [Docs/WORKFLOW_COMMANDS.md](Docs/WORKFLOW_COMMANDS.md).
+
 ### Optional offline benchmark and soak harnesses
 
 `HUSH_BUILD_STRESS_TOOLS` defaults to `ON`. The standard build therefore also creates `hush_routing_benchmark` and `hush_headless_soak`; set `-DHUSH_BUILD_STRESS_TOOLS=OFF` to omit them. Example short smoke runs:
