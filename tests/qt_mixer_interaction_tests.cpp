@@ -156,19 +156,19 @@ int main(int argc, char** argv) {
     track_table->setCurrentCell(0, 0);
     mute_action->trigger();
     assert(window.test_project().tracks[0].mute);
-    assert(window.test_history_cursor() == 4U);
+    assert(window.test_history_cursor() == 3U);
     assert(live_sink.process_one_block());
     assert(near(live_sink.output_left[0], 0.0F));
 
     undo_action->trigger();
     assert(!window.test_project().tracks[0].mute);
-    assert(window.test_history_cursor() == 3U);
+    assert(window.test_history_cursor() == 2U);
     assert(live_sink.process_one_block());
     assert(live_sink.output_left[0] > 0.5F * 0.70710678F);
 
     redo_action->trigger();
     assert(window.test_project().tracks[0].mute);
-    assert(window.test_history_cursor() == 4U);
+    assert(window.test_history_cursor() == 3U);
     assert(live_sink.process_one_block());
     assert(near(live_sink.output_left[0], 0.0F));
     return 0;
