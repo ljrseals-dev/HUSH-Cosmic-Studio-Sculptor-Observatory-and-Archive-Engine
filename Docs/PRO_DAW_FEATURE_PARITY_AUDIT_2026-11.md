@@ -306,10 +306,36 @@ The current PR #99 command palette is a useful first slice, not a complete comma
 External control protocols should be introduced in layers: first an internal command bus and event/result schema, then OSC/MIDI control-surface adapters with explicit capability maps and feedback, then optional transport synchronization (MIDI Clock, MTC/LTC) only after the timebase and transport state machine are stable. Do not add protocol labels to menus without implementing transport, feedback, lifecycle, authorization and failure semantics.
 
 
-## Integration checkpoint — 2026-11-17
+## Integration checkpoint — 2026-11-17 (updated after current-main integrations)
 
-The audit's original source baseline above is retained for reproducibility. The current `main` now includes PR #98, merged as `2bbc9bc77c23e1ba678223f9b58a8ab0b38cdb2e`, which hardens project JSON parsing, numeric conversion, duplicate-ID rejection, recovery-journal continuation, and a realtime graph test handshake. Those correctness improvements do not by themselves close the DAW workflow gaps or change the feature-coverage score.
+The original 30/100 (F) result remains the reproducible historical baseline against commit `8e4b16af1e4fd9bd18f7b2c1c55e664b8dbfaa43`; it is not a fresh grade of the current main. Do not add points for a feature foundation that is not a complete user-visible workflow.
 
-The current integration branch is based on that updated `main` and carries the command-registry implementation and Qt interaction tests previously developed in PR #99. This is a clean current-main integration attempt, not a claim that PR #99 or its command features are already shipped. PR #94 and #95 remain separate, overlapping, conflicted integration candidates; do not merge their entire stale branch histories blindly. Reconcile their project-aware mixer, recording, bus insert, meter and recovery changes by feature and test, then run CI on the combined current-main result.
+### Current main changes
 
-The command registry in this branch remains a mixer-shell command layer. Editable keymap profiles, conflict detection, project-wide structural undo, macros, arrangement editing, MIDI/MPE, complete recording/comping and batch export remain unimplemented until their domain transitions are connected and tested.
+- PR #98 merged as `2bbc9bc77c23e1ba678223f9b58a8ab0b38cdb2e`: strict JSON parsing, locale-independent numeric handling, duplicate ID checks, recovery-journal continuation and realtime graph test.
+- PR #100 merged as `68b7b09816b89e0b7f5c96a4ae27f8524fc23c08`: shared Qt command registration for Open/Save/Undo/Redo, selected-track Mute/Solo, optional ALSA live toggle and searchable Ctrl+K command palette. All eight CI checks passed.
+- PR #102 merged as `dfdd6b6cbafbcc006e2f633cec673ebae28f8176`: note-scoped MPE pitch/pressure/timbre model, strict validation and allocation-free expression interpolation. All eight CI checks passed. This is not yet a complete MIDI/MPE editor or playback path.
+- PR #103 is open against current main: persists optional `take_id` and `take_number` on audio clips, validates shared take-number consistency, and provides deterministic color-index mapping. The recording coordinator does not yet assign take IDs automatically; playlist/comping and undo/redo integration remain open. CI is in progress.
+
+### Remaining high-priority Pro Tools 2026.11 transitions
+
+| Requirement | Current state | Required completion |
+|---|---|---|
+| MPE record/edit/play/automate | Core per-note data/evaluation merged | Project persistence, MPE zone/device input, scheduler, MIDI editor expression lanes, channel color rendering, instrument delivery, undo/recovery/offline-render tests |
+| Auto-color alternate takes | Clip identity PR #103 pending | Recording coordinator assigns one take ID to every track in a simultaneous pass; playlist edits preserve it; comping UI and tests |
+| Pinned/unpinned track focus shortcut | Not implemented | Pinned-track model/view, focus state machine, context-safe command and keyboard test |
+| Local six-stem separation | Not implemented | Optional offline inference engine, locally stored model weights with provenance/license, six-stem output contract, preview/import transactions, resource limits and no-network tests |
+| Session-independent Extensions | Not implemented | Local extension manifest/registry, lifecycle and capability model, safe process boundary, extension menu/panel and no-session host |
+| Project-aware mixer/recording | PRs #94/#95 remain conflicted integration candidates | Selectively port track-to-bus persistence, inserts, meters, routing, recording and recovery; do not merge stale branch history wholesale |
+
+### Current command protocol state
+
+PR #100 delivers the first shared QAction/menu/shortcut/palette layer. It does not deliver editable keymap profiles, shortcut conflict detection, macros, a public command protocol, control-surface feedback, or project-wide structural undo. Commands must still follow the complete transaction contract above; menu presence alone is not implementation.
+
+### Community-requested workflow priorities
+
+The VI-CONTROL 2027 wishlist and Pro Tools user discussions repeatedly mention expression maps/articulations, MIDI CC automation curves, multitrack piano-roll editing, undoing track deletion, batch processing/export, import preview, fine nudge, and better command search/shortcut coverage. Reddit users also request a persistent undo history, timestamp-aware audio import, batch fades and playlist breakout. These are qualitative user requests, not a statistically representative survey; they should guide HUSH's workflow roadmap, not be misrepresented as universal consensus.
+
+Sources: [Avid Pro Tools 2026.11 release notes](https://kb.avid.com/pkb/articles/en_US/Knowledge/Pro-Tools-2026-11-Release-Notes?popup=true), [VI-CONTROL wishlist page 1](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/), [page 2](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-2), [page 3](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-3), [Reddit user requests](https://www.reddit.com/r/protools/comments/1bwhutb).
+
+The score is intentionally not recalculated in this checkpoint: the MPE and take work are still partial workflows, and mixer/recording, Extensions, stem separation and arrangement remain open. Re-score only after the end-to-end transitions and CI evidence close.
