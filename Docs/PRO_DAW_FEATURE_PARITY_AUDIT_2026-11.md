@@ -67,7 +67,7 @@ The reference baseline is Pro Tools Studio with selected Ultimate/post workflows
 
 ## User-request research and recommended integrations
 
-Research sources reviewed include the Pro Tools 2026.11 reference guide and feature comparison, the September 2026 VI-CONTROL “Your Pro Tools 2027 Wish List” discussion (pages 1–3), Reddit's “PT Wishlist Features/Changes” thread, and Production Expert's 2026 missing-features article. Forum requests are qualitative signals, not a statistically representative survey. Items that already exist in Pro Tools are not represented as missing Pro Tools features; they are considered only as possible HUSH workflows.
+Research sources reviewed include the Pro Tools 2026.11 reference guide and feature comparison, the September–November 2026 VI-CONTROL “Your Pro Tools 2027 Wish List” discussion (pages 1–6), Reddit's “PT Wishlist Features/Changes” thread, and Production Expert's 2026 missing-features article. Forum requests are qualitative signals, not a statistically representative survey. Items that already exist in Pro Tools are not represented as missing Pro Tools features; they are considered only as possible HUSH workflows.
 
 ### Repeated or high-value requests
 
@@ -91,6 +91,14 @@ Research sources reviewed include the Pro Tools 2026.11 reference guide and feat
 | Clip-list search/preview and smarter session import matching | Missing | Add local media indexing, waveform preview, metadata matching suggestions and an explicit user-confirmed import plan |
 | Playback-device switching without restarting the app | Missing | Separate device lifecycle from session state; stop/quiesce, close, reconfigure and restart safely with rollback |
 | Multiple sessions open / compare mix revisions | Missing | Session tabs and mix snapshots; no hidden project state or implicit file overwrites |
+| Session versioning / cue containers / snapshots | Missing | Add explicit project branches or cue/sub-session containers only after stable project transactions and media ownership; keep snapshot recall separate from destructive history |
+| Multiple tempo/meter maps and per-cue markers | Partial tempo map only | Add named tempo/meter map variants, per-cue timebases and multi-select marker operations with sample/SMPTE-safe conversions |
+| Track presets and folder-derived groups | Missing | Save/recall full track templates and create undoable groups from routing-folder membership |
+| Control-surface auto-banking | Missing | Add a documented, local control-surface protocol layer (e.g. HUI/Mackie where appropriate), selection-follow and bank synchronization |
+| Quick-swipe comping | Missing | Make take audition/comp selection a direct gesture with explicit listen/monitor state and reversible comp ranges |
+| Chord track and chord detection | Missing | Add a shared chord-event model and optional local analysis; MIDI arrangement and piano roll must consume the same chord data |
+| Local stem separation | Missing | Optional preinstalled local model with explicit user action, offline-only inference and no callback/model work on the realtime thread |
+| Versioned track presets / shared global racks | Missing | Add preset library and explicit shared-vs-local override semantics after plugin state and multi-session ownership are defined |
 
 ### Important corrections from the discussions
 
@@ -200,6 +208,9 @@ Recommended integration order:
 - Avid Pro Tools 2026.11 release notes: https://kb.avid.com/pkb/articles/en_US/Knowledge/Pro-Tools-2026-11-Release-Notes
 - Pro Tools Shortcuts Guide: https://resources.avid.com/SupportFiles/PT/Pro_Tools_Shortcuts_2025.6.pdf
 - VI-CONTROL, Your Pro Tools 2027 Wish List (Sep 2026): https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/
+- VI-CONTROL wishlist page 4 (session versioning, track presets, routing-folder groups, control surfaces): https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-4
+- VI-CONTROL wishlist page 5 (stem separation, sub-sessions, tempo/meter playlists, plugin sandboxing, comping): https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-5
+- VI-CONTROL wishlist page 6 (follow-up discussion on tempo maps and MIDI workflows): https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-6
 - Reddit, PT Wishlist Features/Changes: https://www.reddit.com/r/protools/comments/1lfxtbx/
 - Reddit, What's Still Missing In Pro Tools?: https://www.reddit.com/r/protools/comments/f5v29m/
 - Reddit, Why is there no insert undo feature?: https://www.reddit.com/r/protools/comments/1n9ndr3/
