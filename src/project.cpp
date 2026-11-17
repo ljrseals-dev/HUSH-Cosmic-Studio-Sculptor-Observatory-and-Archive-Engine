@@ -8,6 +8,7 @@
 #include <sstream>
 #include <limits>
 #include <locale>
+#include <system_error>
 #include <unordered_set>
 
 namespace hush {
@@ -323,7 +324,6 @@ std::string to_json(const Project& p) {
 // Strict reader for the schema-v1 model subset emitted by to_json. Bus and route arrays
 // are optional for compatibility with earlier schema-v1 project files.
 bool from_json(const std::string& s, Project& out, Error& e) {
-    std::smatch m;
     std::size_t value_pos = 0U;
     if (!find_top_level_key_value(s, "schema_version", value_pos) ||
         value_pos >= s.size() || s[value_pos] != '1' ||
