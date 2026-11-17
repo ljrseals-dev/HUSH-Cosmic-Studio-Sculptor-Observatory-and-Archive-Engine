@@ -1,3 +1,8 @@
+## Unreleased — locale-independent project JSON numbers
+
+- Serialize project floating-point fields with the classic JSON locale and parse them with std::from_chars, so a user's decimal-comma locale cannot corrupt project files or make valid values unreadable.
+- Add a regression test that switches the global C++ locale to a comma decimal facet and verifies schema-v1 round-trip fidelity.
+
 ## Unreleased — project parser completeness checks
 
 - Reject duplicate stable track IDs and incomplete/malformed array entries instead of silently dropping unrecognized records when other valid entries are present.
