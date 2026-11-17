@@ -26,7 +26,7 @@ bool injected_writer(const std::filesystem::path& path, const hush::Project& pro
 
 int main() {
     using namespace hush;
-    Project p; p.id="session-\"A\"\\folder\n";
+    Project p; p.id="session-\"A\"\\folder\n\"tracks\":[{\"id\":\"decoy\"}],\"pan_law\":\"legacy_minus_4_5_db\"";
     p.tracks={{"track-1","Lead \"main\"\\take\t",0.75F,0.0F,false,false},{"track-2","Pad",0.5F,-0.5F,false,false}};
     p.buses={{"bus-\"master\"\\out","Master \"bus\""},{"bus-music","Music"}};
     p.routes={{"bus-music","bus-\"master\"\\out",SendTap::PostFader,0.8F}};
