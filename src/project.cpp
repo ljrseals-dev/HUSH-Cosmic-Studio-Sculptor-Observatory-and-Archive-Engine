@@ -1,6 +1,7 @@
 #include "hush/project.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <iomanip>
 #include <regex>
 #include <sstream>
@@ -156,6 +157,48 @@ bool extract_array(const std::string& s, const std::string& key, std::string& bo
     e={"array_invalid","",key + " array is unterminated","error"};
     return false;
 }
+bool count_object_array_items(const std::string& body, std::size_t& count) {
+    count = 0U;
+    std::size_t i = 0U;
+    const auto skip_space = [&]() {
+        while (i < body.size() && std::isspace(static_cast<unsigned char>(body[i])) != 0) ++i;
+    };
+    skip_space();
+    while (i < body.size()) {
+        if (body[i] != '{') return false;
+        std::size_t depth = 0U;
+        bool quoted = false;
+        bool escaped = false;
+        for (; i < body.size(); ++i) {
+            const char c = body[i];
+            if (quoted) {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == '"') quoted = false;
+                continue;
+            }
+            if (c == '"') quoted = true;
+            else if (c == '{') ++depth;
+            else if (c == '}') {
+                if (depth == 0U) return false;
+                --depth;
+                if (depth == 0U) {
+                    ++i;
+                    break;
+                }
+            }
+        }
+        if (depth != 0U || quoted) return false;
+        ++count;
+        skip_space();
+        if (i == body.size()) return true;
+        if (body[i] != ',') return false;
+        ++i;
+        skip_space();
+        if (i == body.size()) return false;
+    }
+    return true;
+}
 }
 std::string to_json(const Project& p) {
     std::ostringstream o;
@@ -234,7 +277,12 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     else { e={"pan_law_invalid","","Unknown pan law","error"}; return false; }
 
     std::string body;
+    std::size_t expected_objects = 0U;
     if (!extract_array(s,"tracks",body,true,e)) return false;
+    if (!count_object_array_items(body, expected_objects)) {
+        e={"track_array_invalid","","Track array must contain complete JSON objects","error"}; return false;
+    }
+    std::unordered_set<std::string> track_ids;
     const std::regex track_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"name"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"pan"\s*:\s*(-?[0-9.eE+]+)\s*,\s*"mute"\s*:\s*(true|false)\s*,\s*"solo"\s*:\s*(true|false)\s*\})json");
     auto begin=std::sregex_iterator(body.begin(),body.end(),track_re), end=std::sregex_iterator();
     for (auto it=begin;it!=end;++it) {
@@ -246,16 +294,22 @@ bool from_json(const std::string& s, Project& out, Error& e) {
             e={"track_number_invalid",t.id,"Gain or pan is invalid","error"}; return false;
         }
         t.mute=x[5].str()=="true"; t.solo=x[6].str()=="true";
-        if (t.id.empty() || !std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
-            e={"track_value_invalid",t.id,"Track id, gain, or pan is invalid","error"}; return false;
+        if (t.id.empty() || !track_ids.insert(t.id).second) {
+            e={"track_id_duplicate",t.id,"Track IDs must be non-empty and unique","error"}; return false;
+        }
+        if (!std::isfinite(t.gain) || !std::isfinite(t.pan) || t.pan < -1.0F || t.pan > 1.0F) {
+            e={"track_value_invalid",t.id,"Track gain or pan is invalid","error"}; return false;
         }
         p.tracks.push_back(t);
     }
-    if (body.find('{')!=std::string::npos && p.tracks.empty()) {
-        e={"track_parse_failed","","Track object did not match schema-v1 fields","error"}; return false;
+    if (p.tracks.size() != expected_objects) {
+        e={"track_parse_failed","","One or more track objects did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"buses",body,false,e)) return false;
+    if (!count_object_array_items(body, expected_objects)) {
+        e={"bus_array_invalid","","Bus array must contain complete JSON objects","error"}; return false;
+    }
     const std::regex bus_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"name"\s*:\s*"((?:\\.|[^"\\])*)"\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),bus_re);
     for (auto it=begin;it!=end;++it) {
@@ -266,11 +320,14 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         if (b.id.empty()) { e={"bus_id_empty","","Bus ID must not be empty","error"}; return false; }
         p.buses.push_back(std::move(b));
     }
-    if (body.find('{')!=std::string::npos && p.buses.empty()) {
-        e={"bus_parse_failed","","Bus object did not match schema-v1 fields","error"}; return false;
+    if (p.buses.size() != expected_objects) {
+        e={"bus_parse_failed","","One or more bus objects did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"routes",body,false,e)) return false;
+    if (!count_object_array_items(body, expected_objects)) {
+        e={"route_array_invalid","","Route array must contain complete JSON objects","error"}; return false;
+    }
     const std::regex route_re(R"json(\{\s*"source_bus_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"destination_bus_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"tap"\s*:\s*"(pre_fader|post_fader)"\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),route_re);
     for (auto it=begin;it!=end;++it) {
@@ -287,8 +344,8 @@ bool from_json(const std::string& s, Project& out, Error& e) {
         p.routes.push_back({std::move(source_id),std::move(destination_id),
             x[3].str()=="pre_fader"?SendTap::PreFader:SendTap::PostFader,gain});
     }
-    if (body.find('{')!=std::string::npos && p.routes.empty()) {
-        e={"route_parse_failed","","Route object did not match schema-v1 fields","error"}; return false;
+    if (p.routes.size() != expected_objects) {
+        e={"route_parse_failed","","One or more route objects did not match schema-v1 fields","error"}; return false;
     }
     if (!p.buses.empty() || !p.routes.empty()) {
         BusGraph graph; RoutingError routing_error;
@@ -298,6 +355,9 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     }
 
     if (!extract_array(s,"media_sources",body,false,e)) return false;
+    if (!count_object_array_items(body, expected_objects)) {
+        e={"media_source_array_invalid","","Media source array must contain complete JSON objects","error"}; return false;
+    }
     const std::regex source_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"relative_path"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"sample_rate"\s*:\s*(\d+)\s*,\s*"channels"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),source_re);
     std::unordered_set<std::string> source_ids;
@@ -321,11 +381,14 @@ bool from_json(const std::string& s, Project& out, Error& e) {
                 static_cast<std::uint16_t>(channels),static_cast<std::uint64_t>(frames)});
         } catch (...) { e={"media_source_number_invalid",x[1].str(),"Media source numeric metadata is invalid","error"}; return false; }
     }
-    if (body.find('{')!=std::string::npos && p.media_sources.empty()) {
-        e={"media_source_parse_failed","","Media source object did not match schema-v1 fields","error"}; return false;
+    if (p.media_sources.size() != expected_objects) {
+        e={"media_source_parse_failed","","One or more media source objects did not match schema-v1 fields","error"}; return false;
     }
 
     if (!extract_array(s,"clips",body,false,e)) return false;
+    if (!count_object_array_items(body, expected_objects)) {
+        e={"audio_clip_array_invalid","","Clip array must contain complete JSON objects","error"}; return false;
+    }
     const std::regex clip_re(R"json(\{\s*"id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"track_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"source_id"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"timeline_start_frame"\s*:\s*(-?\d+)\s*,\s*"source_start_frame"\s*:\s*(\d+)\s*,\s*"frame_count"\s*:\s*(\d+)\s*,\s*"gain"\s*:\s*(-?[0-9.eE+]+)(?:\s*,\s*"fade_in_frames"\s*:\s*(\d+))?(?:\s*,\s*"fade_out_frames"\s*:\s*(\d+))?\s*\})json");
     begin=std::sregex_iterator(body.begin(),body.end(),clip_re);
     std::unordered_set<std::string> clip_ids;
@@ -363,8 +426,8 @@ bool from_json(const std::string& s, Project& out, Error& e) {
             p.clips.push_back(std::move(clip));
         } catch (...) { e={"audio_clip_number_invalid",x[1].str(),"Clip frame positions or gain are invalid","error"}; return false; }
     }
-    if (body.find('{')!=std::string::npos && p.clips.empty()) {
-        e={"audio_clip_parse_failed","","Clip object did not match schema-v1 fields","error"}; return false;
+    if (p.clips.size() != expected_objects) {
+        e={"audio_clip_parse_failed","","One or more clip objects did not match schema-v1 fields","error"}; return false;
     }
     out=std::move(p); e={}; return true;
 }
