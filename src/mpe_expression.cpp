@@ -28,10 +28,10 @@ bool less_point(const MpeExpressionPoint& a,
 } // namespace
 
 bool validate_mpe_note(const MpeNote& note,
-                       MpeValidationError& error) noexcept {
+                       MpeValidationError& error) {
     error = {};
     const auto fail = [&error, &note](const char* code,
-                                      const char* message) noexcept {
+                                      const char* message) {
         error.code = code;
         error.note_id = note.id;
         error.message = message;
