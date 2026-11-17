@@ -43,7 +43,7 @@ struct MpeValidationError {
 // Validation is a control-thread operation. It checks bounds, overflow,
 // deterministic ordering, duplicate points, and finite expression values.
 [[nodiscard]] bool validate_mpe_note(const MpeNote& note,
-                                     MpeValidationError& error) noexcept;
+                                     MpeValidationError& error);
 
 // Returns a linearly interpolated value for one dimension. Values before the
 // first point and after the last point hold the nearest endpoint. If a note
