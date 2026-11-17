@@ -115,6 +115,66 @@ bool unescape_json(const std::string& text, std::string& out) {
     return true;
 }
 
+bool extract_json_string(const std::string& json, std::size_t value_pos, std::string& out) {
+    if (value_pos >= json.size() || json[value_pos] != '"') return false;
+    bool escaped = false;
+    for (std::size_t i = value_pos + 1U; i < json.size(); ++i) {
+        const char c = json[i];
+        if (escaped) escaped = false;
+        else if (c == '\\') escaped = true;
+        else if (c == '"') {
+            return unescape_json(json.substr(value_pos + 1U, i - value_pos - 1U), out);
+        }
+    }
+    return false;
+}
+
+bool find_top_level_key_value(const std::string& json, const std::string& key,
+                              std::size_t& value_pos) {
+    std::size_t object_depth = 0U;
+    std::size_t array_depth = 0U;
+    for (std::size_t i = 0; i < json.size(); ++i) {
+        const char c = json[i];
+        if (c == '"') {
+            const std::size_t token_start = i + 1U;
+            bool escaped = false;
+            std::size_t token_end = token_start;
+            for (; token_end < json.size(); ++token_end) {
+                const char token_char = json[token_end];
+                if (escaped) escaped = false;
+                else if (token_char == '\\') escaped = true;
+                else if (token_char == '"') break;
+            }
+            if (token_end == json.size()) return false;
+            if (object_depth == 1U && array_depth == 0U &&
+                json.compare(token_start, token_end - token_start, key) == 0) {
+                std::size_t next = token_end + 1U;
+                while (next < json.size() &&
+                       std::isspace(static_cast<unsigned char>(json[next])) != 0) ++next;
+                if (next < json.size() && json[next] == ':') {
+                    ++next;
+                    while (next < json.size() &&
+                           std::isspace(static_cast<unsigned char>(json[next])) != 0) ++next;
+                    value_pos = next;
+                    return true;
+                }
+            }
+            i = token_end;
+        } else if (c == '{') {
+            ++object_depth;
+        } else if (c == '}') {
+            if (object_depth == 0U) return false;
+            --object_depth;
+        } else if (c == '[') {
+            ++array_depth;
+        } else if (c == ']') {
+            if (array_depth == 0U) return false;
+            --array_depth;
+        }
+    }
+    return false;
+}
+
 bool parse_float_token(const std::string& text, float& value) {
     float parsed = 0.0F;
     const auto result = std::from_chars(text.data(), text.data() + text.size(),
@@ -131,14 +191,17 @@ std::string tap_name(SendTap tap) {
     return tap == SendTap::PreFader ? "pre_fader" : "post_fader";
 }
 bool extract_array(const std::string& s, const std::string& key, std::string& body, bool required, Error& e) {
-    const auto key_pos=s.find("\"" + key + "\"");
-    if (key_pos==std::string::npos) {
+    std::size_t value_pos = 0U;
+    if (!find_top_level_key_value(s, key, value_pos)) {
         if (required) e={"array_missing","",key + " array is missing","error"};
         body.clear();
         return !required;
     }
-    const auto left=s.find('[',key_pos);
-    if (left==std::string::npos) { e={"array_invalid","",key + " array malformed","error"}; return false; }
+    if (value_pos >= s.size() || s[value_pos] != '[') {
+        e={"array_invalid","",key + " array must be a JSON array","error"};
+        return false;
+    }
+    const auto left = value_pos;
     bool quoted=false, escaped=false;
     int depth=0;
     for (std::size_t i=left;i<s.size();++i) {
@@ -261,19 +324,29 @@ std::string to_json(const Project& p) {
 // are optional for compatibility with earlier schema-v1 project files.
 bool from_json(const std::string& s, Project& out, Error& e) {
     std::smatch m;
-    const std::regex version_re(R"("schema_version"\s*:\s*(\d+))");
-    const std::regex id_re(R"REGEX("id"\s*:\s*"((?:\\.|[^"\\])*)")REGEX");
-    const std::regex law_re(R"REGEX("pan_law"\s*:\s*"([^"]+)")REGEX");
-    if (!std::regex_search(s,m,version_re) || m[1].str()!="1") {
+    std::size_t value_pos = 0U;
+    if (!find_top_level_key_value(s, "schema_version", value_pos) ||
+        value_pos >= s.size() || s[value_pos] != '1' ||
+        (value_pos + 1U < s.size() &&
+         s[value_pos + 1U] != ',' && s[value_pos + 1U] != '}' &&
+         std::isspace(static_cast<unsigned char>(s[value_pos + 1U])) == 0)) {
         e={"schema_version_unsupported","","Expected schema_version 1","error"}; return false;
     }
     Project p;
     p.schema_version=1;
-    if (!std::regex_search(s,m,id_re)) { e={"project_id_missing","","Project id is missing","error"}; return false; }
-    if (!unescape_json(m[1].str(), p.id)) { e={"project_id_escape_invalid","","Project ID contains an invalid JSON escape","error"}; return false; }
-    if (!std::regex_search(s,m,law_re)) { e={"pan_law_missing","","Pan law is missing","error"}; return false; }
-    if (m[1].str()=="legacy_minus_4_5_db") p.pan_law=PanLaw::LegacyMinus4_5dB;
-    else if (m[1].str()=="equal_power_minus_3_db") p.pan_law=PanLaw::EqualPowerMinus3dB;
+    if (!find_top_level_key_value(s, "id", value_pos) ||
+        !extract_json_string(s, value_pos, p.id)) {
+        e={"project_id_missing","","Project id is missing or contains an invalid JSON escape","error"}; return false;
+    }
+    if (!find_top_level_key_value(s, "pan_law", value_pos)) {
+        e={"pan_law_missing","","Pan law is missing","error"}; return false;
+    }
+    std::string pan_law;
+    if (!extract_json_string(s, value_pos, pan_law)) {
+        e={"pan_law_invalid","","Pan law is not a valid JSON string","error"}; return false;
+    }
+    if (pan_law=="legacy_minus_4_5_db") p.pan_law=PanLaw::LegacyMinus4_5dB;
+    else if (pan_law=="equal_power_minus_3_db") p.pan_law=PanLaw::EqualPowerMinus3dB;
     else { e={"pan_law_invalid","","Unknown pan law","error"}; return false; }
 
     std::string body;
