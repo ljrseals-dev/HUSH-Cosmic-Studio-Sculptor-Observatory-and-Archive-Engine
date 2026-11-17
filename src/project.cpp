@@ -520,3 +520,6 @@ bool from_json(const std::string& s, Project& out, Error& e) {
     out=std::move(p); e={}; return true;
 }
 }
+          << ", \"fade_out_frames\": " << clip.fade_out_frames
+          << ", \"take_id\": \"" << escape_json(clip.take_id)
+          << "\", \"take_number\": " << clip.take_number << "}";
