@@ -263,3 +263,44 @@ No default-branch mutation was observed. The principal damage risk is integratio
 Recommended order is #98 first; then create one current-main project-mixer integration branch that reconciles the best validated pieces of #94/#95, persists track-to-bus assignment, wires the same pipeline into Qt and ALSA, and proves model → transaction/undo → persistence/recovery → bounded realtime publication → meter observation. Only after that should recording/takes, automation/MIDI, plugin hosting/PDC, and post/delivery be layered on.
 
 The grade remains main-only and evidence-bound. A feature in an open PR, a protocol document, or a passing synthetic unit test does not count as shipped end-to-end functionality.
+
+
+## Additional current user-request evidence — November 2026
+
+A current VI-CONTROL Pro Tools 2027 wishlist thread adds several concrete workflow requests and corrections. These posts are qualitative evidence from individual users, not a statistically representative survey, and some requests are disputed or already available in certain Pro Tools configurations. HUSH should implement the underlying workflow where useful, not copy proprietary UI or command implementations.
+
+| Reported request | HUSH status in reviewed main | Recommended HUSH implementation / transition |
+|---|---|---|
+| Control Room-style monitoring | Missing | Dedicated monitor-bus domain model with reference switching, mono, dim, mute and speaker layouts; do not route monitor-only controls into exported master audio |
+| Multichannel plugin instances and immersive processing | Missing | Channel-layout-aware bus/insert contract, explicit channel maps, validated downmix/upmix matrices, and plugin channel capability negotiation before plugin host work |
+| Batch processing and batch export | Missing | Persistent export-job model, deterministic queue, per-job output paths, collision policy, cancel/resume, error report and reproducible render hash |
+| MIDI CC curves editable with Bézier and direct curve transforms | Missing end-to-end | Persisted automation/event curves with interpolation types, selection transforms (compress/expand/crescendo), sample/beat domain conversion and undo |
+| Expression maps / articulation sets | Missing | Stable articulation IDs, keyswitch/controller conditions, articulation presets, instrument routing and serialized mapping version |
+| Undo deletion of tracks | Missing | One atomic delete transaction capturing track, clips, playlists, routes, sends, automation, plugin state and references; undo restores exact stable IDs and ordering |
+| Search/palette/shortcut coverage gaps | Partial on PR #99 only | Registry must enumerate every enabled command; add tests that every command is discoverable, shortcut conflicts are surfaced, and context-sensitive commands are disabled when unavailable |
+| Multi-track piano roll and MIDI controller lanes in Edit view | Missing | Shared MIDI event model and selection across arrangement/piano-roll views; CC/velocity/expression lanes must edit the same persisted events |
+| Fine audio/MIDI nudge and spacing commands | Missing | Integer sample/tick operations with explicit units, snapping policy, keyboard-repeat behavior, undo grouping and overflow tests |
+| Better session-data import matching / preview | Missing | Local metadata extraction, candidate match report, source timeline/tempo preview and explicit confirmation before import transaction |
+| FLAC import and drag/drop MIDI exchange | Missing | Format capability registry, offline decoder, explicit media import transaction and safe MIDI file/clipboard interchange; preserve provenance |
+| Plugin favorites/hide-unused and AudioSuite-style offline chains | Missing | Local plugin catalogue metadata and user collections; offline processing chain only after plugin isolation, state capture, deterministic render and rollback exist |
+
+The current thread also includes a report of a MIDI Operations selection regression. This is a Pro Tools bug report, not a feature HUSH should reproduce; HUSH's acceptance tests should ensure invoking an operation preserves the selected event set and does not require re-selection.
+
+Sources: [VI-CONTROL Pro Tools 2027 wishlist, page 1](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/), [page 2](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-2), [page 3](https://vi-control.net/community/threads/your-pro-tools-2027-wish-list.174855/page-3). Official shortcut behavior and command-focus semantics should be taken from the [Pro Tools Reference Guide 2026.11](https://resources.avid.com/SupportFiles/PT/Pro_Tools_Reference_Guide_2026.11.pdf), not inferred from forum comments.
+
+## Command and protocol completeness gate
+
+The current PR #99 command palette is a useful first slice, not a complete command system. It registers only the commands listed in `Docs/WORKFLOW_COMMANDS.md`. Do not count a shortcut or protocol as delivered until all of these are true:
+
+1. Stable command ID and versioned argument schema exist.
+2. Menu, shortcut, palette, macro and external control-surface entry resolve to the same command handler.
+3. Context/permission checks disable unavailable commands and prevent shortcuts firing while text-entry widgets own focus.
+4. Handler validates input and applies a single project transaction.
+5. Undo/redo restores exact state, including dependent entities.
+6. Save/reopen and recovery preserve the result.
+7. Realtime publication is bounded and occurs at a block boundary; callbacks never call GUI or agent code.
+8. UI and control surfaces receive coherent state feedback.
+9. Invalid requests and queue-full conditions fail without project/engine divergence.
+10. Tests exercise menu, shortcut, palette and protocol invocation against the same domain transaction.
+
+External control protocols should be introduced in layers: first an internal command bus and event/result schema, then OSC/MIDI control-surface adapters with explicit capability maps and feedback, then optional transport synchronization (MIDI Clock, MTC/LTC) only after the timebase and transport state machine are stable. Do not add protocol labels to menus without implementing transport, feedback, lifecycle, authorization and failure semantics.
